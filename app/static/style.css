@@ -184,13 +184,15 @@ body {
 }
 
 #tool-list .stack-item,
-#lot-list .stack-item {
+#lot-list .stack-item,
+#audit-feed .stack-item {
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
 }
 
 #tool-list .stack-item:hover,
-#lot-list .stack-item:hover {
+#lot-list .stack-item:hover,
+#audit-feed .stack-item:hover {
   transform: translateY(-1px);
   border-color: rgba(93, 200, 255, 0.38);
 }
