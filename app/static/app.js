@@ -50,10 +50,41 @@ async function boot() {
   const replayList = document.getElementById("replay-list");
   const toolSelect = document.getElementById("tool-select");
   const lotSelect = document.getElementById("lot-select");
+  const focusSevereLotBtn = document.getElementById("focus-severe-lot-btn");
+  const copyReviewRouteBtn = document.getElementById("copy-review-route-btn");
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
 
   let selectedToolId = "etch-14";
   let selectedLotId = "lot-8812";
+  let latestLots = [];
+  let latestSignatureId = "";
+
+  async function copyTextValue(text) {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {
+      // Fallback below.
+    }
+
+    try {
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      temp.style.position = "fixed";
+      temp.style.opacity = "0";
+      document.body.appendChild(temp);
+      temp.focus();
+      temp.select();
+      const success = document.execCommand("copy");
+      document.body.removeChild(temp);
+      return Boolean(success);
+    } catch {
+      return false;
+    }
+  }
 
   async function loadFocusedPanels() {
     const [ownership, gate, signature] = await Promise.all([
@@ -101,6 +132,7 @@ async function boot() {
       fetchJson("/api/shift-handoff/signature"),
       fetchJson("/api/evals/replays"),
     ]);
+    latestSignatureId = signature.payload.signature_id || "";
 
     briefStatus.textContent = brief.status.toUpperCase();
     criticalCount.textContent = String(brief.ops_snapshot.critical_alarm_count);
@@ -127,6 +159,7 @@ async function boot() {
 
     const toolItems = tools.items || [];
     const lotItems = lots.items || [];
+    latestLots = lotItems;
     if (!toolItems.find((item) => item.tool_id === selectedToolId) && toolItems[0]) {
       selectedToolId = toolItems[0].tool_id;
     }
@@ -204,6 +237,20 @@ async function boot() {
       });
     });
 
+    document.querySelectorAll("#audit-feed .stack-item").forEach((node, index) => {
+      node.classList.toggle(
+        "selected",
+        audit.items[index]?.tool_id === selectedToolId && audit.items[index]?.lot_id === selectedLotId
+      );
+      node.addEventListener("click", () => {
+        selectedToolId = audit.items[index].tool_id;
+        selectedLotId = audit.items[index].lot_id;
+        toolSelect.value = selectedToolId;
+        lotSelect.value = selectedLotId;
+        loadBoard().catch(handleLoadError);
+      });
+    });
+
     await loadFocusedPanels();
   }
 
@@ -225,6 +272,30 @@ async function boot() {
 
   refreshBoardBtn.addEventListener("click", () => {
     loadBoard().catch(handleLoadError);
+  });
+
+  focusSevereLotBtn.addEventListener("click", () => {
+    if (latestLots.length === 0) {
+      loadBoard().catch(handleLoadError);
+      return;
+    }
+    const severeLot = latestLots.reduce((best, item) =>
+      item.yield_risk_score > best.yield_risk_score ? item : best
+    );
+    selectedLotId = severeLot.lot_id;
+    selectedToolId = severeLot.tool_id;
+    toolSelect.value = selectedToolId;
+    lotSelect.value = selectedLotId;
+    loadBoard().catch(handleLoadError);
+  });
+
+  copyReviewRouteBtn.addEventListener("click", async () => {
+    const payload = [
+      `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
+      `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
+      `handoff signature -> ${latestSignatureId || "pending-signature"}`,
+    ].join("\n");
+    await copyTextValue(payload);
   });
 
   loadBoard().catch(handleLoadError);
