@@ -27,18 +27,26 @@ async function boot() {
   const alarmList = document.getElementById("alarm-list");
   const lotList = document.getElementById("lot-list");
   const toolList = document.getElementById("tool-list");
+  const toolOwnership = document.getElementById("tool-ownership");
+  const releaseGate = document.getElementById("release-gate");
+  const auditFeed = document.getElementById("audit-feed");
   const handoffHeadline = document.getElementById("handoff-headline");
   const handoffActions = document.getElementById("handoff-actions");
+  const handoffSignature = document.getElementById("handoff-signature");
   const replayList = document.getElementById("replay-list");
 
   try {
-    const [brief, reviewPack, alarms, lots, tools, handoff, replay] = await Promise.all([
+    const [brief, reviewPack, alarms, lots, tools, ownership, gate, audit, handoff, signature, replay] = await Promise.all([
       fetchJson("/api/runtime/brief"),
       fetchJson("/api/review-pack"),
       fetchJson("/api/alarms"),
       fetchJson("/api/lots/at-risk"),
       fetchJson("/api/tools"),
+      fetchJson("/api/tool-ownership?tool_id=etch-14"),
+      fetchJson("/api/release-gate?lot_id=lot-8812"),
+      fetchJson("/api/audit/feed"),
       fetchJson("/api/shift-handoff"),
+      fetchJson("/api/shift-handoff/signature"),
       fetchJson("/api/evals/replays"),
     ]);
 
@@ -83,6 +91,27 @@ async function boot() {
       <p class="stack-meta">PM ${item.last_pm_hours}h · MTBF ${item.mtbf_risk}</p>
     `);
 
+    renderList(toolOwnership, [ownership.payload], (item) => `
+      <p class="stack-kicker">${item.tool_id.toUpperCase()} · ${item.status.toUpperCase()}</p>
+      <h3>${item.primary_operator}</h3>
+      <p>${item.maintenance_owner} · ${item.escalation_lane}</p>
+      <p class="stack-meta">Due ${item.due_by} · Ack ${item.ack_required ? "required" : "not required"}</p>
+    `);
+
+    renderList(releaseGate, [gate.payload], (item) => `
+      <p class="stack-kicker">${item.decision.toUpperCase()} · ${item.tool_id}</p>
+      <h3>${item.lot_id}</h3>
+      <p>${item.next_action}</p>
+      <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
+    `);
+
+    renderList(auditFeed, audit.items, (item) => `
+      <p class="stack-kicker">${item.event.toUpperCase()} · ${item.tool_id}</p>
+      <h3>${item.actor}</h3>
+      <p>Lot ${item.lot_id}</p>
+      <p class="stack-meta">${item.at}</p>
+    `);
+
     handoffHeadline.textContent = handoff.payload.headline;
     handoffActions.innerHTML = "";
     handoff.payload.must_acknowledge.forEach((item) => {
@@ -90,6 +119,13 @@ async function boot() {
       li.textContent = item;
       handoffActions.appendChild(li);
     });
+
+    renderList(handoffSignature, [signature.payload], (item) => `
+      <p class="stack-kicker">${item.signature_contract.toUpperCase()}</p>
+      <h3>${item.signature_id}</h3>
+      <p>${item.signed_by} · ${item.release_channel}</p>
+      <p class="stack-meta">Digest ${item.digest_preview}</p>
+    `);
 
     renderList(replayList, replay.runs, (item) => `
       <p class="stack-kicker">${item.status.toUpperCase()}</p>

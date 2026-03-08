@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
+  <rect width="1200" height="720" fill="#071017"/>
+  <rect x="48" y="48" width="1104" height="624" rx="32" fill="#0D1821" stroke="#243544" stroke-width="2"/>
+  <text x="84" y="118" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="40" font-weight="700">fab-ops-yield-control-tower review pack</text>
+  <text x="84" y="154" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="20">Alarm queue, lot risk, tool ownership, release gate, signed handoff, and audit feed in one manufacturing control tower.</text>
+
+  <rect x="84" y="198" width="300" height="158" rx="24" fill="#112433" stroke="#5DC8FF" stroke-width="2"/>
+  <text x="110" y="238" fill="#5DC8FF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">1. Alarm Queue</text>
+  <text x="110" y="274" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Severity, tool, lot, and SOP</text>
+  <text x="110" y="300" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">stay linked for grounded triage.</text>
+  <text x="110" y="332" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/alarms + /api/lots/at-risk</text>
+
+  <rect x="450" y="198" width="300" height="158" rx="24" fill="#14252F" stroke="#49D39B" stroke-width="2"/>
+  <text x="476" y="238" fill="#49D39B" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">2. Tool Ownership</text>
+  <text x="476" y="274" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Operator, maintenance owner,</text>
+  <text x="476" y="300" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">and escalation lane are explicit.</text>
+  <text x="476" y="332" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/tool-ownership</text>
+
+  <rect x="816" y="198" width="300" height="158" rx="24" fill="#2A1B22" stroke="#FF7A7A" stroke-width="2"/>
+  <text x="842" y="238" fill="#FF7A7A" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">3. Release Gate</text>
+  <text x="842" y="274" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Top lot decision and failed checks</text>
+  <text x="842" y="300" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">are visible before release.</text>
+  <text x="842" y="332" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/release-gate</text>
+
+  <rect x="84" y="420" width="300" height="186" rx="24" fill="#111E29" stroke="#5DC8FF" stroke-width="2"/>
+  <text x="110" y="460" fill="#5DC8FF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">4. Shift Handoff</text>
+  <text x="110" y="496" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Must-acknowledge actions and</text>
+  <text x="110" y="522" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">watchlist items carry to next shift.</text>
+  <text x="110" y="554" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/shift-handoff</text>
+
+  <rect x="450" y="420" width="300" height="186" rx="24" fill="#16212B" stroke="#49D39B" stroke-width="2"/>
+  <text x="476" y="460" fill="#49D39B" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">5. Signed Proof</text>
+  <text x="476" y="496" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Digest-style signature shows</text>
+  <text x="476" y="522" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">handoff integrity before release.</text>
+  <text x="476" y="554" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/shift-handoff/signature</text>
+
+  <rect x="816" y="420" width="300" height="186" rx="24" fill="#131B24" stroke="#AEB7C3" stroke-width="2"/>
+  <text x="842" y="460" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">6. Audit Feed</text>
+  <text x="842" y="496" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Latest shift and maintenance events</text>
+  <text x="842" y="522" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">stay reviewable without MES access.</text>
+  <text x="842" y="554" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/audit/feed + /api/evals/replays</text>
+
+  <path d="M384 277H450" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M750 277H816" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 356V420" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M384 513H450" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M750 513H816" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>
+</svg>
