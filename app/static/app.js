@@ -52,6 +52,7 @@ async function boot() {
   const lotSelect = document.getElementById("lot-select");
   const focusSevereLotBtn = document.getElementById("focus-severe-lot-btn");
   const copyReviewRouteBtn = document.getElementById("copy-review-route-btn");
+  const copySevereLotBtn = document.getElementById("copy-severe-lot-btn");
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
 
   let selectedToolId = "etch-14";
@@ -295,6 +296,26 @@ async function boot() {
       `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
       `handoff signature -> ${latestSignatureId || "pending-signature"}`,
     ].join("\n");
+    await copyTextValue(payload);
+  });
+
+  copySevereLotBtn.addEventListener("click", async () => {
+    const severeLot = latestLots.length > 0
+      ? latestLots.reduce((best, item) =>
+          item.yield_risk_score > best.yield_risk_score ? item : best
+        )
+      : null;
+    const payload = severeLot
+      ? [
+          `lot_id: ${severeLot.lot_id}`,
+          `tool_id: ${severeLot.tool_id}`,
+          `yield_risk_score: ${severeLot.yield_risk_score}`,
+          `failure_bucket: ${severeLot.failure_bucket}`,
+          `action_owner: ${severeLot.action_owner}`,
+          `next_action: ${severeLot.next_action}`,
+          `route: /api/release-gate?lot_id=${severeLot.lot_id}`,
+        ].join("\n")
+      : "No severe lot is loaded yet.";
     await copyTextValue(payload);
   });
 
