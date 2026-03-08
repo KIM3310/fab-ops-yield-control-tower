@@ -60,6 +60,20 @@ Open `http://127.0.0.1:8000`.
 6. `shift handoff + signature`
 7. `audit feed + replay evals`
 
+## 2-Minute Review Path
+
+1. Open `/health` to confirm critical-alarm and replay surfaces are available.
+2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
+3. Inspect `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
+4. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
+
+## Proof Assets
+
+- `/health`
+- `/api/tool-ownership?tool_id=etch-14`
+- `/api/release-gate?lot_id=lot-8812`
+- `/api/shift-handoff/signature`
+
 ## Local Verification
 
 ```bash

@@ -59,6 +59,8 @@ def test_health_and_service_grade_surfaces() -> None:
     assert brief_payload["evidence_counts"]["replay_scenarios"] == 4
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
+    assert len(brief_payload["two_minute_review"]) == 4
+    assert brief_payload["proof_assets"][0]["href"] == "/health"
 
     assert review_pack.status_code == 200
     review_payload = review_pack.json()
@@ -68,6 +70,8 @@ def test_health_and_service_grade_surfaces() -> None:
     assert "/api/audit/feed" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["latest_audit_events"] == 3
     assert isinstance(review_payload["operator_promises"], list)
+    assert len(review_payload["two_minute_review"]) == 4
+    assert review_payload["proof_assets"][0]["href"] == "/health"
 
     assert alarm_schema.status_code == 200
     assert alarm_schema.json()["schema"] == "fab-ops-alarm-report-v1"
