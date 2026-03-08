@@ -392,10 +392,22 @@ def build_runtime_brief() -> Dict[str, Any]:
             "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
             "Export /api/shift-handoff and /api/shift-handoff/signature before the next operator release.",
         ],
+        "two_minute_review": [
+            "Open /health to confirm critical-alarm and replay surfaces are available.",
+            "Read /api/runtime/brief for the control-tower contract and current ops snapshot.",
+            "Inspect /api/tool-ownership?tool_id=etch-14 and /api/release-gate?lot_id=lot-8812 before trusting release posture.",
+            "Review /api/shift-handoff and /api/shift-handoff/signature before handing the queue to the next shift.",
+        ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
             "Recommendations are grounded in alarm, lot, and SOP context only.",
             "The queue is intentionally small so reviewer paths stay easy to follow.",
+        ],
+        "proof_assets": [
+            {"label": "Health Surface", "href": "/health", "kind": "route"},
+            {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
+            {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
+            {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
         ],
     }
 
@@ -447,6 +459,8 @@ def build_review_pack() -> Dict[str, Any]:
         "review_sequence": [
             "Health -> Runtime Brief -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary",
         ],
+        "two_minute_review": runtime_brief["two_minute_review"],
+        "proof_assets": runtime_brief["proof_assets"],
     }
 
 

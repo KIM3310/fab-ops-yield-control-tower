@@ -57,14 +57,17 @@ async function boot() {
 
     reviewHeadline.textContent = reviewPack.headline;
     reviewPromises.innerHTML = "";
-    reviewPack.operator_promises.forEach((item) => {
+    [...reviewPack.operator_promises, ...(reviewPack.two_minute_review || []).map((item) => `2-minute: ${item}`)].forEach((item) => {
       const li = document.createElement("li");
       li.textContent = item;
       reviewPromises.appendChild(li);
     });
 
     reviewBoundary.innerHTML = "";
-    reviewPack.trust_boundary.forEach((item) => {
+    [
+      ...reviewPack.trust_boundary,
+      ...((reviewPack.proof_assets || []).map((item) => `proof: ${item.label} -> ${item.href}`)),
+    ].forEach((item) => {
       const li = document.createElement("li");
       li.textContent = item;
       reviewBoundary.appendChild(li);
