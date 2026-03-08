@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -134,9 +135,74 @@ REPLAY_SUITE = [
     {"scenario": "shift-handoff-gap", "status": "pass", "checks": 8},
 ]
 
+TOOL_OWNERSHIP: Dict[str, Dict[str, Any]] = {
+    "etch-14": {
+        "tool_id": "etch-14",
+        "primary_operator": "ops-west-night",
+        "maintenance_owner": "maint-etch-cell-a",
+        "escalation_lane": "plasma-stability-review",
+        "due_by": "2026-03-08T09:10:00Z",
+        "ack_required": True,
+    },
+    "depo-03": {
+        "tool_id": "depo-03",
+        "primary_operator": "ops-west-night",
+        "maintenance_owner": "maint-depo-cell-c",
+        "escalation_lane": "temperature-drift-watch",
+        "due_by": "2026-03-08T10:00:00Z",
+        "ack_required": True,
+    },
+    "cmp-07": {
+        "tool_id": "cmp-07",
+        "primary_operator": "ops-west-night",
+        "maintenance_owner": "maint-cmp-cell-b",
+        "escalation_lane": "normal-observation",
+        "due_by": "2026-03-08T12:00:00Z",
+        "ack_required": False,
+    },
+}
+
+AUDIT_EVENTS = [
+    {
+        "at": "2026-03-08T08:07:00Z",
+        "event": "handoff-preview-generated",
+        "actor": "shift-exporter",
+        "tool_id": "etch-14",
+        "lot_id": "lot-8812",
+    },
+    {
+        "at": "2026-03-08T07:56:00Z",
+        "event": "maintenance-owner-assigned",
+        "actor": "ops-west-night",
+        "tool_id": "etch-14",
+        "lot_id": "lot-8812",
+    },
+    {
+        "at": "2026-03-08T07:51:00Z",
+        "event": "drift-watch-window-tightened",
+        "actor": "depo-monitor",
+        "tool_id": "depo-03",
+        "lot_id": "lot-8821",
+    },
+]
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def get_tool_or_404(tool_id: str) -> Dict[str, Any]:
+    for item in TOOLS:
+        if item["tool_id"] == tool_id:
+            return item
+    raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_id}")
+
+
+def get_lot_or_404(lot_id: str) -> Dict[str, Any]:
+    for item in LOTS_AT_RISK:
+        if item["lot_id"] == lot_id:
+            return item
+    raise HTTPException(status_code=404, detail=f"Unknown lot: {lot_id}")
 
 
 def build_alarm_report_schema() -> Dict[str, Any]:
@@ -214,6 +280,93 @@ def build_shift_handoff() -> Dict[str, Any]:
     }
 
 
+def build_tool_ownership(tool_id: str) -> Dict[str, Any]:
+    tool = get_tool_or_404(tool_id)
+    ownership = TOOL_OWNERSHIP[tool_id]
+    return {
+        **ownership,
+        "line": tool["line"],
+        "status": tool["status"],
+        "current_alarm_id": tool["current_alarm_id"],
+        "mtbf_risk": tool["mtbf_risk"],
+    }
+
+
+def build_release_gate(lot_id: str) -> Dict[str, Any]:
+    lot = get_lot_or_404(lot_id)
+    tool = get_tool_or_404(lot["tool_id"])
+    assignment = build_tool_ownership(tool["tool_id"])
+
+    if lot["yield_risk_score"] >= 0.85 and tool["status"] == "alarm":
+        decision = "hold-release"
+    elif lot["yield_risk_score"] >= 0.65:
+        decision = "reroute-review"
+    else:
+        decision = "release-with-sampling"
+
+    failed_checks: List[str] = []
+    if tool["status"] == "alarm":
+        failed_checks.append("critical tool alarm still open")
+    if lot["yield_risk_score"] >= 0.85:
+        failed_checks.append("yield risk score exceeds severe threshold")
+    if assignment["ack_required"]:
+        failed_checks.append("maintenance owner acknowledgement still required")
+
+    if decision == "release-with-sampling":
+        failed_checks = []
+
+    return {
+        "lot_id": lot_id,
+        "tool_id": tool["tool_id"],
+        "decision": decision,
+        "yield_risk_score": lot["yield_risk_score"],
+        "tool_status": tool["status"],
+        "next_action": lot["next_action"],
+        "primary_operator": assignment["primary_operator"],
+        "maintenance_owner": assignment["maintenance_owner"],
+        "failed_checks": failed_checks,
+    }
+
+
+def build_handoff_signature() -> Dict[str, Any]:
+    handoff = build_shift_handoff()
+    digest_input = "|".join(
+        [
+            handoff["fab_id"],
+            handoff["shift"],
+            ",".join(handoff["open_critical_alarms"]),
+            ",".join(item["lot_id"] for item in handoff["lots_at_risk"]),
+            ",".join(handoff["must_acknowledge"]),
+        ]
+    )
+    digest = hashlib.sha256(digest_input.encode("utf-8")).hexdigest()
+    return {
+        "fab_id": handoff["fab_id"],
+        "signature_contract": "fab-ops-handoff-signature-v1",
+        "signature_id": f"handoff-{handoff['fab_id']}-{handoff['shift']}",
+        "digest_preview": digest[:16],
+        "signed_by": "ops-west-night",
+        "signed_at": handoff["generated_at"],
+        "release_channel": "morning-shift-briefing-pack",
+        "verification_steps": [
+            "Confirm open critical alarms are still listed in the handoff pack.",
+            "Verify lot-at-risk ordering before release or reroute.",
+            "Check must-acknowledge items against tool ownership assignments.",
+        ],
+    }
+
+
+def build_audit_feed() -> Dict[str, Any]:
+    return {
+        "summary": {
+            "events": len(AUDIT_EVENTS),
+            "critical_alarm_count": len([alarm for alarm in ALARMS if alarm["severity"] == "critical"]),
+            "watchlist_tools": len([tool for tool in TOOLS if tool["status"] != "healthy"]),
+        },
+        "items": AUDIT_EVENTS,
+    }
+
+
 def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
     return {
@@ -231,12 +384,13 @@ def build_runtime_brief() -> Dict[str, Any]:
             "lots_at_risk": len(LOTS_AT_RISK),
             "replay_scenarios": len(REPLAY_SUITE),
         },
+        "assignment_count": len(TOOL_OWNERSHIP),
         "ops_snapshot": summary,
         "review_flow": [
             "Open /health to confirm the fab runtime posture and review routes.",
             "Read /api/runtime/brief for the control-tower contract and evidence counts.",
-            "Inspect /api/alarms and /api/lots/at-risk before acting on a shift decision.",
-            "Export /api/shift-handoff before the next operator release.",
+            "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
+            "Export /api/shift-handoff and /api/shift-handoff/signature before the next operator release.",
         ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
@@ -248,6 +402,7 @@ def build_runtime_brief() -> Dict[str, Any]:
 
 def build_review_pack() -> Dict[str, Any]:
     runtime_brief = build_runtime_brief()
+    audit_feed = build_audit_feed()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -264,28 +419,33 @@ def build_review_pack() -> Dict[str, Any]:
                 "/api/schema/shift-handoff",
                 "/api/fabs/summary",
                 "/api/tools",
+                "/api/tool-ownership",
                 "/api/alarms",
                 "/api/lots/at-risk",
+                "/api/release-gate",
                 "/api/shift-handoff",
+                "/api/shift-handoff/signature",
+                "/api/audit/feed",
                 "/api/evals/replays",
             ],
             "critical_alarm_count": runtime_brief["ops_snapshot"]["critical_alarm_count"],
             "severe_lot_count": runtime_brief["ops_snapshot"]["severe_lot_count"],
             "replay_pass_count": len([case for case in REPLAY_SUITE if case["status"] == "pass"]),
+            "latest_audit_events": audit_feed["summary"]["events"],
         },
         "operator_promises": [
             "Critical lots stay visible before a release decision is made.",
             "Tool alarms remain linked to chambers, lots, and SOP references.",
-            "Shift handoff can be reviewed without external infrastructure.",
+            "Shift handoff can be reviewed and signed without external infrastructure.",
         ],
         "trust_boundary": [
             "alarm board: operator triage starts from severity and lot impact",
             "lot risk board: yield exposure is visible before reroute or release",
-            "handoff pack: the next shift can review open alarms and watchlist items",
+            "handoff pack: the next shift can review open alarms, watchlist items, and signature proof",
             "replay suite: the surface stays reviewable without live fab telemetry",
         ],
         "review_sequence": [
-            "Health -> Runtime Brief -> Alarms -> Lots At Risk -> Shift Handoff -> Replay Summary",
+            "Health -> Runtime Brief -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary",
         ],
     }
 
@@ -308,22 +468,30 @@ def build_meta() -> Dict[str, Any]:
             "/api/schema/shift-handoff",
             "/api/fabs/summary",
             "/api/tools",
+            "/api/tool-ownership",
             "/api/alarms",
             "/api/lots/at-risk",
+            "/api/release-gate",
             "/api/shift-handoff",
+            "/api/shift-handoff/signature",
+            "/api/audit/feed",
             "/api/evals/replays",
         ],
         "capabilities": [
             "fab-control-tower",
             "tool-health-board",
+            "tool-ownership-surface",
+            "release-gate-surface",
             "lot-risk-prioritization",
             "shift-handoff-surface",
+            "audit-feed-surface",
             "review-pack-surface",
             "replay-suite-surface",
         ],
         "diagnostics": {
             "demo_mode": "synthetic-fab-telemetry",
             "shift_handoff_ready": True,
+            "audit_feed_ready": True,
             "replay_suite_ready": True,
             "next_action": "Review critical alarms and severe lots before opening the shift handoff export.",
         },
@@ -435,6 +603,15 @@ async def tools() -> Dict[str, Any]:
     }
 
 
+@app.get("/api/tool-ownership")
+async def tool_ownership(tool_id: str = Query(default="etch-14")) -> Dict[str, Any]:
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "payload": build_tool_ownership(tool_id),
+    }
+
+
 @app.get("/api/alarms")
 async def alarms() -> Dict[str, Any]:
     return {
@@ -454,6 +631,15 @@ async def lots_at_risk() -> Dict[str, Any]:
     }
 
 
+@app.get("/api/release-gate")
+async def release_gate(lot_id: str = Query(default="lot-8812")) -> Dict[str, Any]:
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "payload": build_release_gate(lot_id),
+    }
+
+
 @app.get("/api/shift-handoff")
 async def shift_handoff() -> Dict[str, Any]:
     return {
@@ -461,6 +647,20 @@ async def shift_handoff() -> Dict[str, Any]:
         "service": SERVICE_NAME,
         "payload": build_shift_handoff(),
     }
+
+
+@app.get("/api/shift-handoff/signature")
+async def shift_handoff_signature() -> Dict[str, Any]:
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "payload": build_handoff_signature(),
+    }
+
+
+@app.get("/api/audit/feed")
+async def audit_feed() -> Dict[str, Any]:
+    return build_audit_feed()
 
 
 @app.get("/api/evals/replays")
