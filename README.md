@@ -19,6 +19,7 @@
 - Release gate makes the top lot decision explicit instead of implied by the alarm queue.
 - Shift handoff now includes a digest-style signature proof for next-shift review.
 - Audit feed shows the latest handoff and escalation events without live fab systems.
+- The landing screen now supports focused tool and lot selection, so reviewers can swap the control-tower route they inspect instead of relying on one hard-coded example.
 
 ## Quickstart
 
@@ -64,7 +65,7 @@ Open `http://127.0.0.1:8000`.
 
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
-3. Inspect `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
+3. Use the landing-screen selectors or inspect `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
 4. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
 
 ## Proof Assets

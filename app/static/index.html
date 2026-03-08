@@ -14,6 +14,9 @@
         <h1>Fab Ops Yield Control Tower</h1>
         <p class="lede">Alarm triage, lot-at-risk ranking, tool watchlist, and shift handoff in one reviewable surface.</p>
       </div>
+      <div class="hero-actions">
+        <button id="refresh-board-btn" class="ghost-btn" type="button">Refresh Control Tower</button>
+      </div>
       <div class="hero-metrics">
         <div class="metric-card">
           <span class="metric-label">Runtime</span>
@@ -49,6 +52,10 @@
         <article class="info-card">
           <h3>Trust Boundary</h3>
           <ul id="review-boundary" class="bullet-list"></ul>
+        </article>
+        <article class="info-card">
+          <h3>Focused Review Route</h3>
+          <ul id="review-route-preview" class="bullet-list"></ul>
         </article>
       </div>
     </section>
@@ -92,6 +99,10 @@
             <p class="eyebrow">Tool Ownership</p>
             <h2>Escalation Lane</h2>
           </div>
+          <div class="panel-controls">
+            <label for="tool-select" class="metric-label">Tool</label>
+            <select id="tool-select" class="control-select"></select>
+          </div>
         </div>
         <div id="tool-ownership" class="stack-list"></div>
       </article>
@@ -101,6 +112,10 @@
           <div>
             <p class="eyebrow">Release Gate</p>
             <h2>Top Lot Decision</h2>
+          </div>
+          <div class="panel-controls">
+            <label for="lot-select" class="metric-label">Lot</label>
+            <select id="lot-select" class="control-select"></select>
           </div>
         </div>
         <div id="release-gate" class="stack-list"></div>
