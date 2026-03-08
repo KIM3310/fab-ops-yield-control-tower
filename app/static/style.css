@@ -44,6 +44,11 @@ body {
   margin-bottom: 24px;
 }
 
+.hero-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .hero h1,
 .section-head h2,
 .stack-item h3 {
@@ -110,6 +115,44 @@ body {
 
 .section-head {
   margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.panel-controls {
+  min-width: 220px;
+  display: grid;
+  gap: 8px;
+}
+
+.control-select,
+.ghost-btn {
+  font: inherit;
+}
+
+.control-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.ghost-btn {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .bullet-list,
@@ -135,6 +178,23 @@ body {
   margin-bottom: 6px;
 }
 
+.stack-item.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+#tool-list .stack-item,
+#lot-list .stack-item {
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+#tool-list .stack-item:hover,
+#lot-list .stack-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(93, 200, 255, 0.38);
+}
+
 .stack-meta {
   color: var(--text);
 }
@@ -144,6 +204,10 @@ body {
   .grid-3,
   .grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .section-head {
+    flex-direction: column;
   }
 }
 
