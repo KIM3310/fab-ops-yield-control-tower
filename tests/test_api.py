@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_module(name: str, relative_path: str):
+    spec = importlib.util.spec_from_file_location(name, ROOT / relative_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+APP_MODULE = load_module("fab_ops_main", "app/main.py")
+
+
+def test_health_and_service_grade_surfaces() -> None:
+    client = TestClient(APP_MODULE.app)
+
+    health = client.get("/health")
+    meta = client.get("/api/meta")
+    runtime_brief = client.get("/api/runtime/brief")
+    review_pack = client.get("/api/review-pack")
+    alarm_schema = client.get("/api/schema/alarm-report")
+    handoff_schema = client.get("/api/schema/shift-handoff")
+
+    assert health.status_code == 200
+    health_payload = health.json()
+    assert health_payload["service"] == "fab-ops-yield-control-tower"
+    assert health_payload["links"]["meta"] == "/api/meta"
+    assert health_payload["links"]["runtime_brief"] == "/api/runtime/brief"
+    assert health_payload["links"]["review_pack"] == "/api/review-pack"
+    assert health_payload["diagnostics"]["shift_handoff_ready"] is True
+    assert health_payload["ops_contract"]["schema"] == "ops-envelope-v1"
+
+    assert meta.status_code == 200
+    meta_payload = meta.json()
+    assert meta_payload["runtime_contract"] == "fab-ops-runtime-brief-v1"
+    assert meta_payload["review_pack_contract"] == "fab-ops-review-pack-v1"
+    assert meta_payload["report_contract"]["schema"] == "fab-ops-alarm-report-v1"
+    assert meta_payload["handoff_contract"]["schema"] == "fab-ops-shift-handoff-v1"
+    assert "/api/alarms" in meta_payload["routes"]
+    assert "/api/shift-handoff" in meta_payload["routes"]
+
+    assert runtime_brief.status_code == 200
+    brief_payload = runtime_brief.json()
+    assert brief_payload["readiness_contract"] == "fab-ops-runtime-brief-v1"
+    assert brief_payload["evidence_counts"]["replay_scenarios"] == 4
+    assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
+
+    assert review_pack.status_code == 200
+    review_payload = review_pack.json()
+    assert review_payload["readiness_contract"] == "fab-ops-review-pack-v1"
+    assert review_payload["proof_bundle"]["critical_alarm_count"] == 1
+    assert "/api/evals/replays" in review_payload["proof_bundle"]["review_routes"]
+    assert isinstance(review_payload["operator_promises"], list)
+
+    assert alarm_schema.status_code == 200
+    assert alarm_schema.json()["schema"] == "fab-ops-alarm-report-v1"
+
+    assert handoff_schema.status_code == 200
+    assert handoff_schema.json()["schema"] == "fab-ops-shift-handoff-v1"
+
+
+def test_core_domain_endpoints() -> None:
+    client = TestClient(APP_MODULE.app)
+
+    fabs = client.get("/api/fabs/summary")
+    tools = client.get("/api/tools")
+    alarms = client.get("/api/alarms")
+    lots = client.get("/api/lots/at-risk")
+    handoff = client.get("/api/shift-handoff")
+    replay = client.get("/api/evals/replays")
+
+    assert fabs.status_code == 200
+    assert fabs.json()["items"][0]["critical_alarm_count"] == 1
+
+    assert tools.status_code == 200
+    assert len(tools.json()["items"]) == 3
+    assert any(item["status"] == "alarm" for item in tools.json()["items"])
+
+    assert alarms.status_code == 200
+    assert alarms.json()["items"][0]["alarm_id"] == "alm-2041"
+
+    assert lots.status_code == 200
+    lots_payload = lots.json()["items"]
+    assert lots_payload[0]["lot_id"] == "lot-8812"
+    assert lots_payload[0]["yield_risk_score"] > lots_payload[-1]["yield_risk_score"]
+
+    assert handoff.status_code == 200
+    handoff_payload = handoff.json()["payload"]
+    assert handoff_payload["schema"] == "fab-ops-shift-handoff-v1"
+    assert "etch-14 maintenance approval" in handoff_payload["must_acknowledge"]
+
+    assert replay.status_code == 200
+    replay_payload = replay.json()
+    assert replay_payload["summary"]["scenarios"] == 4
+    assert replay_payload["summary"]["score_pct"] == 100.0

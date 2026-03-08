@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fab Ops Yield Control Tower</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero panel">
+      <div>
+        <p class="eyebrow">Manufacturing Flagship</p>
+        <h1>Fab Ops Yield Control Tower</h1>
+        <p class="lede">Alarm triage, lot-at-risk ranking, tool watchlist, and shift handoff in one reviewable surface.</p>
+      </div>
+      <div class="hero-metrics">
+        <div class="metric-card">
+          <span class="metric-label">Runtime</span>
+          <strong id="brief-status">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Critical Alarms</span>
+          <strong id="critical-count">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Severe Lots</span>
+          <strong id="severe-count">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Replay Score</span>
+          <strong id="replay-score">Loading</strong>
+        </div>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Review Pack</p>
+          <h2 id="review-headline">Loading review pack...</h2>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <article class="info-card">
+          <h3>Operator Promises</h3>
+          <ul id="review-promises" class="bullet-list"></ul>
+        </article>
+        <article class="info-card">
+          <h3>Trust Boundary</h3>
+          <ul id="review-boundary" class="bullet-list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="grid grid-3">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Alarm Queue</p>
+            <h2>Active Alarms</h2>
+          </div>
+        </div>
+        <div id="alarm-list" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Yield Risk</p>
+            <h2>Lots At Risk</h2>
+          </div>
+        </div>
+        <div id="lot-list" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tool Watchlist</p>
+            <h2>Equipment State</h2>
+          </div>
+        </div>
+        <div id="tool-list" class="stack-list"></div>
+      </article>
+    </section>
+
+    <section class="grid grid-2">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Shift Handoff</p>
+            <h2 id="handoff-headline">Loading handoff...</h2>
+          </div>
+        </div>
+        <ul id="handoff-actions" class="bullet-list"></ul>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Replay Evals</p>
+            <h2>Scenario Summary</h2>
+          </div>
+        </div>
+        <div id="replay-list" class="stack-list"></div>
+      </article>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
