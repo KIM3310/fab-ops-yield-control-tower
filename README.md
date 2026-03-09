@@ -68,7 +68,7 @@ Open `http://127.0.0.1:8000`.
 7. `shift handoff + signature`
 8. `audit feed + replay evals`
 
-## Quick Review Path
+## Review Flow
 
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
