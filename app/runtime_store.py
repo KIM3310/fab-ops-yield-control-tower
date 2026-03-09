@@ -40,7 +40,9 @@ def summarize_runtime_events(limit: int = 4000) -> Dict[str, Any]:
         "release_gate_checks": 0,
         "handoff_exports": 0,
         "signature_exports": 0,
+        "event_type_counts": {},
         "last_event_at": None,
+        "recent_events": [],
     }
     if not store_path.exists():
         return summary
@@ -54,10 +56,13 @@ def summarize_runtime_events(limit: int = 4000) -> Dict[str, Any]:
         except Exception:
             continue
         summary["event_count"] += 1
+        summary["recent_events"].append(event)
         at = event.get("at")
         if isinstance(at, str) and (summary["last_event_at"] is None or at > summary["last_event_at"]):
             summary["last_event_at"] = at
         event_type = event.get("event_type")
+        event_counts = summary["event_type_counts"]
+        event_counts[event_type] = event_counts.get(event_type, 0) + 1
         if event_type == "route_hit":
             summary["route_hits"] += 1
         elif event_type == "release_gate_check":

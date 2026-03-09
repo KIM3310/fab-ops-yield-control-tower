@@ -2,39 +2,56 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.request
+import sys
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from app.main import app
 
 
-BASE_URL = os.getenv("FAB_OPS_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 TOKEN = os.getenv("FAB_OPS_OPERATOR_TOKEN", "").strip()
 
 
-def fetch_json(path: str, *, include_token: bool = False) -> dict:
-    headers = {}
-    if include_token and TOKEN:
-        headers["x-operator-token"] = TOKEN
-    request = urllib.request.Request(f"{BASE_URL}{path}", headers=headers)
-    with urllib.request.urlopen(request) as response:  # noqa: S310
-        return json.loads(response.read().decode("utf-8"))
+def build_headers() -> dict[str, str]:
+    headers: dict[str, str] = {}
+    if TOKEN:
+        headers["Authorization"] = f"Bearer {TOKEN}"
+    return headers
 
 
-payload = {
-    "health": fetch_json("/health"),
-    "runtime_brief": fetch_json("/api/runtime/brief"),
-    "runtime_scorecard": fetch_json("/api/runtime/scorecard"),
-    "release_gate": fetch_json("/api/release-gate?lot_id=lot-8812", include_token=True),
-}
+def main() -> None:
+    headers = build_headers()
+    with TestClient(app) as client:
+        health = client.get("/health")
+        health.raise_for_status()
+        client.get("/api/runtime/brief").raise_for_status()
+        client.get("/api/review-summary?severity=critical").raise_for_status()
+        release_gate = client.get("/api/release-gate?lot_id=lot-8812", headers=headers)
+        release_gate.raise_for_status()
+        scorecard = client.get("/api/runtime/scorecard")
+        scorecard.raise_for_status()
+        scorecard_body = scorecard.json()
 
-print(
-    json.dumps(
-        {
-            "ok": True,
-            "service": payload["health"]["service"],
-            "critical_alarm_count": payload["runtime_scorecard"]["summary"]["critical_alarm_count"],
-            "persisted_events": payload["runtime_scorecard"]["runtime"]["persistence"]["event_count"],
-            "operator_auth": payload["runtime_scorecard"]["runtime"]["operator_auth"],
-            "release_decision": payload["release_gate"]["payload"]["decision"],
-        },
-        indent=2,
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "service": health.json()["service"],
+                "critical_alarm_count": scorecard_body["summary"]["critical_alarm_count"],
+                "persisted_events": scorecard_body["runtime"]["persistence"]["event_count"],
+                "event_type_counts": scorecard_body["runtime"]["persistence"]["event_type_counts"],
+                "operator_auth": scorecard_body["runtime"]["operator_auth"],
+                "release_decision": release_gate.json()["payload"]["decision"],
+            },
+            indent=2,
+        )
     )
-)
+
+
+if __name__ == "__main__":
+    main()

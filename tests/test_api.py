@@ -75,6 +75,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert scorecard_payload["readiness_contract"] == "fab-ops-runtime-scorecard-v1"
     assert scorecard_payload["summary"]["critical_alarm_count"] == 1
     assert scorecard_payload["runtime"]["persistence"]["enabled"] is True
+    assert scorecard_payload["runtime"]["persistence"]["event_type_counts"]["route_hit"] >= 1
 
     assert review_summary.status_code == 200
     review_summary_payload = review_summary.json()
