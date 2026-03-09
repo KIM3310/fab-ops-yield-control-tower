@@ -1,6 +1,6 @@
 # Fab Ops Yield Control Tower
 
-`fab-ops-yield-control-tower` is a service-grade manufacturing operations demo for semiconductor and industrial environments. It keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, and `shift handoff` in one reviewable operator surface.
+`fab-ops-yield-control-tower` is a production-minded manufacturing operations demo for semiconductor and industrial environments. It keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, and `shift handoff` in one reviewable operator surface.
 
 ![Review pack diagram](docs/review-pack.svg)
 
@@ -12,7 +12,7 @@
 - Tool ownership, release gate, audit feed, and signed handoff proof
 - Recovery board that separates hold, watch, and release-ready lots
 - Replay-style review evidence for manufacturing incident scenarios
-- Service-grade runtime brief, review pack, schema endpoints, and CI
+- Runtime brief, review pack, schema endpoints, and CI
 
 ## Review Pack At A Glance
 
@@ -35,7 +35,7 @@ uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000`.
 
-## Service-Grade Surfaces
+## Runtime Surfaces
 
 - `GET /health`
 - `GET /api/meta`
@@ -68,7 +68,7 @@ Open `http://127.0.0.1:8000`.
 7. `shift handoff + signature`
 8. `audit feed + replay evals`
 
-## 2-Minute Review Path
+## Quick Review Path
 
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
