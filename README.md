@@ -1,6 +1,6 @@
 # Fab Ops Yield Control Tower
 
-`fab-ops-yield-control-tower` is a production-minded manufacturing operations demo for semiconductor and industrial environments. It keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, and `shift handoff` in one reviewable operator surface.
+`fab-ops-yield-control-tower` is a manufacturing operations demo for semiconductor and industrial environments. It keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, and `shift handoff` in one reviewable operator surface.
 
 ![Review pack diagram](docs/review-pack.svg)
 
