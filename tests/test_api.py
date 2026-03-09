@@ -230,24 +230,40 @@ def test_sensitive_routes_require_operator_token_when_enabled(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("FAB_OPS_OPERATOR_TOKEN", "fab-secret")
+    monkeypatch.setenv("FAB_OPS_OPERATOR_ALLOWED_ROLES", "shift-lead,release-supervisor")
     monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(tmp_path / "fab-runtime.jsonl"))
     client = TestClient(APP_MODULE.app)
 
     unauthorized = client.get("/api/release-gate?lot_id=lot-8812")
     assert unauthorized.status_code == 401
 
-    authorized = client.get(
+    denied_role = client.get(
         "/api/release-gate?lot_id=lot-8812",
         headers={"x-operator-token": "fab-secret"},
     )
+    assert denied_role.status_code == 403
+
+    authorized = client.get(
+        "/api/release-gate?lot_id=lot-8812",
+        headers={
+            "x-operator-token": "fab-secret",
+            "x-operator-role": "shift-lead",
+        },
+    )
     assert authorized.status_code == 200
 
-    handoff = client.get("/api/shift-handoff", headers={"x-operator-token": "fab-secret"})
+    handoff = client.get(
+        "/api/shift-handoff",
+        headers={"x-operator-token": "fab-secret", "x-operator-role": "shift-lead"},
+    )
     assert handoff.status_code == 200
 
     signature = client.get(
         "/api/shift-handoff/signature",
-        headers={"x-operator-token": "fab-secret"},
+        headers={
+            "x-operator-token": "fab-secret",
+            "x-operator-role": "shift-lead",
+        },
     )
     assert signature.status_code == 200
 
@@ -255,4 +271,8 @@ def test_sensitive_routes_require_operator_token_when_enabled(
     assert scorecard.status_code == 200
     body = scorecard.json()
     assert body["runtime"]["operator_auth"]["enabled"] is True
+    assert body["runtime"]["operator_auth"]["required_roles"] == [
+        "shift-lead",
+        "release-supervisor",
+    ]
     assert body["runtime"]["persistence"]["event_count"] >= 3
