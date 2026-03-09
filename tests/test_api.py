@@ -26,6 +26,7 @@ def test_health_and_service_grade_surfaces() -> None:
     health = client.get("/health")
     meta = client.get("/api/meta")
     runtime_brief = client.get("/api/runtime/brief")
+    runtime_scorecard = client.get("/api/runtime/scorecard")
     review_summary = client.get("/api/review-summary?severity=critical")
     review_summary_schema = client.get("/api/review-summary/schema")
     review_pack = client.get("/api/review-pack")
@@ -65,8 +66,15 @@ def test_health_and_service_grade_surfaces() -> None:
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
     assert brief_payload["links"]["review_summary"] == "/api/review-summary"
+    assert brief_payload["links"]["runtime_scorecard"] == "/api/runtime/scorecard"
     assert len(brief_payload["two_minute_review"]) == 4
     assert brief_payload["proof_assets"][0]["href"] == "/health"
+
+    assert runtime_scorecard.status_code == 200
+    scorecard_payload = runtime_scorecard.json()
+    assert scorecard_payload["readiness_contract"] == "fab-ops-runtime-scorecard-v1"
+    assert scorecard_payload["summary"]["critical_alarm_count"] == 1
+    assert scorecard_payload["runtime"]["persistence"]["enabled"] is True
 
     assert review_summary.status_code == 200
     review_summary_payload = review_summary.json()
@@ -81,6 +89,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert review_pack.status_code == 200
     review_payload = review_pack.json()
     assert review_payload["readiness_contract"] == "fab-ops-review-pack-v1"
+    assert "/api/runtime/scorecard" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/review-summary" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["critical_alarm_count"] == 1
     assert "/api/evals/replays" in review_payload["proof_bundle"]["review_routes"]
@@ -178,3 +187,35 @@ def test_review_summary_rejects_invalid_filters() -> None:
 
     assert response.status_code == 400
     assert "Invalid severity filter" in response.json()["detail"]
+
+
+def test_sensitive_routes_require_operator_token_when_enabled(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("FAB_OPS_OPERATOR_TOKEN", "fab-secret")
+    monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(tmp_path / "fab-runtime.jsonl"))
+    client = TestClient(APP_MODULE.app)
+
+    unauthorized = client.get("/api/release-gate?lot_id=lot-8812")
+    assert unauthorized.status_code == 401
+
+    authorized = client.get(
+        "/api/release-gate?lot_id=lot-8812",
+        headers={"x-operator-token": "fab-secret"},
+    )
+    assert authorized.status_code == 200
+
+    handoff = client.get("/api/shift-handoff", headers={"x-operator-token": "fab-secret"})
+    assert handoff.status_code == 200
+
+    signature = client.get(
+        "/api/shift-handoff/signature",
+        headers={"x-operator-token": "fab-secret"},
+    )
+    assert signature.status_code == 200
+
+    scorecard = client.get("/api/runtime/scorecard")
+    assert scorecard.status_code == 200
+    body = scorecard.json()
+    assert body["runtime"]["operator_auth"]["enabled"] is True
+    assert body["runtime"]["persistence"]["event_count"] >= 3
