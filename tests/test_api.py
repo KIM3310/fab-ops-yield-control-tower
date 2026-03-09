@@ -29,6 +29,8 @@ def test_health_and_service_grade_surfaces() -> None:
     runtime_scorecard = client.get("/api/runtime/scorecard")
     review_summary = client.get("/api/review-summary?severity=critical")
     review_summary_schema = client.get("/api/review-summary/schema")
+    recovery_board = client.get("/api/recovery-board?mode=hold")
+    recovery_board_schema = client.get("/api/recovery-board/schema")
     review_pack = client.get("/api/review-pack")
     alarm_schema = client.get("/api/schema/alarm-report")
     handoff_schema = client.get("/api/schema/shift-handoff")
@@ -40,6 +42,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert health_payload["links"]["meta"] == "/api/meta"
     assert health_payload["links"]["runtime_brief"] == "/api/runtime/brief"
     assert health_payload["links"]["review_summary"] == "/api/review-summary"
+    assert health_payload["links"]["recovery_board"] == "/api/recovery-board"
     assert health_payload["links"]["review_pack"] == "/api/review-pack"
     assert health_payload["diagnostics"]["shift_handoff_ready"] is True
     assert health_payload["diagnostics"]["audit_feed_ready"] is True
@@ -52,7 +55,10 @@ def test_health_and_service_grade_surfaces() -> None:
     assert meta_payload["review_summary_contract"] == "fab-ops-review-summary-v1"
     assert meta_payload["report_contract"]["schema"] == "fab-ops-alarm-report-v1"
     assert meta_payload["handoff_contract"]["schema"] == "fab-ops-shift-handoff-v1"
+    assert meta_payload["diagnostics"]["recovery_board_ready"] is True
     assert "/api/review-summary" in meta_payload["routes"]
+    assert "/api/recovery-board" in meta_payload["routes"]
+    assert "/api/recovery-board/schema" in meta_payload["routes"]
     assert "/api/alarms" in meta_payload["routes"]
     assert "/api/shift-handoff" in meta_payload["routes"]
     assert "/api/tool-ownership" in meta_payload["routes"]
@@ -63,19 +69,25 @@ def test_health_and_service_grade_surfaces() -> None:
     brief_payload = runtime_brief.json()
     assert brief_payload["readiness_contract"] == "fab-ops-runtime-brief-v1"
     assert brief_payload["evidence_counts"]["replay_scenarios"] == 4
+    assert brief_payload["evidence_counts"]["recovery_routes"] == 3
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
     assert brief_payload["links"]["review_summary"] == "/api/review-summary"
+    assert brief_payload["links"]["recovery_board"] == "/api/recovery-board"
     assert brief_payload["links"]["runtime_scorecard"] == "/api/runtime/scorecard"
-    assert len(brief_payload["two_minute_review"]) == 4
+    assert len(brief_payload["two_minute_review"]) == 5
     assert brief_payload["proof_assets"][0]["href"] == "/health"
 
     assert runtime_scorecard.status_code == 200
     scorecard_payload = runtime_scorecard.json()
     assert scorecard_payload["readiness_contract"] == "fab-ops-runtime-scorecard-v1"
     assert scorecard_payload["summary"]["critical_alarm_count"] == 1
+    assert scorecard_payload["summary"]["hold_lots"] == 1
+    assert scorecard_payload["summary"]["watch_lots"] == 1
+    assert scorecard_payload["summary"]["ready_lots"] == 1
     assert scorecard_payload["runtime"]["persistence"]["enabled"] is True
     assert scorecard_payload["runtime"]["persistence"]["event_type_counts"]["route_hit"] >= 1
+    assert scorecard_payload["links"]["recovery_board"] == "/api/recovery-board"
 
     assert review_summary.status_code == 200
     review_summary_payload = review_summary.json()
@@ -87,17 +99,32 @@ def test_health_and_service_grade_surfaces() -> None:
     assert review_summary_schema.status_code == 200
     assert review_summary_schema.json()["schema"] == "fab-ops-review-summary-v1"
 
+    assert recovery_board.status_code == 200
+    recovery_payload = recovery_board.json()
+    assert recovery_payload["contract_version"] == "fab-ops-recovery-board-v1"
+    assert recovery_payload["summary"]["hold_count"] == 1
+    assert recovery_payload["items"][0]["lot_id"] == "lot-8812"
+    assert recovery_payload["spotlight"]["maintenance_owner"] == "maint-etch-cell-a"
+    assert recovery_payload["route_bundle"]["recovery_board_schema"] == "/api/recovery-board/schema"
+
+    assert recovery_board_schema.status_code == 200
+    assert recovery_board_schema.json()["schema"] == "fab-ops-recovery-board-v1"
+
     assert review_pack.status_code == 200
     review_payload = review_pack.json()
     assert review_payload["readiness_contract"] == "fab-ops-review-pack-v1"
     assert "/api/runtime/scorecard" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/review-summary" in review_payload["proof_bundle"]["review_routes"]
+    assert "/api/recovery-board" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["critical_alarm_count"] == 1
+    assert review_payload["proof_bundle"]["hold_count"] == 1
+    assert review_payload["proof_bundle"]["watch_count"] == 1
+    assert review_payload["proof_bundle"]["ready_count"] == 1
     assert "/api/evals/replays" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/audit/feed" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["latest_audit_events"] == 3
     assert isinstance(review_payload["operator_promises"], list)
-    assert len(review_payload["two_minute_review"]) == 4
+    assert len(review_payload["two_minute_review"]) == 5
     assert review_payload["proof_assets"][0]["href"] == "/health"
 
     assert alarm_schema.status_code == 200
@@ -188,6 +215,15 @@ def test_review_summary_rejects_invalid_filters() -> None:
 
     assert response.status_code == 400
     assert "Invalid severity filter" in response.json()["detail"]
+
+
+def test_recovery_board_rejects_invalid_filters() -> None:
+    client = TestClient(APP_MODULE.app)
+
+    response = client.get("/api/recovery-board?mode=escalate")
+
+    assert response.status_code == 400
+    assert "Invalid mode filter" in response.json()["detail"]
 
 
 def test_sensitive_routes_require_operator_token_when_enabled(

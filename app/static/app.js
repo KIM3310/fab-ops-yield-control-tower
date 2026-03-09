@@ -44,6 +44,8 @@ async function boot() {
   const toolOwnership = document.getElementById("tool-ownership");
   const releaseGate = document.getElementById("release-gate");
   const auditFeed = document.getElementById("audit-feed");
+  const recoveryBoard = document.getElementById("recovery-board");
+  const recoveryModeSelect = document.getElementById("recovery-mode-select");
   const handoffHeadline = document.getElementById("handoff-headline");
   const handoffActions = document.getElementById("handoff-actions");
   const handoffSignature = document.getElementById("handoff-signature");
@@ -64,6 +66,8 @@ async function boot() {
   let latestGate = null;
   let latestHandoff = null;
   let latestSignaturePayload = null;
+  let latestRecoveryBoard = null;
+  let selectedRecoveryMode = "all";
 
   async function copyTextValue(text) {
     if (!text) return false;
@@ -130,7 +134,7 @@ async function boot() {
   }
 
   async function loadBoard() {
-    const [brief, reviewPack, alarms, lots, tools, audit, handoff, signature, replay] = await Promise.all([
+    const [brief, reviewPack, alarms, lots, tools, audit, handoff, signature, replay, recovery] = await Promise.all([
       fetchJson("/api/runtime/brief"),
       fetchJson("/api/review-pack"),
       fetchJson("/api/alarms"),
@@ -140,10 +144,12 @@ async function boot() {
       fetchJson("/api/shift-handoff"),
       fetchJson("/api/shift-handoff/signature"),
       fetchJson("/api/evals/replays"),
+      fetchJson(`/api/recovery-board?mode=${encodeURIComponent(selectedRecoveryMode)}`),
     ]);
     latestSignatureId = signature.payload.signature_id || "";
     latestHandoff = handoff.payload;
     latestSignaturePayload = signature.payload;
+    latestRecoveryBoard = recovery;
 
     briefStatus.textContent = brief.status.toUpperCase();
     criticalCount.textContent = String(brief.ops_snapshot.critical_alarm_count);
@@ -167,6 +173,13 @@ async function boot() {
       li.textContent = item;
       reviewBoundary.appendChild(li);
     });
+
+    renderList(recoveryBoard, recovery.items, (item) => `
+      <p class="stack-kicker">${item.board_status.toUpperCase()} · ${item.tool_id}</p>
+      <h3>${item.lot_id}</h3>
+      <p>${item.next_action}</p>
+      <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
+    `);
 
     const toolItems = tools.items || [];
     const lotItems = lots.items || [];
@@ -285,6 +298,11 @@ async function boot() {
     loadBoard().catch(handleLoadError);
   });
 
+  recoveryModeSelect.addEventListener("change", () => {
+    selectedRecoveryMode = recoveryModeSelect.value;
+    loadBoard().catch(handleLoadError);
+  });
+
   focusSevereLotBtn.addEventListener("click", () => {
     if (latestLots.length === 0) {
       loadBoard().catch(handleLoadError);
@@ -293,6 +311,8 @@ async function boot() {
     const severeLot = latestLots.reduce((best, item) =>
       item.yield_risk_score > best.yield_risk_score ? item : best
     );
+    selectedRecoveryMode = "hold";
+    recoveryModeSelect.value = selectedRecoveryMode;
     selectedLotId = severeLot.lot_id;
     selectedToolId = severeLot.tool_id;
     toolSelect.value = selectedToolId;
@@ -302,6 +322,7 @@ async function boot() {
 
   copyReviewRouteBtn.addEventListener("click", async () => {
     const payload = [
+      `recovery board -> /api/recovery-board?mode=${selectedRecoveryMode}`,
       `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
       `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
       `handoff signature -> ${latestSignatureId || "pending-signature"}`,
@@ -310,19 +331,21 @@ async function boot() {
   });
 
   copySevereLotBtn.addEventListener("click", async () => {
-    const severeLot = latestLots.length > 0
+    const severeLot = latestRecoveryBoard?.spotlight || (latestLots.length > 0
       ? latestLots.reduce((best, item) =>
           item.yield_risk_score > best.yield_risk_score ? item : best
         )
-      : null;
+      : null);
     const payload = severeLot
       ? [
           `lot_id: ${severeLot.lot_id}`,
           `tool_id: ${severeLot.tool_id}`,
           `yield_risk_score: ${severeLot.yield_risk_score}`,
-          `failure_bucket: ${severeLot.failure_bucket}`,
-          `action_owner: ${severeLot.action_owner}`,
+          `risk_bucket: ${severeLot.risk_bucket}`,
+          `board_status: ${severeLot.board_status || "unknown"}`,
+          `maintenance_owner: ${severeLot.maintenance_owner || "unknown"}`,
           `next_action: ${severeLot.next_action}`,
+          `route: /api/recovery-board?mode=${selectedRecoveryMode}`,
           `route: /api/release-gate?lot_id=${severeLot.lot_id}`,
         ].join("\n")
       : "No severe lot is loaded yet.";
@@ -339,6 +362,8 @@ async function boot() {
       `Decision: ${latestGate?.decision || "pending"}`,
       `Next action: ${latestGate?.next_action || "pending"}`,
       `Yield risk: ${latestGate?.yield_risk_score ?? "unknown"}`,
+      `Recovery lane: ${latestRecoveryBoard?.spotlight?.board_status || selectedRecoveryMode}`,
+      `Recovery route: /api/recovery-board?mode=${selectedRecoveryMode}`,
       `Failed checks: ${latestGate?.failed_checks?.join(", ") || "none"}`,
       `Handoff: ${latestHandoff?.headline || "pending-handoff"}`,
       `Signature: ${latestSignaturePayload?.signature_id || latestSignatureId || "pending-signature"}`,

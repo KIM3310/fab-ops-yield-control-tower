@@ -26,6 +26,7 @@ SERVICE_NAME = "fab-ops-yield-control-tower"
 ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
 SHIFT_HANDOFF_SCHEMA = "fab-ops-shift-handoff-v1"
 ALARM_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+ALLOWED_RECOVERY_MODES = {"all", "hold", "watch", "ready"}
 
 FABS = [
     {
@@ -393,6 +394,7 @@ def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> 
 
 def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
+    recovery_board = build_recovery_board()
     operator_auth = build_operator_auth_status()
     persistence = summarize_runtime_events()
     return {
@@ -409,6 +411,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "alarms": len(ALARMS),
             "lots_at_risk": len(LOTS_AT_RISK),
             "replay_scenarios": len(REPLAY_SUITE),
+            "recovery_routes": len(recovery_board["items"]),
         },
         "assignment_count": len(TOOL_OWNERSHIP),
         "operator_auth": operator_auth,
@@ -417,12 +420,14 @@ def build_runtime_brief() -> Dict[str, Any]:
         "review_flow": [
             "Open /health to confirm the fab runtime posture and review routes.",
             "Read /api/runtime/brief for the control-tower contract and evidence counts.",
+            "Use /api/recovery-board to separate hold lots from watch and release-ready lots.",
             "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
             "Export /api/shift-handoff and /api/shift-handoff/signature before the next operator release.",
         ],
         "two_minute_review": [
             "Open /health to confirm critical-alarm and replay surfaces are available.",
             "Read /api/runtime/brief for the control-tower contract and current ops snapshot.",
+            "Inspect /api/recovery-board?mode=hold to find the lot that blocks release posture.",
             "Inspect /api/tool-ownership?tool_id=etch-14 and /api/release-gate?lot_id=lot-8812 before trusting release posture.",
             "Review /api/shift-handoff and /api/shift-handoff/signature before handing the queue to the next shift.",
         ],
@@ -434,6 +439,7 @@ def build_runtime_brief() -> Dict[str, Any]:
         "proof_assets": [
             {"label": "Health Surface", "href": "/health", "kind": "route"},
             {"label": "Review Summary", "href": "/api/review-summary", "kind": "route"},
+            {"label": "Recovery Board", "href": "/api/recovery-board?mode=hold", "kind": "route"},
             {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
             {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
             {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
@@ -442,6 +448,8 @@ def build_runtime_brief() -> Dict[str, Any]:
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "review_summary_schema": "/api/review-summary/schema",
+            "recovery_board": "/api/recovery-board",
+            "recovery_board_schema": "/api/recovery-board/schema",
             "review_pack": "/api/review-pack",
         },
     }
@@ -450,6 +458,7 @@ def build_runtime_brief() -> Dict[str, Any]:
 def build_review_pack() -> Dict[str, Any]:
     runtime_brief = build_runtime_brief()
     audit_feed = build_audit_feed()
+    recovery_board = build_recovery_board()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -463,6 +472,8 @@ def build_review_pack() -> Dict[str, Any]:
                 "/api/runtime/brief",
                 "/api/runtime/scorecard",
                 "/api/review-summary",
+                "/api/recovery-board",
+                "/api/recovery-board/schema",
                 "/api/review-pack",
                 "/api/schema/alarm-report",
                 "/api/schema/shift-handoff",
@@ -481,6 +492,9 @@ def build_review_pack() -> Dict[str, Any]:
             "severe_lot_count": runtime_brief["ops_snapshot"]["severe_lot_count"],
             "replay_pass_count": len([case for case in REPLAY_SUITE if case["status"] == "pass"]),
             "latest_audit_events": audit_feed["summary"]["events"],
+            "hold_count": recovery_board["summary"]["hold_count"],
+            "watch_count": recovery_board["summary"]["watch_count"],
+            "ready_count": recovery_board["summary"]["ready_count"],
             "operator_auth": runtime_brief["operator_auth"],
             "persistence": runtime_brief["persistence"],
         },
@@ -496,13 +510,14 @@ def build_review_pack() -> Dict[str, Any]:
             "replay suite: the surface stays reviewable without live fab telemetry",
         ],
         "review_sequence": [
-            "Health -> Runtime Brief -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary",
+            "Health -> Runtime Brief -> Recovery Board -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary",
         ],
         "two_minute_review": runtime_brief["two_minute_review"],
         "proof_assets": runtime_brief["proof_assets"],
         "links": {
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
+            "recovery_board": "/api/recovery-board",
             "runtime_brief": "/api/runtime/brief",
         },
     }
@@ -527,6 +542,8 @@ def build_meta() -> Dict[str, Any]:
             "/api/runtime/scorecard",
             "/api/review-summary",
             "/api/review-summary/schema",
+            "/api/recovery-board",
+            "/api/recovery-board/schema",
             "/api/review-pack",
             "/api/schema/alarm-report",
             "/api/schema/shift-handoff",
@@ -546,6 +563,7 @@ def build_meta() -> Dict[str, Any]:
             "tool-health-board",
             "tool-ownership-surface",
             "release-gate-surface",
+            "recovery-board-surface",
             "lot-risk-prioritization",
             "shift-handoff-surface",
             "audit-feed-surface",
@@ -555,6 +573,7 @@ def build_meta() -> Dict[str, Any]:
         "diagnostics": {
             "demo_mode": "synthetic-fab-telemetry",
             "shift_handoff_ready": True,
+            "recovery_board_ready": True,
             "audit_feed_ready": True,
             "replay_suite_ready": True,
             "operator_auth_enabled": operator_auth["enabled"],
@@ -575,6 +594,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
     operator_auth = build_operator_auth_status()
     audit_feed = build_audit_feed()
     replay_summary = build_replay_summary()
+    recovery_board = build_recovery_board()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -589,6 +609,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
                 "/api/runtime/brief",
                 "/api/runtime/scorecard",
                 "/api/review-summary",
+                "/api/recovery-board",
                 "/api/review-pack",
                 "/api/shift-handoff/signature",
             ],
@@ -597,10 +618,14 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "critical_alarm_count": summary["critical_alarm_count"],
             "severe_lot_count": summary["severe_lot_count"],
             "watchlist_tools": audit_feed["summary"]["watchlist_tools"],
+            "hold_lots": recovery_board["summary"]["hold_count"],
+            "watch_lots": recovery_board["summary"]["watch_count"],
+            "ready_lots": recovery_board["summary"]["ready_count"],
             "replay_score_pct": replay_summary["summary"]["score_pct"],
             "persisted_events": persistence["event_count"],
         },
         "recommendations": [
+            "Triage the recovery board before trusting any release-ready lot.",
             "Verify tool ownership and release gate before exporting a shift handoff.",
             "Treat the signed handoff surface as the final operator artifact for next-shift review.",
             "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
@@ -609,6 +634,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "health": "/health",
             "runtime_brief": "/api/runtime/brief",
             "review_summary": "/api/review-summary",
+            "recovery_board": "/api/recovery-board",
             "review_pack": "/api/review-pack",
             "handoff_signature": "/api/shift-handoff/signature",
         },
@@ -674,6 +700,89 @@ def build_review_summary(
     }
 
 
+def build_recovery_board(mode: str | None = None) -> Dict[str, Any]:
+    normalized_mode = normalize_review_filter("mode", mode, ALLOWED_RECOVERY_MODES) or "all"
+    items: List[Dict[str, Any]] = []
+    for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
+        gate = build_release_gate(lot["lot_id"])
+        tool = get_tool_or_404(lot["tool_id"])
+        ownership = build_tool_ownership(tool["tool_id"])
+        if gate["decision"] == "hold-release":
+            board_status = "hold"
+        elif gate["decision"] == "reroute-review":
+            board_status = "watch"
+        else:
+            board_status = "ready"
+        if normalized_mode != "all" and board_status != normalized_mode:
+            continue
+        items.append(
+            {
+                "lot_id": lot["lot_id"],
+                "tool_id": lot["tool_id"],
+                "product_family": lot["product_family"],
+                "yield_risk_score": lot["yield_risk_score"],
+                "risk_bucket": lot["risk_bucket"],
+                "board_status": board_status,
+                "release_decision": gate["decision"],
+                "tool_status": tool["status"],
+                "maintenance_owner": ownership["maintenance_owner"],
+                "ack_required": ownership["ack_required"],
+                "escalation_lane": ownership["escalation_lane"],
+                "failed_checks": gate["failed_checks"],
+                "next_action": gate["next_action"],
+            }
+        )
+
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "contract_version": "fab-ops-recovery-board-v1",
+        "filters": {"mode": normalized_mode},
+        "summary": {
+            "visible_lots": len(items),
+            "hold_count": len([item for item in items if item["board_status"] == "hold"]),
+            "watch_count": len([item for item in items if item["board_status"] == "watch"]),
+            "ready_count": len([item for item in items if item["board_status"] == "ready"]),
+        },
+        "spotlight": items[0] if items else None,
+        "items": items,
+        "review_actions": [
+            "Start with hold lots before reviewing watch or ready lots.",
+            "Keep tool ownership, release gate, and handoff pack together during shift review.",
+            "Treat the signed handoff as the final next-shift artifact after recovery decisions are made.",
+        ],
+        "route_bundle": {
+            "recovery_board": "/api/recovery-board",
+            "recovery_board_schema": "/api/recovery-board/schema",
+            "review_summary": "/api/review-summary",
+            "tool_ownership": "/api/tool-ownership?tool_id=etch-14",
+            "release_gate": "/api/release-gate?lot_id=lot-8812",
+            "shift_handoff": "/api/shift-handoff",
+        },
+    }
+
+
+def build_recovery_board_schema() -> Dict[str, Any]:
+    return {
+        "schema": "fab-ops-recovery-board-v1",
+        "required_fields": [
+            "contract_version",
+            "summary.visible_lots",
+            "summary.hold_count",
+            "items",
+            "route_bundle.recovery_board",
+        ],
+        "links": {
+            "recovery_board": "/api/recovery-board",
+            "recovery_board_schema": "/api/recovery-board/schema",
+            "review_summary": "/api/review-summary",
+            "review_pack": "/api/review-pack",
+            "runtime_scorecard": "/api/runtime/scorecard",
+        },
+    }
+
+
 def build_review_summary_schema() -> Dict[str, Any]:
     return {
         "schema": "fab-ops-review-summary-v1",
@@ -687,6 +796,7 @@ def build_review_summary_schema() -> Dict[str, Any]:
         ],
         "links": {
             "review_summary": "/api/review-summary",
+            "recovery_board": "/api/recovery-board",
             "review_pack": "/api/review-pack",
             "runtime_brief": "/api/runtime/brief",
         },
@@ -735,6 +845,7 @@ async def health() -> Dict[str, Any]:
             "runtime_brief": "/api/runtime/brief",
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
+            "recovery_board": "/api/recovery-board",
             "review_pack": "/api/review-pack",
             "alarm_report_schema": "/api/schema/alarm-report",
             "shift_handoff_schema": "/api/schema/shift-handoff",
@@ -773,6 +884,17 @@ async def review_summary(
 @app.get("/api/review-summary/schema")
 async def review_summary_schema() -> Dict[str, Any]:
     return build_review_summary_schema()
+
+
+@app.get("/api/recovery-board")
+async def recovery_board(mode: str | None = Query(default=None)) -> Dict[str, Any]:
+    record_route_hit("/api/recovery-board")
+    return build_recovery_board(mode=mode)
+
+
+@app.get("/api/recovery-board/schema")
+async def recovery_board_schema() -> Dict[str, Any]:
+    return build_recovery_board_schema()
 
 
 @app.get("/api/review-pack")

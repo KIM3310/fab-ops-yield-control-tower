@@ -31,6 +31,8 @@ def main() -> None:
         health.raise_for_status()
         client.get("/api/runtime/brief").raise_for_status()
         client.get("/api/review-summary?severity=critical").raise_for_status()
+        recovery = client.get("/api/recovery-board?mode=hold")
+        recovery.raise_for_status()
         release_gate = client.get("/api/release-gate?lot_id=lot-8812", headers=headers)
         release_gate.raise_for_status()
         scorecard = client.get("/api/runtime/scorecard")
@@ -43,10 +45,12 @@ def main() -> None:
                 "ok": True,
                 "service": health.json()["service"],
                 "critical_alarm_count": scorecard_body["summary"]["critical_alarm_count"],
+                "hold_lots": scorecard_body["summary"]["hold_lots"],
                 "persisted_events": scorecard_body["runtime"]["persistence"]["event_count"],
                 "event_type_counts": scorecard_body["runtime"]["persistence"]["event_type_counts"],
                 "operator_auth": scorecard_body["runtime"]["operator_auth"],
                 "release_decision": release_gate.json()["payload"]["decision"],
+                "recovery_spotlight": recovery.json()["spotlight"]["lot_id"],
             },
             indent=2,
         )
