@@ -26,6 +26,8 @@ def test_health_and_service_grade_surfaces() -> None:
     health = client.get("/health")
     meta = client.get("/api/meta")
     runtime_brief = client.get("/api/runtime/brief")
+    review_summary = client.get("/api/review-summary?severity=critical")
+    review_summary_schema = client.get("/api/review-summary/schema")
     review_pack = client.get("/api/review-pack")
     alarm_schema = client.get("/api/schema/alarm-report")
     handoff_schema = client.get("/api/schema/shift-handoff")
@@ -36,6 +38,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert health_payload["service"] == "fab-ops-yield-control-tower"
     assert health_payload["links"]["meta"] == "/api/meta"
     assert health_payload["links"]["runtime_brief"] == "/api/runtime/brief"
+    assert health_payload["links"]["review_summary"] == "/api/review-summary"
     assert health_payload["links"]["review_pack"] == "/api/review-pack"
     assert health_payload["diagnostics"]["shift_handoff_ready"] is True
     assert health_payload["diagnostics"]["audit_feed_ready"] is True
@@ -45,8 +48,10 @@ def test_health_and_service_grade_surfaces() -> None:
     meta_payload = meta.json()
     assert meta_payload["runtime_contract"] == "fab-ops-runtime-brief-v1"
     assert meta_payload["review_pack_contract"] == "fab-ops-review-pack-v1"
+    assert meta_payload["review_summary_contract"] == "fab-ops-review-summary-v1"
     assert meta_payload["report_contract"]["schema"] == "fab-ops-alarm-report-v1"
     assert meta_payload["handoff_contract"]["schema"] == "fab-ops-shift-handoff-v1"
+    assert "/api/review-summary" in meta_payload["routes"]
     assert "/api/alarms" in meta_payload["routes"]
     assert "/api/shift-handoff" in meta_payload["routes"]
     assert "/api/tool-ownership" in meta_payload["routes"]
@@ -59,12 +64,24 @@ def test_health_and_service_grade_surfaces() -> None:
     assert brief_payload["evidence_counts"]["replay_scenarios"] == 4
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
+    assert brief_payload["links"]["review_summary"] == "/api/review-summary"
     assert len(brief_payload["two_minute_review"]) == 4
     assert brief_payload["proof_assets"][0]["href"] == "/health"
+
+    assert review_summary.status_code == 200
+    review_summary_payload = review_summary.json()
+    assert review_summary_payload["contract_version"] == "fab-ops-review-summary-v1"
+    assert review_summary_payload["summary"]["alarm_count"] == 1
+    assert review_summary_payload["spotlight"]["alarm"]["alarm_id"] == "alm-2041"
+    assert review_summary_payload["route_bundle"]["review_summary"] == "/api/review-summary"
+
+    assert review_summary_schema.status_code == 200
+    assert review_summary_schema.json()["schema"] == "fab-ops-review-summary-v1"
 
     assert review_pack.status_code == 200
     review_payload = review_pack.json()
     assert review_payload["readiness_contract"] == "fab-ops-review-pack-v1"
+    assert "/api/review-summary" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["critical_alarm_count"] == 1
     assert "/api/evals/replays" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/audit/feed" in review_payload["proof_bundle"]["review_routes"]
@@ -152,3 +169,12 @@ def test_release_gate_relaxation_and_audit_feed() -> None:
     audit_payload = audit_feed.json()["items"]
     assert audit_payload[0]["event"] == "handoff-preview-generated"
     assert audit_payload[0]["tool_id"] == "etch-14"
+
+
+def test_review_summary_rejects_invalid_filters() -> None:
+    client = TestClient(APP_MODULE.app)
+
+    response = client.get("/api/review-summary?severity=urgent")
+
+    assert response.status_code == 400
+    assert "Invalid severity filter" in response.json()["detail"]

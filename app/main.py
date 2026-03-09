@@ -16,6 +16,7 @@ STATIC_DIR = BASE_DIR / "static"
 SERVICE_NAME = "fab-ops-yield-control-tower"
 ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
 SHIFT_HANDOFF_SCHEMA = "fab-ops-shift-handoff-v1"
+ALARM_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
 FABS = [
     {
@@ -185,6 +186,8 @@ AUDIT_EVENTS = [
         "lot_id": "lot-8821",
     },
 ]
+ALLOWED_SEVERITIES = {item["severity"] for item in ALARMS}
+ALLOWED_RISK_BUCKETS = {item["risk_bucket"] for item in LOTS_AT_RISK}
 
 
 def utc_now_iso() -> str:
@@ -367,6 +370,14 @@ def build_audit_feed() -> Dict[str, Any]:
     }
 
 
+def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> str | None:
+    if value is None or value == "":
+        return None
+    if value not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid {name} filter: {value}")
+    return value
+
+
 def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
     return {
@@ -405,10 +416,16 @@ def build_runtime_brief() -> Dict[str, Any]:
         ],
         "proof_assets": [
             {"label": "Health Surface", "href": "/health", "kind": "route"},
+            {"label": "Review Summary", "href": "/api/review-summary", "kind": "route"},
             {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
             {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
             {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
         ],
+        "links": {
+            "review_summary": "/api/review-summary",
+            "review_summary_schema": "/api/review-summary/schema",
+            "review_pack": "/api/review-pack",
+        },
     }
 
 
@@ -426,6 +443,7 @@ def build_review_pack() -> Dict[str, Any]:
                 "/health",
                 "/api/meta",
                 "/api/runtime/brief",
+                "/api/review-summary",
                 "/api/review-pack",
                 "/api/schema/alarm-report",
                 "/api/schema/shift-handoff",
@@ -461,6 +479,10 @@ def build_review_pack() -> Dict[str, Any]:
         ],
         "two_minute_review": runtime_brief["two_minute_review"],
         "proof_assets": runtime_brief["proof_assets"],
+        "links": {
+            "review_summary": "/api/review-summary",
+            "runtime_brief": "/api/runtime/brief",
+        },
     }
 
 
@@ -471,12 +493,15 @@ def build_meta() -> Dict[str, Any]:
         "generated_at": utc_now_iso(),
         "runtime_contract": "fab-ops-runtime-brief-v1",
         "review_pack_contract": "fab-ops-review-pack-v1",
+        "review_summary_contract": "fab-ops-review-summary-v1",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
         "routes": [
             "/health",
             "/api/meta",
             "/api/runtime/brief",
+            "/api/review-summary",
+            "/api/review-summary/schema",
             "/api/review-pack",
             "/api/schema/alarm-report",
             "/api/schema/shift-handoff",
@@ -513,6 +538,84 @@ def build_meta() -> Dict[str, Any]:
             "schema": "ops-envelope-v1",
             "version": 1,
             "required_fields": ["service", "status", "diagnostics.next_action"],
+        },
+    }
+
+
+def build_review_summary(
+    severity: str | None = None,
+    risk_bucket: str | None = None,
+) -> Dict[str, Any]:
+    severity_filter = normalize_review_filter("severity", severity, ALLOWED_SEVERITIES)
+    risk_bucket_filter = normalize_review_filter("risk_bucket", risk_bucket, ALLOWED_RISK_BUCKETS)
+    filtered_alarms = [
+        item for item in ALARMS if severity_filter is None or item["severity"] == severity_filter
+    ]
+    filtered_lots = [
+        item for item in LOTS_AT_RISK if risk_bucket_filter is None or item["risk_bucket"] == risk_bucket_filter
+    ]
+    spotlight_alarm = sorted(
+        filtered_alarms,
+        key=lambda item: (ALARM_SEVERITY_RANK.get(item["severity"], 99), item["started_at"]),
+    )[0] if filtered_alarms else None
+    spotlight_lot = sorted(
+        filtered_lots,
+        key=lambda item: item["yield_risk_score"],
+        reverse=True,
+    )[0] if filtered_lots else None
+    replay_summary = build_replay_summary()
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "contract_version": "fab-ops-review-summary-v1",
+        "filters": {
+            "severity": severity_filter,
+            "risk_bucket": risk_bucket_filter,
+        },
+        "summary": {
+            "alarm_count": len(filtered_alarms),
+            "lot_count": len(filtered_lots),
+            "critical_alarm_count": len([item for item in filtered_alarms if item["severity"] == "critical"]),
+            "severe_lot_count": len([item for item in filtered_lots if item["risk_bucket"] == "severe"]),
+            "replay_score_pct": replay_summary["summary"]["score_pct"],
+        },
+        "spotlight": {
+            "alarm": spotlight_alarm,
+            "lot": spotlight_lot,
+        },
+        "fastest_review_path": [
+            "/health",
+            "/api/review-summary",
+            "/api/tool-ownership",
+            "/api/release-gate",
+            "/api/shift-handoff",
+        ],
+        "route_bundle": {
+            "review_summary": "/api/review-summary",
+            "review_pack": "/api/review-pack",
+            "tool_ownership": "/api/tool-ownership?tool_id=etch-14",
+            "release_gate": "/api/release-gate?lot_id=lot-8812",
+            "shift_handoff": "/api/shift-handoff",
+        },
+    }
+
+
+def build_review_summary_schema() -> Dict[str, Any]:
+    return {
+        "schema": "fab-ops-review-summary-v1",
+        "required_fields": [
+            "service",
+            "contract_version",
+            "summary.alarm_count",
+            "summary.replay_score_pct",
+            "fastest_review_path",
+            "route_bundle.review_summary",
+        ],
+        "links": {
+            "review_summary": "/api/review-summary",
+            "review_pack": "/api/review-pack",
+            "runtime_brief": "/api/runtime/brief",
         },
     }
 
@@ -556,6 +659,7 @@ async def health() -> Dict[str, Any]:
         "links": {
             "meta": "/api/meta",
             "runtime_brief": "/api/runtime/brief",
+            "review_summary": "/api/review-summary",
             "review_pack": "/api/review-pack",
             "alarm_report_schema": "/api/schema/alarm-report",
             "shift_handoff_schema": "/api/schema/shift-handoff",
@@ -572,6 +676,19 @@ async def meta() -> Dict[str, Any]:
 @app.get("/api/runtime/brief")
 async def runtime_brief() -> Dict[str, Any]:
     return build_runtime_brief()
+
+
+@app.get("/api/review-summary")
+async def review_summary(
+    severity: str | None = Query(default=None),
+    risk_bucket: str | None = Query(default=None),
+) -> Dict[str, Any]:
+    return build_review_summary(severity=severity, risk_bucket=risk_bucket)
+
+
+@app.get("/api/review-summary/schema")
+async def review_summary_schema() -> Dict[str, Any]:
+    return build_review_summary_schema()
 
 
 @app.get("/api/review-pack")
