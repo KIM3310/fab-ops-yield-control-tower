@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fab-ops-yield-control-tower"
+version = "0.1.0"
+description = "Fab operations control tower with yield alarms, handoff review, and audit surfaces."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Kim", email = "kim@example.com" }]
+license = { text = "MIT" }
+dependencies = [
+  "fastapi==0.115.8",
+  "uvicorn==0.34.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.5",
+  "httpx==0.28.1"
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

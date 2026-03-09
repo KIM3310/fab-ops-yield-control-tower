@@ -26,7 +26,8 @@
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
@@ -78,7 +79,9 @@ Open `http://127.0.0.1:8000`.
 ## Local Verification
 
 ```bash
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
 python3 -m compileall -q app tests
-pytest -q
+python -m pytest
 node --check app/static/app.js
 ```
