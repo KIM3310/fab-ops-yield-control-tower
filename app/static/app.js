@@ -53,12 +53,17 @@ async function boot() {
   const focusSevereLotBtn = document.getElementById("focus-severe-lot-btn");
   const copyReviewRouteBtn = document.getElementById("copy-review-route-btn");
   const copySevereLotBtn = document.getElementById("copy-severe-lot-btn");
+  const copyShiftSnapshotBtn = document.getElementById("copy-shift-snapshot-btn");
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
 
   let selectedToolId = "etch-14";
   let selectedLotId = "lot-8812";
   let latestLots = [];
   let latestSignatureId = "";
+  let latestOwnership = null;
+  let latestGate = null;
+  let latestHandoff = null;
+  let latestSignaturePayload = null;
 
   async function copyTextValue(text) {
     if (!text) return false;
@@ -93,6 +98,9 @@ async function boot() {
       fetchJson(`/api/release-gate?lot_id=${encodeURIComponent(selectedLotId)}`),
       fetchJson("/api/shift-handoff/signature"),
     ]);
+    latestOwnership = ownership.payload;
+    latestGate = gate.payload;
+    latestSignaturePayload = signature.payload;
 
     renderList(toolOwnership, [ownership.payload], (item) => `
       <p class="stack-kicker">${item.tool_id.toUpperCase()} · ${item.status.toUpperCase()}</p>
@@ -134,6 +142,8 @@ async function boot() {
       fetchJson("/api/evals/replays"),
     ]);
     latestSignatureId = signature.payload.signature_id || "";
+    latestHandoff = handoff.payload;
+    latestSignaturePayload = signature.payload;
 
     briefStatus.textContent = brief.status.toUpperCase();
     criticalCount.textContent = String(brief.ops_snapshot.critical_alarm_count);
@@ -317,6 +327,30 @@ async function boot() {
         ].join("\n")
       : "No severe lot is loaded yet.";
     await copyTextValue(payload);
+  });
+
+  copyShiftSnapshotBtn.addEventListener("click", async () => {
+    const lines = [
+      "fab-ops shift snapshot",
+      `Tool: ${selectedToolId}`,
+      `Lot: ${selectedLotId}`,
+      `Ownership lane: ${latestOwnership?.escalation_lane || "unknown"}`,
+      `Primary operator: ${latestOwnership?.primary_operator || "unknown"}`,
+      `Decision: ${latestGate?.decision || "pending"}`,
+      `Next action: ${latestGate?.next_action || "pending"}`,
+      `Yield risk: ${latestGate?.yield_risk_score ?? "unknown"}`,
+      `Failed checks: ${latestGate?.failed_checks?.join(", ") || "none"}`,
+      `Handoff: ${latestHandoff?.headline || "pending-handoff"}`,
+      `Signature: ${latestSignaturePayload?.signature_id || latestSignatureId || "pending-signature"}`,
+      `Signed by: ${latestSignaturePayload?.signed_by || "unknown"}`,
+      "",
+      "Focused routes",
+      `/api/tool-ownership?tool_id=${selectedToolId}`,
+      `/api/release-gate?lot_id=${selectedLotId}`,
+      "/api/shift-handoff",
+      "/api/shift-handoff/signature",
+    ];
+    await copyTextValue(lines.join("\n"));
   });
 
   loadBoard().catch(handleLoadError);

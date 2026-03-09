@@ -47,6 +47,8 @@ body {
 .hero-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .hero h1,
