@@ -38,6 +38,7 @@ Open `http://127.0.0.1:8000`.
 - `GET /health`
 - `GET /api/meta`
 - `GET /api/runtime/brief`
+- `GET /api/runtime/scorecard`
 - `GET /api/review-pack`
 - `GET /api/schema/alarm-report`
 - `GET /api/schema/shift-handoff`

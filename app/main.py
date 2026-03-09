@@ -1,16 +1,25 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+APP_DIR = Path(__file__).resolve().parent
+REPO_ROOT = APP_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-BASE_DIR = Path(__file__).resolve().parent
+from app.operator_access import build_operator_auth_status, require_operator_token
+from app.runtime_store import record_runtime_event, summarize_runtime_events
+
+
+BASE_DIR = APP_DIR
 STATIC_DIR = BASE_DIR / "static"
 
 SERVICE_NAME = "fab-ops-yield-control-tower"
@@ -192,6 +201,10 @@ ALLOWED_RISK_BUCKETS = {item["risk_bucket"] for item in LOTS_AT_RISK}
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def record_route_hit(route: str) -> None:
+    record_runtime_event("route_hit", at=utc_now_iso(), route=route)
 
 
 def get_tool_or_404(tool_id: str) -> Dict[str, Any]:
@@ -380,6 +393,8 @@ def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> 
 
 def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
+    operator_auth = build_operator_auth_status()
+    persistence = summarize_runtime_events()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -396,6 +411,8 @@ def build_runtime_brief() -> Dict[str, Any]:
             "replay_scenarios": len(REPLAY_SUITE),
         },
         "assignment_count": len(TOOL_OWNERSHIP),
+        "operator_auth": operator_auth,
+        "persistence": persistence,
         "ops_snapshot": summary,
         "review_flow": [
             "Open /health to confirm the fab runtime posture and review routes.",
@@ -422,6 +439,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
         ],
         "links": {
+            "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "review_summary_schema": "/api/review-summary/schema",
             "review_pack": "/api/review-pack",
@@ -443,6 +461,7 @@ def build_review_pack() -> Dict[str, Any]:
                 "/health",
                 "/api/meta",
                 "/api/runtime/brief",
+                "/api/runtime/scorecard",
                 "/api/review-summary",
                 "/api/review-pack",
                 "/api/schema/alarm-report",
@@ -462,6 +481,8 @@ def build_review_pack() -> Dict[str, Any]:
             "severe_lot_count": runtime_brief["ops_snapshot"]["severe_lot_count"],
             "replay_pass_count": len([case for case in REPLAY_SUITE if case["status"] == "pass"]),
             "latest_audit_events": audit_feed["summary"]["events"],
+            "operator_auth": runtime_brief["operator_auth"],
+            "persistence": runtime_brief["persistence"],
         },
         "operator_promises": [
             "Critical lots stay visible before a release decision is made.",
@@ -480,6 +501,7 @@ def build_review_pack() -> Dict[str, Any]:
         "two_minute_review": runtime_brief["two_minute_review"],
         "proof_assets": runtime_brief["proof_assets"],
         "links": {
+            "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "runtime_brief": "/api/runtime/brief",
         },
@@ -487,6 +509,8 @@ def build_review_pack() -> Dict[str, Any]:
 
 
 def build_meta() -> Dict[str, Any]:
+    operator_auth = build_operator_auth_status()
+    persistence = summarize_runtime_events()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -500,6 +524,7 @@ def build_meta() -> Dict[str, Any]:
             "/health",
             "/api/meta",
             "/api/runtime/brief",
+            "/api/runtime/scorecard",
             "/api/review-summary",
             "/api/review-summary/schema",
             "/api/review-pack",
@@ -532,12 +557,60 @@ def build_meta() -> Dict[str, Any]:
             "shift_handoff_ready": True,
             "audit_feed_ready": True,
             "replay_suite_ready": True,
+            "operator_auth_enabled": operator_auth["enabled"],
+            "runtime_store_path": persistence["path"],
             "next_action": "Review critical alarms and severe lots before opening the shift handoff export.",
         },
         "ops_contract": {
             "schema": "ops-envelope-v1",
             "version": 1,
             "required_fields": ["service", "status", "diagnostics.next_action"],
+        },
+    }
+
+
+def build_runtime_scorecard() -> Dict[str, Any]:
+    summary = build_fab_summary()
+    persistence = summarize_runtime_events()
+    operator_auth = build_operator_auth_status()
+    audit_feed = build_audit_feed()
+    replay_summary = build_replay_summary()
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "readiness_contract": "fab-ops-runtime-scorecard-v1",
+        "headline": "Runtime scorecard for fab handoff posture, release pressure, and persisted operator evidence.",
+        "runtime": {
+            "operator_auth": operator_auth,
+            "persistence": persistence,
+            "review_routes": [
+                "/health",
+                "/api/runtime/brief",
+                "/api/runtime/scorecard",
+                "/api/review-summary",
+                "/api/review-pack",
+                "/api/shift-handoff/signature",
+            ],
+        },
+        "summary": {
+            "critical_alarm_count": summary["critical_alarm_count"],
+            "severe_lot_count": summary["severe_lot_count"],
+            "watchlist_tools": audit_feed["summary"]["watchlist_tools"],
+            "replay_score_pct": replay_summary["summary"]["score_pct"],
+            "persisted_events": persistence["event_count"],
+        },
+        "recommendations": [
+            "Verify tool ownership and release gate before exporting a shift handoff.",
+            "Treat the signed handoff surface as the final operator artifact for next-shift review.",
+            "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
+        ],
+        "links": {
+            "health": "/health",
+            "runtime_brief": "/api/runtime/brief",
+            "review_summary": "/api/review-summary",
+            "review_pack": "/api/review-pack",
+            "handoff_signature": "/api/shift-handoff/signature",
         },
     }
 
@@ -649,6 +722,7 @@ app.add_middleware(
 
 @app.get("/health")
 async def health() -> Dict[str, Any]:
+    record_route_hit("/health")
     meta = build_meta()
     return {
         "status": "ok",
@@ -659,6 +733,7 @@ async def health() -> Dict[str, Any]:
         "links": {
             "meta": "/api/meta",
             "runtime_brief": "/api/runtime/brief",
+            "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "review_pack": "/api/review-pack",
             "alarm_report_schema": "/api/schema/alarm-report",
@@ -670,12 +745,20 @@ async def health() -> Dict[str, Any]:
 
 @app.get("/api/meta")
 async def meta() -> Dict[str, Any]:
+    record_route_hit("/api/meta")
     return build_meta()
 
 
 @app.get("/api/runtime/brief")
 async def runtime_brief() -> Dict[str, Any]:
+    record_route_hit("/api/runtime/brief")
     return build_runtime_brief()
+
+
+@app.get("/api/runtime/scorecard")
+async def runtime_scorecard() -> Dict[str, Any]:
+    record_route_hit("/api/runtime/scorecard")
+    return build_runtime_scorecard()
 
 
 @app.get("/api/review-summary")
@@ -683,6 +766,7 @@ async def review_summary(
     severity: str | None = Query(default=None),
     risk_bucket: str | None = Query(default=None),
 ) -> Dict[str, Any]:
+    record_route_hit("/api/review-summary")
     return build_review_summary(severity=severity, risk_bucket=risk_bucket)
 
 
@@ -693,6 +777,7 @@ async def review_summary_schema() -> Dict[str, Any]:
 
 @app.get("/api/review-pack")
 async def review_pack() -> Dict[str, Any]:
+    record_route_hit("/api/review-pack")
     return build_review_pack()
 
 
@@ -718,6 +803,7 @@ async def shift_handoff_schema() -> Dict[str, Any]:
 
 @app.get("/api/fabs/summary")
 async def fabs_summary() -> Dict[str, Any]:
+    record_route_hit("/api/fabs/summary")
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -727,6 +813,7 @@ async def fabs_summary() -> Dict[str, Any]:
 
 @app.get("/api/tools")
 async def tools() -> Dict[str, Any]:
+    record_route_hit("/api/tools")
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -736,6 +823,7 @@ async def tools() -> Dict[str, Any]:
 
 @app.get("/api/tool-ownership")
 async def tool_ownership(tool_id: str = Query(default="etch-14")) -> Dict[str, Any]:
+    record_route_hit("/api/tool-ownership")
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -745,6 +833,7 @@ async def tool_ownership(tool_id: str = Query(default="etch-14")) -> Dict[str, A
 
 @app.get("/api/alarms")
 async def alarms() -> Dict[str, Any]:
+    record_route_hit("/api/alarms")
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -754,6 +843,7 @@ async def alarms() -> Dict[str, Any]:
 
 @app.get("/api/lots/at-risk")
 async def lots_at_risk() -> Dict[str, Any]:
+    record_route_hit("/api/lots/at-risk")
     items = sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True)
     return {
         "status": "ok",
@@ -763,7 +853,10 @@ async def lots_at_risk() -> Dict[str, Any]:
 
 
 @app.get("/api/release-gate")
-async def release_gate(lot_id: str = Query(default="lot-8812")) -> Dict[str, Any]:
+async def release_gate(request: Request, lot_id: str = Query(default="lot-8812")) -> Dict[str, Any]:
+    require_operator_token(request)
+    record_route_hit("/api/release-gate")
+    record_runtime_event("release_gate_check", at=utc_now_iso(), lot_id=lot_id)
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -772,7 +865,10 @@ async def release_gate(lot_id: str = Query(default="lot-8812")) -> Dict[str, Any
 
 
 @app.get("/api/shift-handoff")
-async def shift_handoff() -> Dict[str, Any]:
+async def shift_handoff(request: Request) -> Dict[str, Any]:
+    require_operator_token(request)
+    record_route_hit("/api/shift-handoff")
+    record_runtime_event("handoff_export", at=utc_now_iso(), shift="night", fab_id="fab-west-1")
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -781,7 +877,15 @@ async def shift_handoff() -> Dict[str, Any]:
 
 
 @app.get("/api/shift-handoff/signature")
-async def shift_handoff_signature() -> Dict[str, Any]:
+async def shift_handoff_signature(request: Request) -> Dict[str, Any]:
+    require_operator_token(request)
+    record_route_hit("/api/shift-handoff/signature")
+    record_runtime_event(
+        "handoff_signature_export",
+        at=utc_now_iso(),
+        shift="night",
+        fab_id="fab-west-1",
+    )
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -791,11 +895,13 @@ async def shift_handoff_signature() -> Dict[str, Any]:
 
 @app.get("/api/audit/feed")
 async def audit_feed() -> Dict[str, Any]:
+    record_route_hit("/api/audit/feed")
     return build_audit_feed()
 
 
 @app.get("/api/evals/replays")
 async def replay_evals() -> Dict[str, Any]:
+    record_route_hit("/api/evals/replays")
     return build_replay_summary()
 
 
