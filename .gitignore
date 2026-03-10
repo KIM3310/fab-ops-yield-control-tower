@@ -4,3 +4,4 @@ __pycache__/
 *.egg-info/
 .runtime/
 .tmp-verify/
+.DS_Store
