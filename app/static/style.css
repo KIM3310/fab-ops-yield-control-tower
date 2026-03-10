@@ -71,6 +71,37 @@ body {
   line-height: 1.6;
 }
 
+.runtime-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.runtime-banner.is-loading {
+  border-color: rgba(93, 200, 255, 0.32);
+  background: rgba(93, 200, 255, 0.12);
+}
+
+.runtime-banner.is-ok {
+  border-color: rgba(73, 211, 155, 0.32);
+  background: rgba(73, 211, 155, 0.12);
+}
+
+.runtime-banner.is-degraded,
+.stack-item.is-empty {
+  border-color: rgba(255, 196, 92, 0.32);
+  background: rgba(255, 196, 92, 0.12);
+}
+
+.runtime-banner.is-error,
+.stack-item.is-error {
+  border-color: rgba(255, 122, 122, 0.38);
+  background: rgba(255, 122, 122, 0.12);
+}
+
 .hero-metrics,
 .grid {
   display: grid;
@@ -157,6 +188,22 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.ghost-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ghost-btn.is-busy {
+  border-color: rgba(93, 200, 255, 0.28);
+  background: rgba(93, 200, 255, 0.08);
+}
+
+.ghost-btn:disabled,
+.ghost-btn.is-busy {
+  cursor: progress;
+  opacity: 0.74;
+}
+
 .bullet-list,
 .stack-list {
   list-style: none;
@@ -183,6 +230,11 @@ body {
 .stack-item.selected {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.stack-item.is-empty,
+.stack-item.is-error {
+  border-style: dashed;
 }
 
 #tool-list .stack-item,

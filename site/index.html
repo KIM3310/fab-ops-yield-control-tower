@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <meta name="description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Fab Ops Yield Control Tower">
+  <meta property="og:description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fab Ops Yield Control Tower">
+  <meta name="twitter:description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower"><title>Fab Ops Yield Control Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#edf5fb; --panel:#fbfeff; --ink:#121820; --muted:#586679; --line:#d1dde8; --accent:#0f6db7; --soft:#ebf5ff; }
+    *{box-sizing:border-box} body{margin:0;font-family:"IBM Plex Sans",sans-serif;background:linear-gradient(180deg,#f7fbff 0,#eaf1f8 100%);color:var(--ink)}
+    .shell{max-width:1100px;margin:0 auto;padding:32px 20px 56px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 18px 40px rgba(15,23,42,.05)}
+    .hero,.grid{display:grid;gap:16px}.hero{margin-bottom:18px}.eyebrow,.chip{display:inline-flex;padding:8px 12px;border-radius:999px;font-size:.82rem;font-weight:700}.eyebrow{background:#101827;color:#fff}.chip{background:var(--soft);color:var(--accent)}
+    h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.04em;margin:0}.hero h1{font-size:clamp(2.4rem,4.8vw,4.4rem);line-height:.96}.lede{max-width:860px;margin:0;color:var(--muted);line-height:1.75}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:18px}.list{margin:0;padding-left:18px;color:var(--muted);line-height:1.8}.links a{color:var(--accent);text-decoration:none;font-weight:600}
+    @media (max-width:900px){.two{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel hero">
+      <div>
+        <span class="eyebrow">fab-ops-yield-control-tower</span>
+        <span class="chip">manufacturing ops</span>
+        <span class="chip">control tower</span>
+      </div>
+      <h1>Alarm triage, lot risk, release gates, and shift handoff for fab operations.</h1>
+      <p class="lede">This public Pages site is a free summary surface for the repository. The full project combines a FastAPI backend with a browser control tower, but the core value is the workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and signed next-shift handoff.</p>
+    </section>
+
+    <section class="grid two">
+      <article class="panel">
+        <h2>Operational story</h2>
+        <ul class="list">
+          <li>Alarm queue linked to tool and lot context.</li>
+          <li>Recovery board with hold, watch, and release-ready lanes.</li>
+          <li>Tool ownership and escalation lane visibility.</li>
+          <li>Shift handoff plus signature proof for continuity.</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Why this public version is static</h2>
+        <ul class="list">
+          <li>The repo’s strongest signal is the reviewable workflow, not public backend hosting.</li>
+          <li>Static hosting keeps the portfolio accessible at zero cost.</li>
+          <li>The full backend remains available in-repo for local validation and future service deployment.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid two">
+      <article class="panel links">
+        <h2>Read first</h2>
+        <ul class="list">
+          <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/README.md">README</a></li>
+          <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/review-pack.svg">Review pack diagram</a></li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Review path</h2>
+        <ul class="list">
+          <li>Start with runtime brief and recovery board.</li>
+          <li>Inspect tool ownership and release gate for one severe lot.</li>
+          <li>Finish with shift handoff and audit feed.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
