@@ -8,6 +8,12 @@
 - Treat this repo as an operator workbench demo with synthetic manufacturing data and explicit release boundaries.
 - Recovery board, release gate, and signed handoff routes are the proof surfaces before any production-readiness claim.
 
+
+## Role signals
+- **AI / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
+- **Solution architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
+- **Field / sales engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
+
 ## What it demonstrates
 
 - Fab control tower framing instead of a generic AI copilot
