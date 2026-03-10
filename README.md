@@ -8,11 +8,15 @@
 - Treat this repo as an operator workbench demo with synthetic manufacturing data and explicit release boundaries.
 - Recovery board, release gate, and signed handoff routes are the proof surfaces before any production-readiness claim.
 
-
 ## Role signals
 - **AI / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
 - **Solution architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
 - **Field / solutions engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
+
+## Runtime vs review/site surfaces
+- Primary runtime: the FastAPI app in `app/` plus the local UI assets under `app/static/` are the live operator surface.
+- Review/site surfaces: `site/` and `docs/` hold static reviewer material and diagrams; use them for recorded walkthroughs, not live runtime state.
+- Repo map: `scripts/` contains scenario helpers, `tests/` contains regression checks, and `infra/` contains deployment notes.
 
 ## What it demonstrates
 
@@ -67,7 +71,7 @@ Open `http://127.0.0.1:8000`.
 - `GET /api/audit/feed`
 - `GET /api/evals/replays`
 
-## Review Flow Snapshot
+## Review Flow (Short)
 
 1. `health`
 2. `runtime brief`
@@ -78,7 +82,7 @@ Open `http://127.0.0.1:8000`.
 7. `shift handoff + signature`
 8. `audit feed + replay evals`
 
-## Review Flow
+## Review Flow (Detailed)
 
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
