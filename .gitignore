@@ -1,6 +1,8 @@
 .pytest_cache/
 .venv/
+.venv*/
 __pycache__/
 *.egg-info/
 .runtime/
 .tmp-verify/
+.DS_Store
