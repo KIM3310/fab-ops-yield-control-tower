@@ -4,6 +4,10 @@
 
 ![Review pack diagram](docs/review-pack.svg)
 
+## Portfolio posture
+- Treat this repo as an operator workbench demo with synthetic manufacturing data and explicit release boundaries.
+- Recovery board, release gate, and signed handoff routes are the proof surfaces before any production-readiness claim.
+
 ## What it demonstrates
 
 - Fab control tower framing instead of a generic AI copilot
@@ -57,7 +61,7 @@ Open `http://127.0.0.1:8000`.
 - `GET /api/audit/feed`
 - `GET /api/evals/replays`
 
-## Review Flow
+## Review Flow Snapshot
 
 1. `health`
 2. `runtime brief`
