@@ -10,7 +10,7 @@
 
 ## Role signals
 - **AI / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
-- **Solution architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
+- **Solution / cloud architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
 - **Field / solutions engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
 
 ## Runtime vs review/site surfaces
