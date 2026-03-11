@@ -106,8 +106,8 @@ async function boot() {
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
   const runtimeBanner = document.getElementById("runtime-banner");
 
-  let selectedToolId = "etch-14";
-  let selectedLotId = "lot-8812";
+  let selectedToolId = "";
+  let selectedLotId = "";
   let latestLots = [];
   let latestSignatureId = "";
   let latestOwnership = null;
