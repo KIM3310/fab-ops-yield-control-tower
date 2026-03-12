@@ -90,6 +90,7 @@ async function boot() {
   const toolList = document.getElementById("tool-list");
   const toolOwnership = document.getElementById("tool-ownership");
   const releaseGate = document.getElementById("release-gate");
+  const recoveryWhatIf = document.getElementById("recovery-what-if");
   const auditFeed = document.getElementById("audit-feed");
   const recoveryBoard = document.getElementById("recovery-board");
   const recoveryModeSelect = document.getElementById("recovery-mode-select");
@@ -115,6 +116,7 @@ async function boot() {
   let latestHandoff = null;
   let latestSignaturePayload = null;
   let latestRecoveryBoard = null;
+  let latestRecoveryWhatIf = null;
   let selectedRecoveryMode = "all";
 
   function setRuntimeBanner(state, message) {
@@ -241,6 +243,7 @@ async function boot() {
       fetchJson("/api/shift-handoff/signature"),
       fetchJson("/api/evals/replays"),
       fetchJson(`/api/recovery-board?mode=${encodeURIComponent(selectedRecoveryMode)}`),
+      fetchJson(`/api/recovery-what-if?lot_id=${encodeURIComponent(selectedLotId || "lot-8812")}&yield_gain=0.25&maintenance_complete=true`),
     ]);
 
     const [
@@ -254,6 +257,7 @@ async function boot() {
       signatureResult,
       replayResult,
       recoveryResult,
+      recoveryWhatIfResult,
     ] = results;
 
     const degradedPanels = [];
@@ -361,6 +365,32 @@ async function boot() {
         recoveryBoard,
         "Recovery board unavailable",
         describeError(recoveryResult.reason),
+        "error"
+      );
+    }
+
+    if (recoveryWhatIfResult.status === "fulfilled") {
+      latestRecoveryWhatIf = recoveryWhatIfResult.value;
+      renderList(
+        recoveryWhatIf,
+        [recoveryWhatIfResult.value],
+        (item) => `
+          <p class="stack-kicker">${item.simulated.decision.toUpperCase()} · eta gain ${item.delta.release_eta_minutes}m</p>
+          <h3>${item.lot_id}</h3>
+          <p>Baseline ${item.baseline.decision} -> Simulated ${item.simulated.decision}</p>
+          <p class="stack-meta">Risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
+        `,
+        {
+          emptyTitle: "Recovery what-if unavailable",
+          emptyMessage: "No simulation is available for the selected lot.",
+        }
+      );
+    } else {
+      latestRecoveryWhatIf = null;
+      renderStatusCard(
+        recoveryWhatIf,
+        "Recovery what-if unavailable",
+        describeError(recoveryWhatIfResult.reason),
         "error"
       );
     }

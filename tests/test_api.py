@@ -30,6 +30,7 @@ def test_health_and_service_grade_surfaces() -> None:
     review_summary = client.get("/api/review-summary?severity=critical")
     review_summary_schema = client.get("/api/review-summary/schema")
     recovery_board = client.get("/api/recovery-board?mode=hold")
+    recovery_what_if = client.get("/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true")
     recovery_board_schema = client.get("/api/recovery-board/schema")
     review_pack = client.get("/api/review-pack")
     alarm_schema = client.get("/api/schema/alarm-report")
@@ -43,6 +44,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert health_payload["links"]["runtime_brief"] == "/api/runtime/brief"
     assert health_payload["links"]["review_summary"] == "/api/review-summary"
     assert health_payload["links"]["recovery_board"] == "/api/recovery-board"
+    assert health_payload["links"]["recovery_what_if"] == "/api/recovery-what-if"
     assert health_payload["links"]["review_pack"] == "/api/review-pack"
     assert health_payload["diagnostics"]["shift_handoff_ready"] is True
     assert health_payload["diagnostics"]["audit_feed_ready"] is True
@@ -58,6 +60,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert meta_payload["diagnostics"]["recovery_board_ready"] is True
     assert "/api/review-summary" in meta_payload["routes"]
     assert "/api/recovery-board" in meta_payload["routes"]
+    assert "/api/recovery-what-if" in meta_payload["routes"]
     assert "/api/recovery-board/schema" in meta_payload["routes"]
     assert "/api/alarms" in meta_payload["routes"]
     assert "/api/shift-handoff" in meta_payload["routes"]
@@ -74,6 +77,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert brief_payload["assignment_count"] == 3
     assert brief_payload["links"]["review_summary"] == "/api/review-summary"
     assert brief_payload["links"]["recovery_board"] == "/api/recovery-board"
+    assert brief_payload["links"]["recovery_what_if"] == "/api/recovery-what-if"
     assert brief_payload["links"]["runtime_scorecard"] == "/api/runtime/scorecard"
     assert len(brief_payload["two_minute_review"]) == 5
     assert brief_payload["proof_assets"][0]["href"] == "/health"
@@ -88,6 +92,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert scorecard_payload["runtime"]["persistence"]["enabled"] is True
     assert scorecard_payload["runtime"]["persistence"]["event_type_counts"]["route_hit"] >= 1
     assert scorecard_payload["links"]["recovery_board"] == "/api/recovery-board"
+    assert scorecard_payload["links"]["recovery_what_if"] == "/api/recovery-what-if"
 
     assert review_summary.status_code == 200
     review_summary_payload = review_summary.json()
@@ -107,6 +112,14 @@ def test_health_and_service_grade_surfaces() -> None:
     assert recovery_payload["spotlight"]["maintenance_owner"] == "maint-etch-cell-a"
     assert recovery_payload["route_bundle"]["recovery_board_schema"] == "/api/recovery-board/schema"
 
+    assert recovery_what_if.status_code == 200
+    recovery_what_if_payload = recovery_what_if.json()
+    assert recovery_what_if_payload["contract_version"] == "fab-ops-recovery-what-if-v1"
+    assert recovery_what_if_payload["baseline"]["decision"] == "hold-release"
+    assert recovery_what_if_payload["simulated"]["decision"] in {"reroute-review", "release-with-sampling"}
+    assert recovery_what_if_payload["delta"]["release_eta_minutes"] >= 0
+    assert recovery_what_if_payload["route_bundle"]["recovery_what_if"] == "/api/recovery-what-if"
+
     assert recovery_board_schema.status_code == 200
     assert recovery_board_schema.json()["schema"] == "fab-ops-recovery-board-v1"
 
@@ -116,6 +129,7 @@ def test_health_and_service_grade_surfaces() -> None:
     assert "/api/runtime/scorecard" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/review-summary" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/recovery-board" in review_payload["proof_bundle"]["review_routes"]
+    assert "/api/recovery-what-if" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["critical_alarm_count"] == 1
     assert review_payload["proof_bundle"]["hold_count"] == 1
     assert review_payload["proof_bundle"]["watch_count"] == 1
