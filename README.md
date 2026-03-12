@@ -5,7 +5,7 @@
 ![Review pack diagram](docs/review-pack.svg)
 
 ## Portfolio posture
-- Treat this repo as a shift-ready control room with synthetic fab data, not as a manufacturing-flavored dashboard mockup.
+- Read this repo like a shift-ready control room with synthetic fab data, not like a manufacturing-flavored dashboard mockup.
 - Recovery board, release gate, and signed handoff routes should all line up before you talk about production readiness.
 
 ## Role signals
