@@ -57,6 +57,7 @@ Open `http://127.0.0.1:8000`.
 - `GET /api/runtime/scorecard`
 - `GET /api/review-pack`
 - `GET /api/recovery-board`
+- `GET /api/recovery-what-if`
 - `GET /api/recovery-board/schema`
 - `GET /api/schema/alarm-report`
 - `GET /api/schema/shift-handoff`
@@ -87,7 +88,8 @@ Open `http://127.0.0.1:8000`.
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
 3. Inspect `/api/recovery-board?mode=hold` to isolate the lot that blocks release posture.
-4. Use the landing-screen selectors or inspect example routes such as `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
+4. Run `/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true` before trusting a maintenance-based recovery claim.
+5. Use the landing-screen selectors or inspect example routes such as `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
 5. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
 
 ## Proof Assets
