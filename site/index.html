@@ -21,7 +21,11 @@
     .hero,.grid{display:grid;gap:16px}.hero{margin-bottom:18px}.eyebrow,.chip{display:inline-flex;padding:8px 12px;border-radius:999px;font-size:.82rem;font-weight:700}.eyebrow{background:#101827;color:#fff}.chip{background:var(--soft);color:var(--accent)}
     h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.04em;margin:0}.hero h1{font-size:clamp(2.4rem,4.8vw,4.4rem);line-height:.96}.lede{max-width:860px;margin:0;color:var(--muted);line-height:1.75}
     .two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:18px}.list{margin:0;padding-left:18px;color:var(--muted);line-height:1.8}.links a{color:var(--accent);text-decoration:none;font-weight:600}
+    .quick-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+    .quick-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff}
+    .quick-card strong{display:block;margin-bottom:8px}
     @media (max-width:900px){.two{grid-template-columns:1fr}}
+    @media (max-width:900px){.quick-strip{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -33,7 +37,21 @@
         <span class="chip">control tower</span>
       </div>
       <h1>Alarm triage, lot risk, release gates, and shift handoff for fab operations.</h1>
-      <p class="lede">This public Pages site is a free summary surface for the repository. The full project combines a FastAPI backend with a browser control tower, but the core value is the workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and signed next-shift handoff.</p>
+      <p class="lede">This public Pages site is the fastest recruiter-facing summary of the product. The real value is the workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and a signed next-shift handoff that still reads clearly under pressure.</p>
+      <div class="quick-strip">
+        <article class="quick-card">
+          <strong>01 · Runtime brief</strong>
+          <p>Anchor the walkthrough in operator posture before touching alarms or release claims.</p>
+        </article>
+        <article class="quick-card">
+          <strong>02 · Recovery board</strong>
+          <p>Show hold / watch / ready lanes so the lot-risk story is immediately concrete.</p>
+        </article>
+        <article class="quick-card">
+          <strong>03 · Shift handoff</strong>
+          <p>End with the signed handoff to prove continuity, not just dashboard cosmetics.</p>
+        </article>
+      </div>
     </section>
 
     <section class="grid two">
@@ -58,14 +76,14 @@
 
     <section class="grid two">
       <article class="panel links">
-        <h2>Read first</h2>
+        <h2>Start here</h2>
         <ul class="list">
           <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/README.md">README</a></li>
           <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/review-pack.svg">Review pack diagram</a></li>
         </ul>
       </article>
       <article class="panel">
-        <h2>Review path</h2>
+        <h2>30-second reviewer path</h2>
         <ul class="list">
           <li>Start with runtime brief and recovery board.</li>
           <li>Inspect tool ownership and release gate for one severe lot.</li>
