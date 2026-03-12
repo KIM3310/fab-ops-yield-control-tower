@@ -345,6 +345,82 @@ def build_release_gate(lot_id: str) -> Dict[str, Any]:
     }
 
 
+def build_recovery_what_if(
+    lot_id: str,
+    *,
+    yield_gain: float = 0.2,
+    maintenance_complete: bool = False,
+) -> Dict[str, Any]:
+    baseline = build_release_gate(lot_id)
+    lot = get_lot_or_404(lot_id)
+    tool = get_tool_or_404(lot["tool_id"])
+    assignment = build_tool_ownership(tool["tool_id"])
+
+    simulated_yield_risk = round(max(0.0, float(lot["yield_risk_score"]) - max(0.0, min(0.5, yield_gain))), 2)
+    simulated_tool_status = "healthy" if maintenance_complete else tool["status"]
+    simulated_ack_required = False if maintenance_complete else assignment["ack_required"]
+
+    if simulated_yield_risk >= 0.85 and simulated_tool_status == "alarm":
+        simulated_decision = "hold-release"
+    elif simulated_yield_risk >= 0.65:
+        simulated_decision = "reroute-review"
+    else:
+        simulated_decision = "release-with-sampling"
+
+    simulated_failed_checks: List[str] = []
+    if simulated_tool_status == "alarm":
+        simulated_failed_checks.append("critical tool alarm still open")
+    if simulated_yield_risk >= 0.85:
+        simulated_failed_checks.append("yield risk score exceeds severe threshold")
+    if simulated_ack_required:
+        simulated_failed_checks.append("maintenance owner acknowledgement still required")
+    if simulated_decision == "release-with-sampling":
+        simulated_failed_checks = []
+
+    baseline_eta = 240 if baseline["decision"] == "hold-release" else 90 if baseline["decision"] == "reroute-review" else 30
+    simulated_eta = 240 if simulated_decision == "hold-release" else 90 if simulated_decision == "reroute-review" else 30
+
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "contract_version": "fab-ops-recovery-what-if-v1",
+        "lot_id": lot_id,
+        "baseline": {
+            **baseline,
+            "release_eta_minutes": baseline_eta,
+        },
+        "simulated": {
+            "lot_id": lot_id,
+            "tool_id": tool["tool_id"],
+            "decision": simulated_decision,
+            "yield_risk_score": simulated_yield_risk,
+            "tool_status": simulated_tool_status,
+            "next_action": "Promote recovery path to release board if simulated posture holds through the next shift." if simulated_decision != "hold-release" else lot["next_action"],
+            "primary_operator": assignment["primary_operator"],
+            "maintenance_owner": assignment["maintenance_owner"],
+            "failed_checks": simulated_failed_checks,
+            "release_eta_minutes": simulated_eta,
+        },
+        "delta": {
+            "risk_score_reduction": round(float(baseline["yield_risk_score"]) - simulated_yield_risk, 2),
+            "release_eta_minutes": max(0, baseline_eta - simulated_eta),
+            "maintenance_clearance": maintenance_complete,
+        },
+        "review_actions": [
+            "Run the what-if drill before claiming the lot is ready for release or reroute.",
+            "Pair the simulated decision with tool ownership and handoff signature before shift change.",
+            "Use recovery board + release gate + what-if together during maintenance approval review.",
+        ],
+        "route_bundle": {
+            "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
+            "release_gate": f"/api/release-gate?lot_id={lot_id}",
+            "shift_handoff_signature": "/api/shift-handoff/signature",
+        },
+    }
+
+
 def build_handoff_signature() -> Dict[str, Any]:
     handoff = build_shift_handoff()
     digest_input = "|".join(
@@ -440,6 +516,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             {"label": "Health Surface", "href": "/health", "kind": "route"},
             {"label": "Review Summary", "href": "/api/review-summary", "kind": "route"},
             {"label": "Recovery Board", "href": "/api/recovery-board?mode=hold", "kind": "route"},
+            {"label": "Recovery What-If", "href": "/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true", "kind": "route"},
             {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
             {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
             {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
@@ -449,6 +526,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "review_summary": "/api/review-summary",
             "review_summary_schema": "/api/review-summary/schema",
             "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
             "recovery_board_schema": "/api/recovery-board/schema",
             "review_pack": "/api/review-pack",
         },
@@ -473,6 +551,7 @@ def build_review_pack() -> Dict[str, Any]:
                 "/api/runtime/scorecard",
                 "/api/review-summary",
                 "/api/recovery-board",
+                "/api/recovery-what-if",
                 "/api/recovery-board/schema",
                 "/api/review-pack",
                 "/api/schema/alarm-report",
@@ -518,6 +597,7 @@ def build_review_pack() -> Dict[str, Any]:
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
             "runtime_brief": "/api/runtime/brief",
         },
     }
@@ -543,6 +623,7 @@ def build_meta() -> Dict[str, Any]:
             "/api/review-summary",
             "/api/review-summary/schema",
             "/api/recovery-board",
+            "/api/recovery-what-if",
             "/api/recovery-board/schema",
             "/api/review-pack",
             "/api/schema/alarm-report",
@@ -635,6 +716,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "runtime_brief": "/api/runtime/brief",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
             "review_pack": "/api/review-pack",
             "handoff_signature": "/api/shift-handoff/signature",
         },
@@ -775,6 +857,7 @@ def build_recovery_board_schema() -> Dict[str, Any]:
         ],
         "links": {
             "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
             "recovery_board_schema": "/api/recovery-board/schema",
             "review_summary": "/api/review-summary",
             "review_pack": "/api/review-pack",
@@ -846,6 +929,7 @@ async def health() -> Dict[str, Any]:
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "recovery_what_if": "/api/recovery-what-if",
             "review_pack": "/api/review-pack",
             "alarm_report_schema": "/api/schema/alarm-report",
             "shift_handoff_schema": "/api/schema/shift-handoff",
@@ -895,6 +979,20 @@ async def recovery_board(mode: str | None = Query(default=None)) -> Dict[str, An
 @app.get("/api/recovery-board/schema")
 async def recovery_board_schema() -> Dict[str, Any]:
     return build_recovery_board_schema()
+
+
+@app.get("/api/recovery-what-if")
+async def recovery_what_if(
+    lot_id: str = Query(default="lot-8812"),
+    yield_gain: float = Query(default=0.2),
+    maintenance_complete: bool = Query(default=False),
+) -> Dict[str, Any]:
+    record_route_hit("/api/recovery-what-if")
+    return build_recovery_what_if(
+        lot_id=lot_id,
+        yield_gain=yield_gain,
+        maintenance_complete=maintenance_complete,
+    )
 
 
 @app.get("/api/review-pack")
