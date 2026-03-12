@@ -5,8 +5,8 @@
 ![Review pack diagram](docs/review-pack.svg)
 
 ## Portfolio posture
-- Treat this repo as an operator workbench demo with synthetic manufacturing data and explicit release boundaries.
-- Recovery board, release gate, and signed handoff routes are the proof surfaces before any production-readiness claim.
+- Treat this repo as a shift-ready control room with synthetic fab data, not as a manufacturing-flavored dashboard mockup.
+- Recovery board, release gate, and signed handoff routes should all line up before you talk about production readiness.
 
 ## Role signals
 - **AI / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
