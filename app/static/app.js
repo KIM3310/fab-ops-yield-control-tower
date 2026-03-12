@@ -195,7 +195,7 @@ const RECORDED_FAB = {
 
 const REVIEW_LENSES = {
   operator: {
-    headline: "Operator Lens",
+    headline: "Shift lead lens",
     summary: "Start with the severe lot, then compare recovery and release posture before copying a handoff.",
     cards: [
       ["01 · Severe lot", "Focus the top blocker before you explain any other metric."],
@@ -205,7 +205,7 @@ const REVIEW_LENSES = {
     actions: ["Focus Severe Lot", "Copy Shift Snapshot", "Copy Focused Route"],
   },
   reviewer: {
-    headline: "Reviewer Lens",
+    headline: "Review proof lens",
     summary: "Keep review pack, trust boundary, and replay evidence together so the control tower feels auditable, not just flashy.",
     cards: [
       ["01 · Review pack", "Read operator promises and trust boundary before you touch the severe lot."],
@@ -215,7 +215,7 @@ const REVIEW_LENSES = {
     actions: ["Copy Focused Route", "Copy Severe Lot", "Refresh Control Tower"],
   },
   executive: {
-    headline: "Executive Lens",
+    headline: "Ops director lens",
     summary: "Lead with blocker, ETA delta, and handoff readiness so the business story reads in under a minute.",
     cards: [
       ["01 · Blocker", "Use the severe lot as the headline instead of the whole dashboard."],
