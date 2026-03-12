@@ -13,6 +13,12 @@
 - **Solution / cloud architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
 - **Field / solutions engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
 
+
+## Portfolio context
+- **Portfolio family:** governed ops and control towers
+- **This repo's role:** industrial / semiconductor control-tower branch focused on release and handoff continuity.
+- **Related repos:** `regulated-case-workbench`, `twincity-ui`, `Nexus-Hive`
+
 ## Runtime vs review/site surfaces
 - Primary runtime: the FastAPI app in `app/` plus the local UI assets under `app/static/` are the live operator surface.
 - Review/site surfaces: `site/` and `docs/` hold static reviewer material and diagrams; use them for recorded walkthroughs, not live runtime state.
