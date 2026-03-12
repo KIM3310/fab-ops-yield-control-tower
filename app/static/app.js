@@ -20,6 +20,16 @@ function renderBulletList(container, items, fallbackText) {
   });
 }
 
+function renderRichBulletList(container, items, fallbackText) {
+  container.innerHTML = "";
+  const listItems = items.length > 0 ? items : [{ html: fallbackText }];
+  listItems.forEach((item) => {
+    const li = document.createElement("li");
+    li.innerHTML = item.html || fallbackText;
+    container.appendChild(li);
+  });
+}
+
 function renderList(container, items, formatter, options = {}) {
   container.innerHTML = "";
   if (items.length === 0) {
@@ -257,6 +267,8 @@ async function boot() {
   const reviewPromises = document.getElementById("review-promises");
   const reviewBoundary = document.getElementById("review-boundary");
   const reviewRoutePreview = document.getElementById("review-route-preview");
+  const storylineSummary = document.getElementById("storyline-summary");
+  const storylineRoute = document.getElementById("storyline-route");
   const alarmList = document.getElementById("alarm-list");
   const lotList = document.getElementById("lot-list");
   const toolList = document.getElementById("tool-list");
@@ -342,6 +354,44 @@ async function boot() {
     if (action === "Copy Focused Route") return copyReviewRouteBtn.click();
     if (action === "Copy Severe Lot") return copySevereLotBtn.click();
     if (action === "Refresh Control Tower") return refreshBoardBtn.click();
+  }
+
+  function renderStoryline() {
+    const spotlight = latestRecoveryBoard?.spotlight || null;
+    const storyLotId = selectedLotId || spotlight?.lot_id || latestGate?.lot_id || "pending-lot";
+    const boardStatus = spotlight?.board_status || spotlight?.risk_bucket || selectedRecoveryMode;
+    const simulatedDecision = latestRecoveryWhatIf?.simulated?.decision || "pending";
+    const etaGain = latestRecoveryWhatIf?.delta?.release_eta_minutes;
+    const riskDelta = latestRecoveryWhatIf?.delta?.risk_score_reduction;
+    const maintenanceState = latestRecoveryWhatIf?.delta?.maintenance_clearance ? "complete" : "still open";
+    const signatureId = latestSignaturePayload?.signature_id || latestSignatureId || "pending-signature";
+
+    renderRichBulletList(storylineSummary, [
+      {
+        html: `<strong>${storyLotId}</strong> is the live lot-risk anchor, currently reading as <strong>${boardStatus}</strong> until the release gate changes.`,
+      },
+      {
+        html: `<strong>Recovery what-if</strong> shifts the posture toward <strong>${simulatedDecision}</strong>${typeof etaGain === "number" ? ` with ${etaGain} minutes of ETA recovery` : ""}${typeof riskDelta === "number" ? ` and ${riskDelta} risk-score reduction` : ""}.`,
+      },
+      {
+        html: `<strong>Reviewer-proof handoff</strong> stays honest: maintenance is <strong>${maintenanceState}</strong>, gate evidence remains required, and the next shift should see signature <strong>${signatureId}</strong> before anyone talks about release confidence.`,
+      },
+    ], "Storyline details load after the focused lot is available.");
+
+    renderRichBulletList(storylineRoute, [
+      {
+        html: `<strong>1.</strong> Recovery board -> <code>/api/recovery-board?mode=${selectedRecoveryMode}</code> keeps the blocker visible first.`,
+      },
+      {
+        html: `<strong>2.</strong> Recovery what-if -> <code>/api/recovery-what-if?lot_id=${storyLotId}&yield_gain=0.25&maintenance_complete=true</code> shows the bounded improvement claim instead of implying recovery.`,
+      },
+      {
+        html: `<strong>3.</strong> Release gate + ownership -> <code>/api/release-gate?lot_id=${storyLotId}</code> and <code>/api/tool-ownership?tool_id=${selectedToolId || "pending-tool"}</code> prove who owns the next move.`,
+      },
+      {
+        html: `<strong>4.</strong> Shift handoff -> <code>/api/shift-handoff</code> plus <code>/api/shift-handoff/signature</code> closes the story with next-shift continuity, not a cosmetic dashboard ending.`,
+      },
+    ], "Reviewer route details load after the focused lot is available.");
   }
 
   async function copyTextValue(text) {
@@ -436,6 +486,7 @@ async function boot() {
       li.textContent = item;
       reviewRoutePreview.appendChild(li);
     });
+    renderStoryline();
 
     return focusedFailures;
   }
@@ -579,6 +630,7 @@ async function boot() {
         <p>${item.next_action}</p>
         <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
       `);
+      renderStoryline();
       setRuntimeBanner("ok", "Recorded recruiter review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
       setRefreshBusy(false);
       return;
@@ -906,6 +958,7 @@ async function boot() {
       setRuntimeBanner("ok", "All runtime surfaces are live.");
     }
 
+    renderStoryline();
     setRefreshBusy(false);
   }
 
