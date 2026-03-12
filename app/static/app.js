@@ -193,6 +193,39 @@ const RECORDED_FAB = {
   },
 };
 
+const REVIEW_LENSES = {
+  operator: {
+    headline: "Operator Lens",
+    summary: "Start with the severe lot, then compare recovery and release posture before copying a handoff.",
+    cards: [
+      ["01 · Severe lot", "Focus the top blocker before you explain any other metric."],
+      ["02 · Recovery", "Use recovery what-if and release gate together so the next action is concrete."],
+      ["03 · Shift handoff", "Copy the shift snapshot only after the blocker and handoff proof match."],
+    ],
+    actions: ["Focus Severe Lot", "Copy Shift Snapshot", "Copy Focused Route"],
+  },
+  reviewer: {
+    headline: "Reviewer Lens",
+    summary: "Keep review pack, trust boundary, and replay evidence together so the control tower feels auditable, not just flashy.",
+    cards: [
+      ["01 · Review pack", "Read operator promises and trust boundary before you touch the severe lot."],
+      ["02 · Proof route", "Use the focused route to connect recovery board, release gate, and signature."],
+      ["03 · Replay", "Use replay summary as the confidence layer after the route is clear."],
+    ],
+    actions: ["Copy Focused Route", "Copy Severe Lot", "Refresh Control Tower"],
+  },
+  executive: {
+    headline: "Executive Lens",
+    summary: "Lead with blocker, ETA delta, and handoff readiness so the business story reads in under a minute.",
+    cards: [
+      ["01 · Blocker", "Use the severe lot as the headline instead of the whole dashboard."],
+      ["02 · ETA", "Explain recovery what-if as a release timing decision, not just a technical tweak."],
+      ["03 · Handoff", "End with the shift snapshot because that is the operational commitment."],
+    ],
+    actions: ["Copy Shift Snapshot", "Copy Severe Lot", "Focus Severe Lot"],
+  },
+};
+
 function populateSelect(select, items, valueKey, labelBuilder, selectedValue) {
   select.innerHTML = "";
   select.disabled = items.length === 0;
@@ -245,6 +278,15 @@ async function boot() {
   const copyShiftSnapshotBtn = document.getElementById("copy-shift-snapshot-btn");
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
   const runtimeBanner = document.getElementById("runtime-banner");
+  const lensHeadline = document.getElementById("lens-headline");
+  const lensSummary = document.getElementById("lens-summary");
+  const lensGrid = document.getElementById("lens-grid");
+  const lensOperatorBtn = document.getElementById("lens-operator-btn");
+  const lensReviewerBtn = document.getElementById("lens-reviewer-btn");
+  const lensExecutiveBtn = document.getElementById("lens-executive-btn");
+  const lensPrimaryBtn = document.getElementById("lens-primary-btn");
+  const lensSecondaryBtn = document.getElementById("lens-secondary-btn");
+  const lensTertiaryBtn = document.getElementById("lens-tertiary-btn");
 
   let selectedToolId = "";
   let selectedLotId = "";
@@ -257,6 +299,7 @@ async function boot() {
   let latestRecoveryBoard = null;
   let latestRecoveryWhatIf = null;
   let selectedRecoveryMode = "all";
+  let currentLens = "operator";
 
   function setRuntimeBanner(state, message) {
     runtimeBanner.className = `runtime-banner is-${state}`;
@@ -269,6 +312,36 @@ async function boot() {
     refreshBoardBtn.textContent = isBusy
       ? "Refreshing Control Tower…"
       : "Refresh Control Tower";
+  }
+
+  function renderLensPanel() {
+    const config = REVIEW_LENSES[currentLens] || REVIEW_LENSES.operator;
+    lensHeadline.textContent = config.headline;
+    lensSummary.textContent = config.summary;
+    lensGrid.innerHTML = config.cards
+      .map(
+        ([title, body]) => `
+          <article class="panel">
+            <h2>${title}</h2>
+            <p class="stack-meta">${body}</p>
+          </article>`,
+      )
+      .join("");
+    [lensOperatorBtn, lensReviewerBtn, lensExecutiveBtn].forEach((btn) => btn?.classList.remove("is-active"));
+    if (currentLens === "operator") lensOperatorBtn?.classList.add("is-active");
+    if (currentLens === "reviewer") lensReviewerBtn?.classList.add("is-active");
+    if (currentLens === "executive") lensExecutiveBtn?.classList.add("is-active");
+    lensPrimaryBtn.textContent = config.actions[0];
+    lensSecondaryBtn.textContent = config.actions[1];
+    lensTertiaryBtn.textContent = config.actions[2];
+  }
+
+  function runLensAction(action) {
+    if (action === "Focus Severe Lot") return focusSevereLotBtn.click();
+    if (action === "Copy Shift Snapshot") return copyShiftSnapshotBtn.click();
+    if (action === "Copy Focused Route") return copyReviewRouteBtn.click();
+    if (action === "Copy Severe Lot") return copySevereLotBtn.click();
+    if (action === "Refresh Control Tower") return refreshBoardBtn.click();
   }
 
   async function copyTextValue(text) {
@@ -860,6 +933,22 @@ async function boot() {
   refreshBoardBtn.addEventListener("click", () => {
     loadBoard().catch(handleLoadError);
   });
+  lensOperatorBtn.addEventListener("click", () => {
+    currentLens = "operator";
+    renderLensPanel();
+  });
+  lensReviewerBtn.addEventListener("click", () => {
+    currentLens = "reviewer";
+    renderLensPanel();
+  });
+  lensExecutiveBtn.addEventListener("click", () => {
+    currentLens = "executive";
+    renderLensPanel();
+  });
+  lensPrimaryBtn.addEventListener("click", () => runLensAction(lensPrimaryBtn.textContent));
+  lensSecondaryBtn.addEventListener("click", () => runLensAction(lensSecondaryBtn.textContent));
+  lensTertiaryBtn.addEventListener("click", () => runLensAction(lensTertiaryBtn.textContent));
+  renderLensPanel();
 
   recoveryModeSelect.addEventListener("change", () => {
     selectedRecoveryMode = recoveryModeSelect.value;
