@@ -54,6 +54,145 @@ function describeError(error) {
   return "Request failed";
 }
 
+const RECORDED_FAB = {
+  brief: {
+    status: "recorded",
+    ops_snapshot: {
+      critical_alarm_count: 2,
+      severe_lot_count: 1,
+    },
+  },
+  replay: {
+    summary: { score_pct: 100 },
+    runs: [
+      { status: "pass", scenario: "Plasma drift recovery", checks: 6 },
+      { status: "pass", scenario: "Etch chamber hold-to-watch release", checks: 5 },
+    ],
+  },
+  reviewPack: {
+    headline: "Recorded review pack for yield risk, recovery, and handoff posture.",
+    operator_promises: [
+      "Alarms, lots, tools, and handoff stay in one reviewer-visible surface.",
+      "Recovery what-if and release-gate decisions remain tied to the same lot context.",
+    ],
+    two_minute_review: [
+      "Focus the severe lot first.",
+      "Compare recovery what-if against the release gate before discussing readiness.",
+    ],
+    trust_boundary: [
+      "Recorded mode shows workflow proof, not live fab telemetry freshness.",
+    ],
+    proof_assets: [
+      { label: "Recovery Board", href: "/api/recovery-board?mode=hold" },
+      { label: "Release Gate", href: "/api/release-gate?lot_id=LOT-8812" },
+    ],
+  },
+  recoveryBoard: {
+    items: [
+      {
+        board_status: "hold",
+        tool_id: "ETCH-04",
+        lot_id: "LOT-8812",
+        next_action: "Finish chamber maintenance, then rerun the release gate.",
+        yield_risk_score: 87,
+        maintenance_owner: "team-park",
+        failed_checks: ["maintenance-open", "signature-pending"],
+      },
+      {
+        board_status: "watch",
+        tool_id: "CMP-08",
+        lot_id: "LOT-7741",
+        next_action: "Keep on watch until the next replay checkpoint clears.",
+        yield_risk_score: 54,
+        maintenance_owner: "team-choi",
+        failed_checks: ["watch-window-open"],
+      },
+    ],
+    spotlight: {
+      lot_id: "LOT-8812",
+      tool_id: "ETCH-04",
+      yield_risk_score: 87,
+      risk_bucket: "hold",
+      board_status: "hold",
+      maintenance_owner: "team-park",
+      next_action: "Finish chamber maintenance, then rerun the release gate.",
+    },
+  },
+  recoveryWhatIf: {
+    lot_id: "LOT-8812",
+    baseline: { decision: "hold" },
+    simulated: { decision: "watch" },
+    delta: {
+      release_eta_minutes: 48,
+      risk_score_reduction: 12,
+      maintenance_clearance: true,
+    },
+  },
+  alarms: {
+    items: [
+      { severity: "critical", tool_id: "ETCH-04", category: "RF drift", symptom: "Yield excursion on chamber 2", lot_id: "LOT-8812", sop_ref: "ETCH-RF-12" },
+    ],
+  },
+  lots: {
+    items: [
+      { risk_bucket: "hold", tool_id: "ETCH-04", lot_id: "LOT-8812", product_family: "14nm logic", yield_risk_score: 87, next_action: "Complete maintenance then rerun gate" },
+      { risk_bucket: "watch", tool_id: "CMP-08", lot_id: "LOT-7741", product_family: "memory", yield_risk_score: 54, next_action: "Watch next replay checkpoint" },
+    ],
+  },
+  tools: {
+    items: [
+      { status: "degraded", line: "L1", tool_id: "ETCH-04", chamber: "C2", last_pm_hours: 41, mtbf_risk: "high" },
+      { status: "watch", line: "L3", tool_id: "CMP-08", chamber: "C1", last_pm_hours: 18, mtbf_risk: "medium" },
+    ],
+  },
+  audit: {
+    items: [
+      { event: "maintenance-opened", tool_id: "ETCH-04", actor: "team-park", lot_id: "LOT-8812", at: "2026-03-12T05:22:00Z" },
+      { event: "replay-passed", tool_id: "CMP-08", actor: "ops-shift-b", lot_id: "LOT-7741", at: "2026-03-12T04:58:00Z" },
+    ],
+  },
+  handoff: {
+    payload: {
+      headline: "Finish ETCH-04 maintenance, then recheck LOT-8812 before the next shift handoff.",
+      must_acknowledge: [
+        "ETCH-04 is still the top blocker for the next release window.",
+        "LOT-8812 moves from hold to watch only if maintenance closes and the replay stays green.",
+      ],
+    },
+  },
+  signature: {
+    payload: {
+      signature_contract: "fab-handoff-v1",
+      signature_id: "sig-fab-8812",
+      signed_by: "shift-lead-lee",
+      release_channel: "shift-handoff",
+      digest_preview: "sha256:fab8812",
+    },
+  },
+  focused: {
+    ownership: {
+      payload: {
+        tool_id: "ETCH-04",
+        primary_operator: "operator-han",
+        maintenance_owner: "team-park",
+        escalation_lane: "yield-escalation",
+        due_by: "2026-03-12T18:00:00Z",
+        ack_required: true,
+      },
+    },
+    gate: {
+      payload: {
+        lot_id: "LOT-8812",
+        tool_id: "ETCH-04",
+        decision: "hold",
+        next_action: "Finish maintenance and rerun the replay bundle before release.",
+        yield_risk_score: 87,
+        failed_checks: ["maintenance-open", "signature-pending"],
+      },
+    },
+  },
+};
+
 function populateSelect(select, items, valueKey, labelBuilder, selectedValue) {
   select.innerHTML = "";
   select.disabled = items.length === 0;
@@ -259,6 +398,118 @@ async function boot() {
       recoveryResult,
       recoveryWhatIfResult,
     ] = results;
+
+    const allFailed = results.every((item) => item.status === "rejected");
+    if (allFailed) {
+      briefStatus.textContent = RECORDED_FAB.brief.status.toUpperCase();
+      criticalCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.critical_alarm_count);
+      severeCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.severe_lot_count);
+      replayScore.textContent = `${RECORDED_FAB.replay.summary.score_pct}%`;
+      reviewHeadline.textContent = RECORDED_FAB.reviewPack.headline;
+      renderBulletList(
+        reviewPromises,
+        [
+          ...RECORDED_FAB.reviewPack.operator_promises,
+          ...RECORDED_FAB.reviewPack.two_minute_review.map((item) => `2-minute: ${item}`),
+        ],
+        "Operator promises are not available yet."
+      );
+      renderBulletList(
+        reviewBoundary,
+        [
+          ...RECORDED_FAB.reviewPack.trust_boundary,
+          ...RECORDED_FAB.reviewPack.proof_assets.map((item) => `proof: ${item.label} -> ${item.href}`),
+        ],
+        "Trust boundary details are not available yet."
+      );
+      renderList(replayList, RECORDED_FAB.replay.runs, (item) => `
+        <p class="stack-kicker">${item.status.toUpperCase()}</p>
+        <h3>${item.scenario}</h3>
+        <p class="stack-meta">${item.checks} checks</p>
+      `);
+      latestRecoveryBoard = RECORDED_FAB.recoveryBoard;
+      latestRecoveryWhatIf = RECORDED_FAB.recoveryWhatIf;
+      latestLots = RECORDED_FAB.lots.items;
+      latestHandoff = RECORDED_FAB.handoff.payload;
+      latestSignaturePayload = RECORDED_FAB.signature.payload;
+      latestSignatureId = RECORDED_FAB.signature.payload.signature_id;
+      latestOwnership = RECORDED_FAB.focused.ownership.payload;
+      latestGate = RECORDED_FAB.focused.gate.payload;
+      selectedToolId = RECORDED_FAB.focused.ownership.payload.tool_id;
+      selectedLotId = RECORDED_FAB.focused.gate.payload.lot_id;
+      populateSelect(toolSelect, RECORDED_FAB.tools.items, "tool_id", (item) => `${item.tool_id} · ${item.status}`, selectedToolId);
+      populateSelect(lotSelect, RECORDED_FAB.lots.items, "lot_id", (item) => `${item.lot_id} · risk ${item.yield_risk_score}`, selectedLotId);
+      renderList(recoveryBoard, RECORDED_FAB.recoveryBoard.items, (item) => `
+        <p class="stack-kicker">${item.board_status.toUpperCase()} · ${item.tool_id}</p>
+        <h3>${item.lot_id}</h3>
+        <p>${item.next_action}</p>
+        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ")}</p>
+      `);
+      renderList(recoveryWhatIf, [RECORDED_FAB.recoveryWhatIf], (item) => `
+        <p class="stack-kicker">${item.simulated.decision.toUpperCase()} · eta gain ${item.delta.release_eta_minutes}m</p>
+        <h3>${item.lot_id}</h3>
+        <p>Baseline ${item.baseline.decision} -> Simulated ${item.simulated.decision}</p>
+        <p class="stack-meta">Risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
+      `);
+      renderList(alarmList, RECORDED_FAB.alarms.items, (item) => `
+        <p class="stack-kicker">${item.severity.toUpperCase()} · ${item.tool_id}</p>
+        <h3>${item.category}</h3>
+        <p>${item.symptom}</p>
+        <p class="stack-meta">Lot ${item.lot_id} · SOP ${item.sop_ref}</p>
+      `);
+      renderList(lotList, RECORDED_FAB.lots.items, (item) => `
+        <p class="stack-kicker">${item.risk_bucket.toUpperCase()} · ${item.tool_id}</p>
+        <h3>${item.lot_id}</h3>
+        <p>${item.product_family}</p>
+        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.next_action}</p>
+      `);
+      renderList(toolList, RECORDED_FAB.tools.items, (item) => `
+        <p class="stack-kicker">${item.status.toUpperCase()} · ${item.line}</p>
+        <h3>${item.tool_id}</h3>
+        <p>Chamber ${item.chamber}</p>
+        <p class="stack-meta">PM ${item.last_pm_hours}h · MTBF ${item.mtbf_risk}</p>
+      `);
+      renderList(auditFeed, RECORDED_FAB.audit.items, (item) => `
+        <p class="stack-kicker">${item.event.toUpperCase()} · ${item.tool_id}</p>
+        <h3>${item.actor}</h3>
+        <p>Lot ${item.lot_id}</p>
+        <p class="stack-meta">${item.at}</p>
+      `);
+      handoffHeadline.textContent = RECORDED_FAB.handoff.payload.headline;
+      renderBulletList(handoffActions, RECORDED_FAB.handoff.payload.must_acknowledge, "No shift handoff actions are pending.");
+      renderList(handoffSignature, [RECORDED_FAB.signature.payload], (item) => `
+        <p class="stack-kicker">${item.signature_contract.toUpperCase()}</p>
+        <h3>${item.signature_id}</h3>
+        <p>${item.signed_by} · ${item.release_channel}</p>
+        <p class="stack-meta">Digest ${item.digest_preview}</p>
+      `);
+      reviewRoutePreview.innerHTML = "";
+      [
+        `recovery board -> /api/recovery-board?mode=hold`,
+        `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
+        `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
+        `handoff signature -> ${latestSignatureId}`,
+      ].forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        reviewRoutePreview.appendChild(li);
+      });
+      renderList(toolOwnership, [RECORDED_FAB.focused.ownership.payload], (item) => `
+        <p class="stack-kicker">${item.tool_id}</p>
+        <h3>${item.primary_operator}</h3>
+        <p>${item.maintenance_owner} · ${item.escalation_lane}</p>
+        <p class="stack-meta">Due ${item.due_by} · Ack ${item.ack_required ? "required" : "not required"}</p>
+      `);
+      renderList(releaseGate, [RECORDED_FAB.focused.gate.payload], (item) => `
+        <p class="stack-kicker">${item.decision.toUpperCase()} · ${item.tool_id}</p>
+        <h3>${item.lot_id}</h3>
+        <p>${item.next_action}</p>
+        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
+      `);
+      setRuntimeBanner("ok", "Recorded recruiter review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
+      setRefreshBusy(false);
+      return;
+    }
 
     const degradedPanels = [];
 
