@@ -285,6 +285,7 @@ async function boot() {
   const continuityProofFreshness = document.getElementById("continuity-proof-freshness");
   const continuitySignature = document.getElementById("continuity-signature");
   const continuityGuard = document.getElementById("continuity-guard");
+  const continuityBlockers = document.getElementById("continuity-blockers");
   const replayList = document.getElementById("replay-list");
   const toolSelect = document.getElementById("tool-select");
   const lotSelect = document.getElementById("lot-select");
@@ -332,6 +333,7 @@ async function boot() {
     const escalationLane = latestOwnership?.escalation_lane || 'pending escalation lane';
     const gateDecision = latestGate?.decision || latestGate?.release_decision || 'pending gate';
     const blocker = latestGate?.blocking_reason || latestGate?.headline || 'release evidence still loading';
+    const failedChecks = Array.isArray(latestGate?.failed_checks) ? latestGate.failed_checks : [];
     const ackCount = Array.isArray(latestHandoff?.must_acknowledge) ? latestHandoff.must_acknowledge.length : 0;
 
     if (continuityOwnerLane) continuityOwnerLane.textContent = `${owner} owns ${escalationLane} while ${blocker}.`;
@@ -340,6 +342,9 @@ async function boot() {
     if (continuityGuard) continuityGuard.textContent = gateDecision === 'release'
       ? 'Shift continuity is aligned. Keep the signed handoff attached when forwarding the release decision.'
       : 'Shift continuity stays blocked until owner, release gate, and signature line up.';
+    if (continuityBlockers) continuityBlockers.textContent = failedChecks.length
+      ? `${failedChecks.length} gate blockers stay attached to the focused lot: ${failedChecks.join(', ')}.`
+      : 'Gate blockers cleared. Keep the focused lot attached to the signed handoff before copying the shift summary.';
   }
 
   function setRuntimeBanner(state, message) {

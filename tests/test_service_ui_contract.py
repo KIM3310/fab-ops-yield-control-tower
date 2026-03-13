@@ -16,9 +16,11 @@ def test_service_ui_focus_route_contract() -> None:
         'id="continuity-proof-freshness"',
         'id="continuity-signature"',
         'id="continuity-guard"',
+        'id="continuity-blockers"',
         'id="storyline-route"',
         'Start with the severe lot, then compare recovery and release posture before copying a handoff.',
         'Shift continuity stays blocked until owner, release gate, and signature line up.',
+        'Gate blockers stay visible with the focused lot before any shift handoff is copied.',
     ]
 
     for token in required_tokens:
