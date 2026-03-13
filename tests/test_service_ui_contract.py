@@ -11,8 +11,14 @@ def test_service_ui_focus_route_contract() -> None:
         'id="focus-severe-lot-btn"',
         'id="copy-review-route-btn"',
         'id="copy-shift-snapshot-btn"',
+        'id="continuity-checkpoint-panel"',
+        'id="continuity-owner-lane"',
+        'id="continuity-proof-freshness"',
+        'id="continuity-signature"',
+        'id="continuity-guard"',
         'id="storyline-route"',
         'Start with the severe lot, then compare recovery and release posture before copying a handoff.',
+        'Shift continuity stays blocked until owner, release gate, and signature line up.',
     ]
 
     for token in required_tokens:
