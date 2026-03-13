@@ -75,6 +75,9 @@ def test_health_and_service_grade_surfaces() -> None:
     assert brief_payload["evidence_counts"]["recovery_routes"] == 3
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
+    assert brief_payload["focus_lot"]["lot_id"] == "lot-8812"
+    assert brief_payload["focus_lot"]["release_decision"] == "hold-release"
+    assert brief_payload["focus_lot"]["review_path"][-1] == "/api/shift-handoff/signature"
     assert brief_payload["links"]["review_summary"] == "/api/review-summary"
     assert brief_payload["links"]["recovery_board"] == "/api/recovery-board"
     assert brief_payload["links"]["recovery_what_if"] == "/api/recovery-what-if"
@@ -137,6 +140,8 @@ def test_health_and_service_grade_surfaces() -> None:
     assert "/api/evals/replays" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/audit/feed" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["latest_audit_events"] == 3
+    assert review_payload["focus_lot"]["maintenance_owner"] == "maint-etch-cell-a"
+    assert review_payload["focus_lot"]["review_path"][1] == "/api/recovery-board?mode=hold"
     assert isinstance(review_payload["operator_promises"], list)
     assert len(review_payload["two_minute_review"]) == 5
     assert review_payload["proof_assets"][0]["href"] == "/health"
