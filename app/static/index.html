@@ -50,6 +50,29 @@
           <strong id="replay-score">Loading</strong>
         </div>
       </div>
+      <section class="panel" id="continuity-checkpoint-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Shift continuity checkpoint</p>
+            <h2>Keep blocker, owner, freshness, and signature aligned.</h2>
+          </div>
+        </div>
+        <div class="grid grid-3">
+          <article class="info-card">
+            <h3>Owner Lane</h3>
+            <p id="continuity-owner-lane" class="stack-meta">Loading owner lane...</p>
+          </article>
+          <article class="info-card">
+            <h3>Proof Freshness</h3>
+            <p id="continuity-proof-freshness" class="stack-meta">Loading proof freshness...</p>
+          </article>
+          <article class="info-card">
+            <h3>Signature Hold</h3>
+            <p id="continuity-signature" class="stack-meta">Loading handoff signature...</p>
+          </article>
+        </div>
+        <p id="continuity-guard" class="stack-meta">Shift continuity stays blocked until owner, release gate, and signature line up.</p>
+      </section>
     </header>
 
     <section class="panel">

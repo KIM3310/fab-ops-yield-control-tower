@@ -281,6 +281,10 @@ async function boot() {
   const handoffHeadline = document.getElementById("handoff-headline");
   const handoffActions = document.getElementById("handoff-actions");
   const handoffSignature = document.getElementById("handoff-signature");
+  const continuityOwnerLane = document.getElementById("continuity-owner-lane");
+  const continuityProofFreshness = document.getElementById("continuity-proof-freshness");
+  const continuitySignature = document.getElementById("continuity-signature");
+  const continuityGuard = document.getElementById("continuity-guard");
   const replayList = document.getElementById("replay-list");
   const toolSelect = document.getElementById("tool-select");
   const lotSelect = document.getElementById("lot-select");
@@ -312,6 +316,31 @@ async function boot() {
   let latestRecoveryWhatIf = null;
   let selectedRecoveryMode = "all";
   let currentLens = "operator";
+
+
+  function formatIsoStamp(value) {
+    if (!value) return 'pending';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toISOString().replace('.000Z', 'Z');
+  }
+
+  function renderContinuityCheckpoint() {
+    const signatureId = latestSignaturePayload?.signature_id || latestSignatureId || 'pending-signature';
+    const signedAt = latestSignaturePayload?.signed_at || latestHandoff?.generated_at || null;
+    const owner = latestOwnership?.primary_operator || latestOwnership?.maintenance_owner || 'pending owner';
+    const escalationLane = latestOwnership?.escalation_lane || 'pending escalation lane';
+    const gateDecision = latestGate?.decision || latestGate?.release_decision || 'pending gate';
+    const blocker = latestGate?.blocking_reason || latestGate?.headline || 'release evidence still loading';
+    const ackCount = Array.isArray(latestHandoff?.must_acknowledge) ? latestHandoff.must_acknowledge.length : 0;
+
+    if (continuityOwnerLane) continuityOwnerLane.textContent = `${owner} owns ${escalationLane} while ${blocker}.`;
+    if (continuityProofFreshness) continuityProofFreshness.textContent = `Signed ${formatIsoStamp(signedAt)} · gate ${gateDecision} · ${ackCount} ack items.`;
+    if (continuitySignature) continuitySignature.textContent = `Signature ${signatureId} stays attached before any next-shift release claim.`;
+    if (continuityGuard) continuityGuard.textContent = gateDecision === 'release'
+      ? 'Shift continuity is aligned. Keep the signed handoff attached when forwarding the release decision.'
+      : 'Shift continuity stays blocked until owner, release gate, and signature line up.';
+  }
 
   function setRuntimeBanner(state, message) {
     runtimeBanner.className = `runtime-banner is-${state}`;
@@ -377,6 +406,8 @@ async function boot() {
         html: `<strong>Reviewer-proof handoff</strong> stays honest: maintenance is <strong>${maintenanceState}</strong>, gate evidence remains required, and the next shift should see signature <strong>${signatureId}</strong> before anyone talks about release confidence.`,
       },
     ], "Storyline details load after the focused lot is available.");
+
+    renderContinuityCheckpoint();
 
     renderRichBulletList(storylineRoute, [
       {
