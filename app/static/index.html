@@ -17,13 +17,21 @@
       <p id="runtime-banner" class="runtime-banner is-loading" role="status" aria-live="polite">
         Refreshing control tower data…
       </p>
-      <div class="hero-actions">
-        <button id="focus-severe-lot-btn" class="ghost-btn" type="button">Focus Severe Lot</button>
-        <button id="copy-review-route-btn" class="ghost-btn" type="button">Copy Focused Route</button>
-        <button id="copy-severe-lot-btn" class="ghost-btn" type="button">Copy Severe Lot</button>
-        <button id="copy-shift-snapshot-btn" class="ghost-btn" type="button">Copy Shift Snapshot</button>
-        <button id="refresh-board-btn" class="ghost-btn" type="button">Refresh Control Tower</button>
+      <div class="hero-action-stack">
+        <div class="hero-actions">
+          <button id="focus-severe-lot-btn" class="ghost-btn" type="button">Focus Severe Lot</button>
+          <button id="copy-review-route-btn" class="ghost-btn" type="button">Copy Focused Route</button>
+          <button id="refresh-board-btn" class="ghost-btn" type="button">Refresh Control Tower</button>
+        </div>
+        <details class="hero-more-actions">
+          <summary>More handoff actions</summary>
+          <div class="hero-actions hero-actions--secondary">
+            <button id="copy-severe-lot-btn" class="ghost-btn" type="button">Copy Severe Lot</button>
+            <button id="copy-shift-snapshot-btn" class="ghost-btn" type="button">Copy Shift Snapshot</button>
+          </div>
+        </details>
       </div>
+      <p class="stack-meta">Fast top-fold path: focus the severe lot, copy the route, then open handoff copy only when the blocker and owner are aligned.</p>
       <div class="hero-metrics">
         <div class="metric-card">
           <span class="metric-label">Runtime</span>

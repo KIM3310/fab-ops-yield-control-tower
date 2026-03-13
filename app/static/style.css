@@ -44,11 +44,34 @@ body {
   margin-bottom: 24px;
 }
 
+.hero-action-stack {
+  display: grid;
+  gap: 12px;
+}
+
 .hero-actions {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.hero-more-actions {
+  justify-self: end;
+  width: min(100%, 360px);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hero-more-actions summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.hero-more-actions[open] summary {
+  margin-bottom: 12px;
 }
 
 .hero h1,
