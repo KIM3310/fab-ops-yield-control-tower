@@ -24,6 +24,11 @@
 - Review/site surfaces: `site/` and `docs/` hold static reviewer material and diagrams; use them for recorded walkthroughs, not live runtime state.
 - Repo map: `scripts/` contains scenario helpers, `tests/` contains regression checks, and `infra/` contains deployment notes.
 
+## Reviewer walkthrough in one story
+1. Start with the static review/site material only to frame the fab scenario and seeded lots.
+2. Switch to the live FastAPI surface for the real release-gate, recovery-board, and handoff decisions.
+3. Finish on audit feed plus replay evals so the walkthrough lands on continuity evidence instead of a frozen screenshot.
+
 ## What it demonstrates
 
 - Fab control tower framing instead of a generic AI copilot
