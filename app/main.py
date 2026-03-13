@@ -262,6 +262,32 @@ def build_shift_handoff_schema() -> Dict[str, Any]:
     }
 
 
+def build_focus_lot() -> Dict[str, Any]:
+    spotlight_lot = get_lot_or_404('lot-8812')
+    spotlight_alarm = next(alarm for alarm in ALARMS if alarm['lot_id'] == spotlight_lot['lot_id'])
+    spotlight_tool = get_tool_or_404(spotlight_lot['tool_id'])
+    release_gate = build_release_gate(spotlight_lot['lot_id'])
+    ownership = build_tool_ownership(spotlight_tool['tool_id'])
+    handoff = build_shift_handoff()
+    return {
+        'lot_id': spotlight_lot['lot_id'],
+        'alarm_id': spotlight_alarm['alarm_id'],
+        'tool_id': spotlight_tool['tool_id'],
+        'severity': spotlight_alarm['severity'],
+        'risk_bucket': spotlight_lot['risk_bucket'],
+        'release_decision': release_gate['decision'],
+        'next_action': spotlight_lot['next_action'],
+        'maintenance_owner': ownership['maintenance_owner'],
+        'handoff_headline': handoff['headline'],
+        'review_path': [
+            '/api/runtime/brief',
+            '/api/recovery-board?mode=hold',
+            f"/api/release-gate?lot_id={spotlight_lot['lot_id']}",
+            '/api/shift-handoff/signature',
+        ],
+    }
+
+
 def build_fab_summary() -> Dict[str, Any]:
     critical_alarms = [alarm for alarm in ALARMS if alarm["severity"] == "critical"]
     severe_lots = [lot for lot in LOTS_AT_RISK if lot["yield_risk_score"] >= 0.8]
@@ -473,6 +499,7 @@ def build_runtime_brief() -> Dict[str, Any]:
     recovery_board = build_recovery_board()
     operator_auth = build_operator_auth_status()
     persistence = summarize_runtime_events()
+    focus_lot = build_focus_lot()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -490,6 +517,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "recovery_routes": len(recovery_board["items"]),
         },
         "assignment_count": len(TOOL_OWNERSHIP),
+        "focus_lot": focus_lot,
         "operator_auth": operator_auth,
         "persistence": persistence,
         "ops_snapshot": summary,
@@ -537,6 +565,7 @@ def build_review_pack() -> Dict[str, Any]:
     runtime_brief = build_runtime_brief()
     audit_feed = build_audit_feed()
     recovery_board = build_recovery_board()
+    focus_lot = build_focus_lot()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -577,6 +606,7 @@ def build_review_pack() -> Dict[str, Any]:
             "operator_auth": runtime_brief["operator_auth"],
             "persistence": runtime_brief["persistence"],
         },
+        "focus_lot": focus_lot,
         "operator_promises": [
             "Critical lots stay visible before a release decision is made.",
             "Tool alarms remain linked to chambers, lots, and SOP references.",
