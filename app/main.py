@@ -463,6 +463,52 @@ def build_recovery_what_if(
     }
 
 
+def build_release_board() -> Dict[str, Any]:
+    items: List[Dict[str, Any]] = []
+    for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
+        gate = build_release_gate(lot["lot_id"])
+        ownership = build_tool_ownership(lot["tool_id"])
+        items.append(
+            {
+                "lot_id": lot["lot_id"],
+                "tool_id": lot["tool_id"],
+                "decision": gate["decision"],
+                "yield_risk_score": lot["yield_risk_score"],
+                "risk_bucket": lot["risk_bucket"],
+                "failed_checks": gate["failed_checks"],
+                "maintenance_owner": ownership["maintenance_owner"],
+                "ack_required": ownership["ack_required"],
+                "next_action": gate["next_action"],
+            }
+        )
+
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "contract_version": "fab-ops-release-board-v1",
+        "summary": {
+            "visible_lots": len(items),
+            "hold_release": len([item for item in items if item["decision"] == "hold-release"]),
+            "reroute_review": len([item for item in items if item["decision"] == "reroute-review"]),
+            "release_with_sampling": len([item for item in items if item["decision"] == "release-with-sampling"]),
+        },
+        "spotlight": items[0] if items else None,
+        "items": items,
+        "review_actions": [
+            "Review the release board before discussing any single lot as release-ready.",
+            "Keep failed checks and maintenance ownership paired so a release decision always names the next operator.",
+            "Use release board plus handoff signature as the final go/no-go set before shift change.",
+        ],
+        "route_bundle": {
+            "release_board": "/api/release-board",
+            "recovery_board": "/api/recovery-board",
+            "release_gate": "/api/release-gate?lot_id=lot-8812",
+            "shift_handoff": "/api/shift-handoff",
+        },
+    }
+
+
 def build_handoff_signature() -> Dict[str, Any]:
     handoff = build_shift_handoff()
     manifest_bytes = stable_json(handoff).encode("utf-8")
@@ -570,6 +616,7 @@ def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> 
 def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
     recovery_board = build_recovery_board()
+    release_board = build_release_board()
     operator_auth = build_operator_auth_status()
     persistence = summarize_runtime_events()
     focus_lot = build_focus_lot()
@@ -588,6 +635,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "lots_at_risk": len(LOTS_AT_RISK),
             "replay_scenarios": len(REPLAY_SUITE),
             "recovery_routes": len(recovery_board["items"]),
+            "release_board_rows": release_board["summary"]["visible_lots"],
         },
         "assignment_count": len(TOOL_OWNERSHIP),
         "focus_lot": focus_lot,
@@ -598,6 +646,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "Open /health to confirm the fab runtime posture and review routes.",
             "Read /api/runtime/brief for the control-tower contract and evidence counts.",
             "Use /api/recovery-board to separate hold lots from watch and release-ready lots.",
+            "Use /api/release-board to confirm the whole queue before discussing any single lot release.",
             "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
             "Export /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before the next operator release.",
         ],
@@ -605,6 +654,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "Open /health to confirm critical-alarm and replay surfaces are available.",
             "Read /api/runtime/brief for the control-tower contract and current ops snapshot.",
             "Inspect /api/recovery-board?mode=hold to find the lot that blocks release posture.",
+            "Inspect /api/release-board before treating any downstream lot as release-ready.",
             "Inspect /api/tool-ownership?tool_id=etch-14 and /api/release-gate?lot_id=lot-8812 before trusting release posture.",
             "Review /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before handing the queue to the next shift.",
         ],
@@ -617,6 +667,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             {"label": "Health Surface", "href": "/health", "kind": "route"},
             {"label": "Review Summary", "href": "/api/review-summary", "kind": "route"},
             {"label": "Recovery Board", "href": "/api/recovery-board?mode=hold", "kind": "route"},
+            {"label": "Release Board", "href": "/api/release-board", "kind": "route"},
             {"label": "Recovery What-If", "href": "/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true", "kind": "route"},
             {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
             {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
@@ -628,6 +679,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             "review_summary": "/api/review-summary",
             "review_summary_schema": "/api/review-summary/schema",
             "recovery_board": "/api/recovery-board",
+            "release_board": "/api/release-board",
             "recovery_what_if": "/api/recovery-what-if",
             "recovery_board_schema": "/api/recovery-board/schema",
             "review_pack": "/api/review-pack",
@@ -639,6 +691,7 @@ def build_review_pack() -> Dict[str, Any]:
     runtime_brief = build_runtime_brief()
     audit_feed = build_audit_feed()
     recovery_board = build_recovery_board()
+    release_board = build_release_board()
     focus_lot = build_focus_lot()
     return {
         "status": "ok",
@@ -654,6 +707,7 @@ def build_review_pack() -> Dict[str, Any]:
                 "/api/runtime/scorecard",
                 "/api/review-summary",
                 "/api/recovery-board",
+                "/api/release-board",
                 "/api/recovery-what-if",
                 "/api/recovery-board/schema",
                 "/api/review-pack",
@@ -678,6 +732,7 @@ def build_review_pack() -> Dict[str, Any]:
             "hold_count": recovery_board["summary"]["hold_count"],
             "watch_count": recovery_board["summary"]["watch_count"],
             "ready_count": recovery_board["summary"]["ready_count"],
+            "release_board_rows": release_board["summary"]["visible_lots"],
             "operator_auth": runtime_brief["operator_auth"],
             "persistence": runtime_brief["persistence"],
         },
@@ -702,6 +757,7 @@ def build_review_pack() -> Dict[str, Any]:
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "release_board": "/api/release-board",
             "recovery_what_if": "/api/recovery-what-if",
             "runtime_brief": "/api/runtime/brief",
         },
@@ -728,6 +784,7 @@ def build_meta() -> Dict[str, Any]:
             "/api/review-summary",
             "/api/review-summary/schema",
             "/api/recovery-board",
+            "/api/release-board",
             "/api/recovery-what-if",
             "/api/recovery-board/schema",
             "/api/review-pack",
@@ -750,6 +807,7 @@ def build_meta() -> Dict[str, Any]:
             "tool-health-board",
             "tool-ownership-surface",
             "release-gate-surface",
+            "release-board-surface",
             "recovery-board-surface",
             "lot-risk-prioritization",
             "shift-handoff-surface",
@@ -782,6 +840,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
     audit_feed = build_audit_feed()
     replay_summary = build_replay_summary()
     recovery_board = build_recovery_board()
+    release_board = build_release_board()
     return {
         "status": "ok",
         "service": SERVICE_NAME,
@@ -797,6 +856,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
                 "/api/runtime/scorecard",
                 "/api/review-summary",
                 "/api/recovery-board",
+                "/api/release-board",
                 "/api/review-pack",
                 "/api/shift-handoff/signature",
                 "/api/shift-handoff/verify",
@@ -809,6 +869,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "hold_lots": recovery_board["summary"]["hold_count"],
             "watch_lots": recovery_board["summary"]["watch_count"],
             "ready_lots": recovery_board["summary"]["ready_count"],
+            "release_board_rows": release_board["summary"]["visible_lots"],
             "replay_score_pct": replay_summary["summary"]["score_pct"],
             "persisted_events": persistence["event_count"],
         },
@@ -823,6 +884,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "runtime_brief": "/api/runtime/brief",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "release_board": "/api/release-board",
             "recovery_what_if": "/api/recovery-what-if",
             "review_pack": "/api/review-pack",
             "handoff_signature": "/api/shift-handoff/signature",
@@ -1037,6 +1099,7 @@ async def health() -> Dict[str, Any]:
             "runtime_scorecard": "/api/runtime/scorecard",
             "review_summary": "/api/review-summary",
             "recovery_board": "/api/recovery-board",
+            "release_board": "/api/release-board",
             "recovery_what_if": "/api/recovery-what-if",
             "review_pack": "/api/review-pack",
             "alarm_report_schema": "/api/schema/alarm-report",
@@ -1082,6 +1145,12 @@ async def review_summary_schema() -> Dict[str, Any]:
 async def recovery_board(mode: str | None = Query(default=None)) -> Dict[str, Any]:
     record_route_hit("/api/recovery-board")
     return build_recovery_board(mode=mode)
+
+
+@app.get("/api/release-board")
+async def release_board() -> Dict[str, Any]:
+    record_route_hit("/api/release-board")
+    return build_release_board()
 
 
 @app.get("/api/recovery-board/schema")
