@@ -9,8 +9,8 @@
 - Recovery board, release gate, and signed handoff routes should all line up before you talk about production readiness.
 
 ## Role signals
-- **AI / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
-- **Solution / cloud architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
+- **AI engineer / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
+- **Solutions architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
 - **Field / solutions engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
 
 
