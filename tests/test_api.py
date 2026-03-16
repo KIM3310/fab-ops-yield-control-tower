@@ -167,6 +167,7 @@ def test_core_domain_endpoints() -> None:
     release_gate = client.get("/api/release-gate?lot_id=lot-8812")
     handoff = client.get("/api/shift-handoff")
     handoff_signature = client.get("/api/shift-handoff/signature")
+    handoff_verify = client.get("/api/shift-handoff/verify")
     replay = client.get("/api/evals/replays")
 
     assert fabs.status_code == 200
@@ -203,6 +204,14 @@ def test_core_domain_endpoints() -> None:
     signature_payload = handoff_signature.json()["payload"]
     assert signature_payload["signature_contract"] == "fab-ops-handoff-signature-v1"
     assert signature_payload["signature_id"] == "handoff-fab-west-1-night"
+    assert signature_payload["algorithm"] == "hmac-sha256"
+    assert len(signature_payload["sha256"]) == 64
+    assert len(signature_payload["signature"]) == 64
+
+    assert handoff_verify.status_code == 200
+    verify_payload = handoff_verify.json()["payload"]
+    assert verify_payload["overall_valid"] is True
+    assert verify_payload["checks"]["signature_match"] is True
 
     assert replay.status_code == 200
     replay_payload = replay.json()

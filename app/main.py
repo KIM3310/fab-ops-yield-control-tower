@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +28,7 @@ STATIC_DIR = BASE_DIR / "static"
 SERVICE_NAME = "fab-ops-yield-control-tower"
 ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
 SHIFT_HANDOFF_SCHEMA = "fab-ops-shift-handoff-v1"
+HANDOFF_SIGNATURE_CONTRACT = "fab-ops-handoff-signature-v1"
 ALARM_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 ALLOWED_RECOVERY_MODES = {"all", "hold", "watch", "ready"}
 
@@ -202,6 +206,18 @@ ALLOWED_RISK_BUCKETS = {item["risk_bucket"] for item in LOTS_AT_RISK}
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def handoff_signing_key() -> str:
+    return str(os.getenv("FAB_OPS_HANDOFF_SIGNING_KEY", "fab-ops-demo-signing-key")).strip() or "fab-ops-demo-signing-key"
+
+
+def handoff_signing_key_id() -> str:
+    return str(os.getenv("FAB_OPS_HANDOFF_SIGNING_KEY_ID", "fab-ops-demo-v1")).strip() or "fab-ops-demo-v1"
+
+
+def stable_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
 
 
 def record_route_hit(route: str) -> None:
@@ -449,29 +465,86 @@ def build_recovery_what_if(
 
 def build_handoff_signature() -> Dict[str, Any]:
     handoff = build_shift_handoff()
-    digest_input = "|".join(
-        [
-            handoff["fab_id"],
-            handoff["shift"],
-            ",".join(handoff["open_critical_alarms"]),
-            ",".join(item["lot_id"] for item in handoff["lots_at_risk"]),
-            ",".join(handoff["must_acknowledge"]),
-        ]
-    )
-    digest = hashlib.sha256(digest_input.encode("utf-8")).hexdigest()
+    manifest_bytes = stable_json(handoff).encode("utf-8")
+    sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+    signature = hmac.new(handoff_signing_key().encode("utf-8"), manifest_bytes, hashlib.sha256).hexdigest()
     return {
         "fab_id": handoff["fab_id"],
-        "signature_contract": "fab-ops-handoff-signature-v1",
+        "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
         "signature_id": f"handoff-{handoff['fab_id']}-{handoff['shift']}",
-        "digest_preview": digest[:16],
+        "algorithm": "hmac-sha256",
+        "key_id": handoff_signing_key_id(),
+        "sha256": sha256,
+        "signature": signature,
+        "digest_preview": sha256[:16],
         "signed_by": "ops-west-night",
         "signed_at": handoff["generated_at"],
         "release_channel": "morning-shift-briefing-pack",
+        "manifest": handoff,
+        "verification_route": "/api/shift-handoff/verify",
         "verification_steps": [
             "Confirm open critical alarms are still listed in the handoff pack.",
-            "Verify lot-at-risk ordering before release or reroute.",
-            "Check must-acknowledge items against tool ownership assignments.",
+            "Recompute SHA-256 over the handoff manifest before release or reroute.",
+            "Check must-acknowledge items and verify the HMAC signature against the current key id.",
         ],
+    }
+
+
+def build_handoff_signature_verification(
+    *,
+    algorithm: str | None = None,
+    key_id: str | None = None,
+    sha256: str | None = None,
+    signature: str | None = None,
+) -> Dict[str, Any]:
+    current = build_handoff_signature()
+    provided_algorithm = str(algorithm or current["algorithm"]).strip()
+    provided_key_id = str(key_id or current["key_id"]).strip()
+    provided_sha256 = str(sha256 or current["sha256"]).strip()
+    provided_signature = str(signature or current["signature"]).strip()
+    checks = {
+        "algorithm_match": hmac.compare_digest(provided_algorithm, current["algorithm"]),
+        "key_id_match": hmac.compare_digest(provided_key_id, current["key_id"]),
+        "sha256_match": hmac.compare_digest(provided_sha256, current["sha256"]),
+        "signature_match": hmac.compare_digest(provided_signature, current["signature"]),
+    }
+    return {
+        "fab_id": current["fab_id"],
+        "verification_contract": "fab-ops-handoff-signature-verify-v1",
+        "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
+        "signature_id": current["signature_id"],
+        "overall_valid": all(checks.values()),
+        "checks": checks,
+        "verification_route": "/api/shift-handoff/verify",
+    }
+
+
+def build_handoff_signature_verification(
+    *,
+    algorithm: str | None = None,
+    key_id: str | None = None,
+    sha256: str | None = None,
+    signature: str | None = None,
+) -> Dict[str, Any]:
+    current = build_handoff_signature()
+    provided_algorithm = str(algorithm or current["algorithm"]).strip()
+    provided_key_id = str(key_id or current["key_id"]).strip()
+    provided_sha256 = str(sha256 or current["sha256"]).strip()
+    provided_signature = str(signature or current["signature"]).strip()
+    checks = {
+        "algorithm_match": hmac.compare_digest(provided_algorithm, current["algorithm"]),
+        "key_id_match": hmac.compare_digest(provided_key_id, current["key_id"]),
+        "sha256_match": hmac.compare_digest(provided_sha256, current["sha256"]),
+        "signature_match": hmac.compare_digest(provided_signature, current["signature"]),
+    }
+    return {
+        "fab_id": current["fab_id"],
+        "verification_contract": "fab-ops-handoff-signature-verify-v1",
+        "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
+        "signature_id": current["signature_id"],
+        "overall_valid": all(checks.values()),
+        "checks": checks,
+        "verification_route": "/api/shift-handoff/verify",
     }
 
 
@@ -526,14 +599,14 @@ def build_runtime_brief() -> Dict[str, Any]:
             "Read /api/runtime/brief for the control-tower contract and evidence counts.",
             "Use /api/recovery-board to separate hold lots from watch and release-ready lots.",
             "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
-            "Export /api/shift-handoff and /api/shift-handoff/signature before the next operator release.",
+            "Export /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before the next operator release.",
         ],
         "two_minute_review": [
             "Open /health to confirm critical-alarm and replay surfaces are available.",
             "Read /api/runtime/brief for the control-tower contract and current ops snapshot.",
             "Inspect /api/recovery-board?mode=hold to find the lot that blocks release posture.",
             "Inspect /api/tool-ownership?tool_id=etch-14 and /api/release-gate?lot_id=lot-8812 before trusting release posture.",
-            "Review /api/shift-handoff and /api/shift-handoff/signature before handing the queue to the next shift.",
+            "Review /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before handing the queue to the next shift.",
         ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
@@ -548,6 +621,7 @@ def build_runtime_brief() -> Dict[str, Any]:
             {"label": "Tool Ownership", "href": "/api/tool-ownership?tool_id=etch-14", "kind": "route"},
             {"label": "Release Gate", "href": "/api/release-gate?lot_id=lot-8812", "kind": "route"},
             {"label": "Handoff Signature", "href": "/api/shift-handoff/signature", "kind": "route"},
+            {"label": "Handoff Verify", "href": "/api/shift-handoff/verify", "kind": "route"},
         ],
         "links": {
             "runtime_scorecard": "/api/runtime/scorecard",
@@ -593,6 +667,7 @@ def build_review_pack() -> Dict[str, Any]:
                 "/api/release-gate",
                 "/api/shift-handoff",
                 "/api/shift-handoff/signature",
+                "/api/shift-handoff/verify",
                 "/api/audit/feed",
                 "/api/evals/replays",
             ],
@@ -666,6 +741,7 @@ def build_meta() -> Dict[str, Any]:
             "/api/release-gate",
             "/api/shift-handoff",
             "/api/shift-handoff/signature",
+            "/api/shift-handoff/verify",
             "/api/audit/feed",
             "/api/evals/replays",
         ],
@@ -723,6 +799,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
                 "/api/recovery-board",
                 "/api/review-pack",
                 "/api/shift-handoff/signature",
+                "/api/shift-handoff/verify",
             ],
         },
         "summary": {
@@ -738,7 +815,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
         "recommendations": [
             "Triage the recovery board before trusting any release-ready lot.",
             "Verify tool ownership and release gate before exporting a shift handoff.",
-            "Treat the signed handoff surface as the final operator artifact for next-shift review.",
+            "Treat the signed handoff surface plus verification as the final operator artifact for next-shift review.",
             "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
         ],
         "links": {
@@ -749,6 +826,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "recovery_what_if": "/api/recovery-what-if",
             "review_pack": "/api/review-pack",
             "handoff_signature": "/api/shift-handoff/signature",
+            "handoff_verify": "/api/shift-handoff/verify",
         },
     }
 
@@ -1140,6 +1218,36 @@ async def shift_handoff_signature(request: Request) -> Dict[str, Any]:
         "status": "ok",
         "service": SERVICE_NAME,
         "payload": build_handoff_signature(),
+    }
+
+
+@app.get("/api/shift-handoff/verify")
+async def shift_handoff_verify(
+    request: Request,
+    algorithm: str | None = Query(default=None),
+    key_id: str | None = Query(default=None),
+    sha256: str | None = Query(default=None),
+    signature: str | None = Query(default=None),
+) -> Dict[str, Any]:
+    require_operator_token(request)
+    record_route_hit("/api/shift-handoff/verify")
+    payload = build_handoff_signature_verification(
+        algorithm=algorithm,
+        key_id=key_id,
+        sha256=sha256,
+        signature=signature,
+    )
+    record_runtime_event(
+        "handoff_signature_verify",
+        at=utc_now_iso(),
+        fab_id=payload["fab_id"],
+        signature_id=payload["signature_id"],
+        overall_valid=payload["overall_valid"],
+    )
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "payload": payload,
     }
 
 
