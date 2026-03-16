@@ -69,6 +69,7 @@ Open `http://127.0.0.1:8000`.
 - `GET /api/review-pack`
 - `GET /api/recovery-board`
 - `GET /api/recovery-what-if`
+- `GET /api/release-board`
 - `GET /api/recovery-board/schema`
 - `GET /api/schema/alarm-report`
 - `GET /api/schema/shift-handoff`
@@ -88,25 +89,28 @@ Open `http://127.0.0.1:8000`.
 1. `health`
 2. `runtime brief`
 3. `recovery board`
-4. `tool ownership`
-5. `release gate`
-6. `alarm queue + lots at risk`
-7. `shift handoff + signature`
-8. `audit feed + replay evals`
+4. `release board`
+5. `tool ownership`
+6. `release gate`
+7. `alarm queue + lots at risk`
+8. `shift handoff + signature`
+9. `audit feed + replay evals`
 
 ## Review Flow (Detailed)
 
 1. Open `/health` to confirm critical-alarm and replay surfaces are available.
 2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
 3. Inspect `/api/recovery-board?mode=hold` to isolate the lot that blocks release posture.
-4. Run `/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true` before trusting a maintenance-based recovery claim.
-5. Use the landing-screen selectors or inspect example routes such as `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
-5. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
+4. Inspect `/api/release-board` to confirm queue-level release posture before arguing from a single lot.
+5. Run `/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true` before trusting a maintenance-based recovery claim.
+6. Use the landing-screen selectors or inspect example routes such as `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
+7. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
 
 ## Proof Assets
 
 - `/health`
 - `/api/recovery-board?mode=hold`
+- `/api/release-board`
 - `/api/tool-ownership?tool_id=etch-14` (example seeded tool)
 - `/api/release-gate?lot_id=lot-8812` (example seeded lot)
 - `/api/shift-handoff/signature`
