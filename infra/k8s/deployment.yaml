@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: semiconductor-ops-platform
+  labels:
+    app: semiconductor-ops-platform
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: semiconductor-ops-platform
+  template:
+    metadata:
+      labels:
+        app: semiconductor-ops-platform
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/kim3310/fab-ops-yield-control-tower:latest
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: semiconductor-ops-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          emptyDir: {}

@@ -36,6 +36,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from app.domains.fab_ops.routes import router as fab_ops_router  # noqa: E402
 from app.domains.scanner.routes import router as scanner_router  # noqa: E402
+from app.shared.monitoring import setup_monitoring  # noqa: E402
 
 STATIC_DIR = APP_DIR / "static"
 
@@ -43,7 +44,42 @@ STATIC_DIR = APP_DIR / "static"
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Semiconductor Ops Platform")
+OPENAPI_TAGS: list[dict[str, str]] = [
+    {
+        "name": "platform",
+        "description": "Platform-level health checks and diagnostics.",
+    },
+    {
+        "name": "fab-ops",
+        "description": "Fab Ops Yield Control Tower -- alarms, lots, tools, recovery board, release gate, and shift handoff.",
+    },
+    {
+        "name": "scanner",
+        "description": "Scanner Field Response -- field incidents, subsystem escalation, qualification review, and signed handoff.",
+    },
+    {
+        "name": "monitoring",
+        "description": "Prometheus metrics and observability endpoints.",
+    },
+]
+
+app = FastAPI(
+    title="Semiconductor Ops Platform",
+    description=(
+        "Unified manufacturing operations platform for semiconductor environments. "
+        "Combines **Fab Ops Yield Control Tower** (alarms, lot-risk prioritization, "
+        "tool ownership, release gate, recovery board, shift handoff) and "
+        "**Scanner Field Response** (field incidents, subsystem escalation, "
+        "qualification review, customer readiness, signed handoff) under a single "
+        "API with shared infrastructure."
+    ),
+    version="1.0.0",
+    openapi_tags=OPENAPI_TAGS,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    license_info={"name": "MIT"},
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,6 +87,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Monitoring (Prometheus metrics, structured logging, request ID)
+# ---------------------------------------------------------------------------
+
+setup_monitoring(app)
 
 # ---------------------------------------------------------------------------
 # Domain routers
@@ -66,7 +108,7 @@ logger.info("Registered domain routers: fab-ops, scanner")
 # Platform-level routes
 # ---------------------------------------------------------------------------
 
-@app.get("/health")
+@app.get("/health", tags=["platform"])
 async def health() -> dict[str, Any]:
     """Return platform health status and navigation links for both domains.
 

@@ -4,6 +4,10 @@ Unified runtime event store for the semiconductor-ops-platform.
 Supports per-domain store paths via environment variable prefixes so that
 fab-ops and scanner domains write to separate event files while sharing
 the same persistence logic.
+
+The persistence backend is selected by the ``PERSISTENCE_BACKEND`` env var:
+- ``sqlite`` (default): delegates to :mod:`app.shared.database`
+- ``jsonl``: uses the legacy JSONL flat-file store
 """
 from __future__ import annotations
 
@@ -64,7 +68,11 @@ def _ensure_store_file(domain: str = "fab_ops") -> Path:
 
 
 def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: Any) -> None:
-    """Append a single runtime event to the domain's JSONL store.
+    """Append a single runtime event to the configured persistence backend.
+
+    When ``PERSISTENCE_BACKEND=sqlite`` (the default), events are written to
+    the SQLite database.  Otherwise they are appended to the domain's JSONL
+    flat-file store.
 
     Args:
         event_type: Categorical label for the event (e.g. ``"route_hit"``).
@@ -72,8 +80,14 @@ def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: An
         **payload: Arbitrary key-value pairs serialised into the event record.
 
     Raises:
-        OSError: If the store file cannot be opened for writing.
+        OSError: If the JSONL store file cannot be opened for writing.
     """
+    from app.shared.database import is_sqlite_backend, record_event_sqlite
+
+    if is_sqlite_backend():
+        record_event_sqlite(event_type, domain, **payload)
+        return
+
     store_path = _ensure_store_file(domain)
     event: dict[str, Any] = {"event_type": event_type, **payload}
     try:
@@ -88,6 +102,8 @@ def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: An
 def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> dict[str, Any]:
     """Read the most recent events from the store and return an aggregated summary.
 
+    Delegates to the SQLite backend when ``PERSISTENCE_BACKEND=sqlite``.
+
     Args:
         domain: Domain identifier.
         limit: Maximum number of trailing lines to consider.
@@ -95,6 +111,11 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> dict
     Returns:
         Dictionary containing counts, recent events, and last-event timestamp.
     """
+    from app.shared.database import is_sqlite_backend, summarize_events_sqlite
+
+    if is_sqlite_backend():
+        return summarize_events_sqlite(domain, limit)
+
     store_path = runtime_store_path(domain)
     summary: dict[str, Any] = {
         "enabled": True,
