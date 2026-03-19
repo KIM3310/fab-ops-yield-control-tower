@@ -5,10 +5,9 @@ All routes are prefixed with ``/api/scanner`` by the parent app.  Route
 handlers are intentionally thin -- business logic lives in
 :mod:`app.domains.scanner.helpers`.
 """
-from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Dict, List,  Optional,  Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
@@ -53,7 +52,7 @@ router = APIRouter(prefix="/api/scanner", tags=["scanner"])
 
 
 @router.get("/meta")
-def meta() -> dict[str, Any]:
+def meta() -> Dict[str, Any]:
     """Return scanner domain metadata, contracts, and diagnostic info."""
     record_route_hit("/api/scanner/meta")
     return {
@@ -94,28 +93,28 @@ def meta() -> dict[str, Any]:
 
 
 @router.get("/runtime/brief")
-def runtime_brief() -> dict[str, Any]:
+def runtime_brief() -> Dict[str, Any]:
     """Return the comprehensive runtime brief for the scanner domain."""
     record_route_hit("/api/scanner/runtime/brief")
     return build_runtime_brief()
 
 
 @router.get("/runtime/scorecard")
-def runtime_scorecard() -> dict[str, Any]:
+def runtime_scorecard() -> Dict[str, Any]:
     """Return the runtime scorecard with operational metrics."""
     record_route_hit("/api/scanner/runtime/scorecard")
     return build_runtime_scorecard()
 
 
 @router.get("/review-pack")
-def review_pack() -> dict[str, Any]:
+def review_pack() -> Dict[str, Any]:
     """Return the shift-ready review pack for the scanner domain."""
     record_route_hit("/api/scanner/review-pack")
     return build_review_pack()
 
 
 @router.get("/schema/field-incident")
-def field_incident_schema() -> dict[str, Any]:
+def field_incident_schema() -> Dict[str, Any]:
     """Return the field incident schema definition."""
     record_route_hit("/api/scanner/schema/field-incident")
     return {
@@ -125,7 +124,7 @@ def field_incident_schema() -> dict[str, Any]:
 
 
 @router.get("/schema/application-qualification")
-def application_qualification_schema() -> dict[str, Any]:
+def application_qualification_schema() -> Dict[str, Any]:
     """Return the application qualification schema definition."""
     record_route_hit("/api/scanner/schema/application-qualification")
     return {
@@ -142,14 +141,14 @@ def application_qualification_schema() -> dict[str, Any]:
 
 
 @router.get("/scanners")
-def scanners() -> dict[str, Any]:
+def scanners() -> Dict[str, Any]:
     """Return the list of all scanners at the site."""
     record_route_hit("/api/scanner/scanners")
     return {"items": SCANNERS}
 
 
 @router.get("/incidents")
-def incidents(severity: str | None = Query(default=None)) -> dict[str, Any]:
+def incidents(severity: Optional[str] = Query(default=None)) -> Dict[str, Any]:
     """Return field incidents, optionally filtered by severity."""
     record_route_hit("/api/scanner/incidents")
     if severity and severity not in ALLOWED_SEVERITIES:
@@ -161,14 +160,14 @@ def incidents(severity: str | None = Query(default=None)) -> dict[str, Any]:
 
 
 @router.get("/field-response-board")
-def field_response_board() -> dict[str, Any]:
+def field_response_board() -> Dict[str, Any]:
     """Return the field response board sorted by severity and SLA."""
     record_route_hit("/api/scanner/field-response-board")
     return build_field_response_board()
 
 
 @router.get("/subsystem-escalation")
-def subsystem_escalation(tool_id: str = Query(...)) -> dict[str, Any]:
+def subsystem_escalation(tool_id: str = Query(...)) -> Dict[str, Any]:
     """Return the subsystem escalation detail for a scanner."""
     record_route_hit("/api/scanner/subsystem-escalation")
     record_runtime_event("module_escalation_check", domain=DOMAIN, at=utc_now_iso(), tool_id=tool_id)
@@ -176,7 +175,7 @@ def subsystem_escalation(tool_id: str = Query(...)) -> dict[str, Any]:
 
 
 @router.get("/qualification-board")
-def qualification_board(lot_id: str = Query(...)) -> dict[str, Any]:
+def qualification_board(lot_id: str = Query(...)) -> Dict[str, Any]:
     """Return the qualification board for a specific lot."""
     record_route_hit("/api/scanner/qualification-board")
     record_runtime_event("application_qualification_check", domain=DOMAIN, at=utc_now_iso(), lot_id=lot_id)
@@ -184,7 +183,7 @@ def qualification_board(lot_id: str = Query(...)) -> dict[str, Any]:
 
 
 @router.get("/customer-readiness")
-def customer_readiness(customer: str = Query(...)) -> dict[str, Any]:
+def customer_readiness(customer: str = Query(...)) -> Dict[str, Any]:
     """Return customer readiness status for a customer program."""
     record_route_hit("/api/scanner/customer-readiness")
     if customer not in ALLOWED_CUSTOMERS:
@@ -193,7 +192,7 @@ def customer_readiness(customer: str = Query(...)) -> dict[str, Any]:
 
 
 @router.get("/lot-risk")
-def lot_risk() -> dict[str, Any]:
+def lot_risk() -> Dict[str, Any]:
     """Return the lot risk board sorted by risk score (descending)."""
     record_route_hit("/api/scanner/lot-risk")
     items = sorted(WAFER_RISK_ITEMS, key=lambda item: item["risk_score"], reverse=True)
@@ -209,7 +208,7 @@ def lot_risk() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff")
-def shift_handoff() -> dict[str, Any]:
+def shift_handoff() -> Dict[str, Any]:
     """Export the scanner shift handoff payload."""
     record_route_hit("/api/scanner/shift-handoff")
     payload = build_shift_handoff_payload()
@@ -218,7 +217,7 @@ def shift_handoff() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff/signature")
-def shift_handoff_signature() -> dict[str, Any]:
+def shift_handoff_signature() -> Dict[str, Any]:
     """Export the signed scanner shift handoff envelope."""
     record_route_hit("/api/scanner/shift-handoff/signature")
     payload = build_shift_handoff_payload()
@@ -228,7 +227,7 @@ def shift_handoff_signature() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff/verify")
-def shift_handoff_verify() -> dict[str, Any]:
+def shift_handoff_verify() -> Dict[str, Any]:
     """Verify the scanner shift handoff signature."""
     record_route_hit("/api/scanner/shift-handoff/verify")
     payload = build_shift_handoff_payload()
@@ -237,21 +236,21 @@ def shift_handoff_verify() -> dict[str, Any]:
 
 
 @router.get("/evals/replays")
-def replay_evals() -> dict[str, Any]:
+def replay_evals() -> Dict[str, Any]:
     """Return the replay suite summary for the scanner domain."""
     record_route_hit("/api/scanner/evals/replays")
     return build_replay_summary()
 
 
 @router.get("/audit/feed")
-def audit_feed() -> dict[str, Any]:
+def audit_feed() -> Dict[str, Any]:
     """Return the audit event feed for the scanner domain."""
     record_route_hit("/api/scanner/audit/feed")
     return {"summary": {"events": len(AUDIT_EVENTS)}, "items": AUDIT_EVENTS}
 
 
 @router.get("/operator/runtime")
-def operator_runtime(request: Request) -> dict[str, Any]:
+def operator_runtime(request: Request) -> Dict[str, Any]:
     """Return operator runtime info (auth required when token is configured)."""
     record_route_hit("/api/scanner/operator/runtime")
     require_operator_token(request, DOMAIN)

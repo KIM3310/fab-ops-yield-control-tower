@@ -4,12 +4,11 @@ Unified operator access control for the semiconductor-ops-platform.
 Supports per-domain environment variable prefixes so that fab-ops and scanner
 domains can use independent tokens while sharing the same auth logic.
 """
-from __future__ import annotations
 
 import hmac
 import logging
 import os
-from typing import Any
+from typing import Dict, List,  Any
 
 from fastapi import HTTPException, Request
 
@@ -19,7 +18,7 @@ OPERATOR_TOKEN_HEADER: str = "x-operator-token"
 OPERATOR_ROLE_HEADERS: tuple[str, ...] = ("x-operator-role", "x-operator-roles")
 
 # Environment variable prefixes per domain
-_ENV_PREFIXES: dict[str, str] = {
+_ENV_PREFIXES: Dict[str, str] = {
     "fab_ops": "FAB_OPS",
     "scanner": "SCANNER",
 }
@@ -50,7 +49,7 @@ def operator_token_enabled(domain: str = "fab_ops") -> bool:
     return bool(_expected_operator_token(domain))
 
 
-def _allowed_roles(domain: str = "fab_ops") -> list[str]:
+def _allowed_roles(domain: str = "fab_ops") -> List[str]:
     """Return the list of operator roles permitted for *domain*.
 
     Reads from ``{PREFIX}_OPERATOR_ALLOWED_ROLES`` (comma-separated).
@@ -69,7 +68,7 @@ def _allowed_roles(domain: str = "fab_ops") -> list[str]:
     ]
 
 
-def build_operator_auth_status(domain: str = "fab_ops") -> dict[str, Any]:
+def build_operator_auth_status(domain: str = "fab_ops") -> Dict[str, Any]:
     """Build a JSON-safe summary of the current operator auth configuration.
 
     Useful for diagnostic endpoints that expose whether auth is enabled and
@@ -113,7 +112,7 @@ def _read_presented_token(request: Request) -> str:
     return ""
 
 
-def _read_presented_roles(request: Request) -> list[str]:
+def _read_presented_roles(request: Request) -> List[str]:
     """Extract operator role claims from the incoming request headers.
 
     Args:
@@ -122,7 +121,7 @@ def _read_presented_roles(request: Request) -> list[str]:
     Returns:
         Lowercase list of role strings.
     """
-    values: list[str] = []
+    values: List[str] = []
     for header in OPERATOR_ROLE_HEADERS:
         raw = request.headers.get(header, "").strip()
         if raw:

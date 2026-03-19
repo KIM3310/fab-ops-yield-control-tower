@@ -10,13 +10,12 @@ Capabilities:
 - **S3 export**: Upload handoff packs and audit bundles to an S3 bucket.
 - **SQS publish**: Publish domain events to an SQS queue (placeholder).
 """
-from __future__ import annotations
 
 import json
 import logging
 import os
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Dict, List,  Any
 
 logger = logging.getLogger("shared.aws_adapter")
 
@@ -68,8 +67,8 @@ def _get_sqs_client():  # type: ignore[no-untyped-def]
 def export_handoff_to_s3(
     domain: str,
     handoff_id: str,
-    payload: dict[str, Any],
-) -> dict[str, Any] | None:
+    payload: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
     """Upload a shift handoff pack to S3.
 
     Args:
@@ -85,7 +84,7 @@ def export_handoff_to_s3(
         logger.debug("AWS not configured -- skipping S3 handoff export")
         return None
 
-    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     key = f"handoffs/{domain}/{handoff_id}/{ts}.json"
     body = json.dumps(payload, indent=2, ensure_ascii=False)
 
@@ -107,8 +106,8 @@ def export_handoff_to_s3(
 
 def export_audit_bundle_to_s3(
     domain: str,
-    audit_events: list[dict[str, Any]],
-) -> dict[str, Any] | None:
+    audit_events: List[dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
     """Upload an audit event bundle to S3.
 
     Args:
@@ -123,7 +122,7 @@ def export_audit_bundle_to_s3(
         logger.debug("AWS not configured -- skipping S3 audit export")
         return None
 
-    ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     key = f"audit/{domain}/{ts}-bundle.json"
     body = json.dumps(
         {"domain": domain, "exported_at": ts, "event_count": len(audit_events), "events": audit_events},
@@ -155,8 +154,8 @@ def export_audit_bundle_to_s3(
 def publish_event_to_sqs(
     domain: str,
     event_type: str,
-    payload: dict[str, Any],
-) -> dict[str, Any] | None:
+    payload: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
     """Publish a domain event to SQS.
 
     This is a placeholder for future async event processing (e.g. triggering
@@ -179,7 +178,7 @@ def publish_event_to_sqs(
         {
             "domain": domain,
             "event_type": event_type,
-            "published_at": datetime.now(UTC).isoformat(),
+            "published_at": datetime.now(timezone.utc).isoformat(),
             "payload": payload,
         },
         ensure_ascii=False,
@@ -205,7 +204,7 @@ def publish_event_to_sqs(
 # ---------------------------------------------------------------------------
 
 
-def aws_status() -> dict[str, Any]:
+def aws_status() -> Dict[str, Any]:
     """Return a summary of the AWS integration configuration.
 
     Useful for diagnostic and meta endpoints.

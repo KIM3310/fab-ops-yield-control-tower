@@ -16,7 +16,7 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Callable
+from typing import Dict, List,  Any, Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import PlainTextResponse
@@ -45,7 +45,7 @@ class JSONFormatter(logging.Formatter):
     """
 
     def format(self, record: logging.LogRecord) -> str:
-        log_entry: dict[str, Any] = {
+        log_entry: Dict[str, Any] = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
             "logger": record.name,

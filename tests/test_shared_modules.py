@@ -141,6 +141,8 @@ class TestRuntimeStore:
     def test_record_and_summarize(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         store_file = tmp_path / "test-events.jsonl"
         monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(store_file))
+        monkeypatch.setenv("PERSISTENCE_BACKEND", "jsonl")
+        monkeypatch.setattr("app.shared.database.PERSISTENCE_BACKEND", "jsonl")
 
         record_runtime_event("test_event", domain="fab_ops", at="2026-01-01T00:00:00Z", detail="hello")
 
@@ -152,6 +154,8 @@ class TestRuntimeStore:
     def test_summarize_empty_store(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         store_file = tmp_path / "empty.jsonl"
         monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(store_file))
+        monkeypatch.setenv("PERSISTENCE_BACKEND", "jsonl")
+        monkeypatch.setattr("app.shared.database.PERSISTENCE_BACKEND", "jsonl")
         summary = summarize_runtime_events("fab_ops")
         assert summary["event_count"] == 0
         assert summary["enabled"] is True
@@ -160,6 +164,8 @@ class TestRuntimeStore:
         store_file = tmp_path / "bad.jsonl"
         store_file.write_text("not-json\n{\"event_type\":\"ok\",\"at\":\"2026-01-01T00:00:00Z\"}\n")
         monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(store_file))
+        monkeypatch.setenv("PERSISTENCE_BACKEND", "jsonl")
+        monkeypatch.setattr("app.shared.database.PERSISTENCE_BACKEND", "jsonl")
         summary = summarize_runtime_events("fab_ops")
         assert summary["event_count"] == 1
 

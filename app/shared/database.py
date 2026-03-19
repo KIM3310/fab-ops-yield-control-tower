@@ -11,14 +11,13 @@ environment variable:
 When the SQLite backend is active, tables are created automatically on first
 import via ``Base.metadata.create_all``.
 """
-from __future__ import annotations
 
 import json
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Union,  Dict, List,  Optional,  Any
 
 from sqlalchemy import (
     Boolean,
@@ -59,13 +58,13 @@ class RuntimeEvent(Base):  # type: ignore[misc]
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain = Column(String(32), nullable=False, index=True)
     event_type = Column(String(64), nullable=False, index=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     route = Column(String(256), nullable=True)
     payload_json = Column(Text, nullable=True)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize to a dictionary matching the legacy JSONL format."""
-        base: dict[str, Any] = {
+        base: Dict[str, Any] = {
             "event_type": self.event_type,
             "domain": self.domain,
             "at": self.timestamp.isoformat() if self.timestamp else None,
@@ -95,10 +94,10 @@ class ShiftHandoff(Base):  # type: ignore[misc]
     signature_hmac = Column(String(64), nullable=True)
     signed_by = Column(String(64), nullable=True)
     signed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     payload_json = Column(Text, nullable=False)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize to a dictionary."""
         return {
             "id": self.id,
@@ -126,13 +125,13 @@ class AuditRecord(Base):  # type: ignore[misc]
     actor = Column(String(64), nullable=False)
     tool_id = Column(String(64), nullable=True)
     lot_id = Column(String(64), nullable=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     details_json = Column(Text, nullable=True)
     is_exported = Column(Boolean, nullable=False, default=False)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize to a dictionary."""
-        result: dict[str, Any] = {
+        result: Dict[str, Any] = {
             "id": self.id,
             "at": self.timestamp.isoformat() if self.timestamp else None,
             "event": self.event_name,
@@ -213,7 +212,7 @@ def record_event_sqlite(
     try:
         route = payload.pop("route", None)
         at_str = payload.pop("at", None)
-        ts = datetime.now(UTC)
+        ts = datetime.now(timezone.utc)
         if at_str:
             try:
                 ts = datetime.fromisoformat(str(at_str))
@@ -238,7 +237,7 @@ def record_event_sqlite(
         session.close()
 
 
-def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> dict[str, Any]:
+def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> Dict[str, Any]:
     """Read recent events from SQLite and return an aggregated summary.
 
     Returns a dictionary matching the shape produced by the JSONL summarizer
@@ -251,7 +250,7 @@ def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> dict[
     Returns:
         Summary dictionary with counts and recent events.
     """
-    summary: dict[str, Any] = {
+    summary: Dict[str, Any] = {
         "enabled": True,
         "backend": "sqlite",
         "path": DATABASE_URL,
@@ -286,7 +285,7 @@ def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> dict[
                 summary["last_event_at"] = at
 
             et = d.get("event_type", "")
-            counts: dict[str, int] = summary["event_type_counts"]
+            counts: Dict[str, int] = summary["event_type_counts"]
             counts[et] = counts.get(et, 0) + 1
 
             if et == "route_hit":
@@ -311,10 +310,10 @@ def record_handoff_sqlite(
     shift: str,
     fab_or_site_id: str,
     headline: str,
-    payload: dict[str, Any],
-    signature_sha256: str | None = None,
-    signature_hmac: str | None = None,
-    signed_by: str | None = None,
+    payload: Dict[str, Any],
+    signature_sha256: Optional[str] = None,
+    signature_hmac: Optional[str] = None,
+    signed_by: Optional[str] = None,
 ) -> None:
     """Persist a shift handoff record to SQLite.
 
@@ -340,7 +339,7 @@ def record_handoff_sqlite(
             signature_sha256=signature_sha256,
             signature_hmac=signature_hmac,
             signed_by=signed_by,
-            signed_at=datetime.now(UTC) if signed_by else None,
+            signed_at=datetime.now(timezone.utc) if signed_by else None,
             payload_json=json.dumps(payload),
         )
         session.add(record)
@@ -357,9 +356,9 @@ def record_audit_sqlite(
     domain: str,
     event_name: str,
     actor: str,
-    tool_id: str | None = None,
-    lot_id: str | None = None,
-    details: dict[str, Any] | None = None,
+    tool_id: Optional[str] = None,
+    lot_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Persist an audit record to SQLite.
 
@@ -391,7 +390,7 @@ def record_audit_sqlite(
         session.close()
 
 
-def migrate_jsonl_to_sqlite(jsonl_path: str | Path, domain: str = "fab_ops") -> int:
+def migrate_jsonl_to_sqlite(jsonl_path: Union[str, Path], domain: str = "fab_ops") -> int:
     """Migrate events from a JSONL file into the SQLite database.
 
     Each line in the JSONL file is parsed and inserted as a RuntimeEvent.
@@ -426,7 +425,7 @@ def migrate_jsonl_to_sqlite(jsonl_path: str | Path, domain: str = "fab_ops") -> 
             event_type = data.pop("event_type", "unknown")
             route = data.pop("route", None)
             at_str = data.pop("at", None)
-            ts = datetime.now(UTC)
+            ts = datetime.now(timezone.utc)
             if at_str:
                 try:
                     ts = datetime.fromisoformat(str(at_str))
