@@ -5,7 +5,7 @@ application qualifications, customer readiness, and constants.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 SERVICE_NAME = "scanner-field-response"
 OPS_CONTRACT = "ops-envelope-v1"
@@ -120,7 +120,7 @@ FIELD_INCIDENTS = [
     },
 ]
 
-MODULE_ESCALATIONS: Dict[str, Dict[str, Any]] = {
+MODULE_ESCALATIONS: dict[str, dict[str, Any]] = {
     "scanner-euv-02": {
         "tool_id": "scanner-euv-02",
         "linked_incident_id": "inc-3407",
@@ -167,7 +167,7 @@ MODULE_ESCALATIONS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-APPLICATION_QUALIFICATIONS: Dict[str, Dict[str, Any]] = {
+APPLICATION_QUALIFICATIONS: dict[str, dict[str, Any]] = {
     "lot-n2-118": {
         "lot_id": "lot-n2-118",
         "tool_id": "scanner-euv-02",

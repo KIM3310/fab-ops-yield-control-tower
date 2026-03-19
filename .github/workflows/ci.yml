@@ -29,5 +29,11 @@ jobs:
       - name: Bytecode compile check
         run: python -m compileall -q app tests
 
+      - name: Lint with ruff
+        run: python -m ruff check app tests
+
+      - name: Type check with mypy
+        run: python -m mypy app --ignore-missing-imports
+
       - name: Test
         run: python -m pytest -q

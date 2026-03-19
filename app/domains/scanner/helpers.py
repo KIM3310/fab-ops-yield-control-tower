@@ -1,25 +1,27 @@
 """
 Business logic helpers for the scanner field-response domain.
+
+Contains all ``build_*`` functions, lookup helpers, and domain logic used
+by the scanner API routes.  Route handlers delegate to these functions so
+they remain thin and testable.
 """
 from __future__ import annotations
 
 import hmac as _hmac
-from datetime import datetime, timezone
-from typing import Any, Dict
+import logging
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 
 from app.domains.scanner.domain import (
-    APPLICATION_QUALIFICATION_SCHEMA,
     APPLICATION_QUALIFICATIONS,
     AUDIT_EVENTS,
     CUSTOMER_READINESS,
     CUSTOMER_READINESS_CONTRACT,
-    FIELD_INCIDENT_SCHEMA,
     FIELD_INCIDENTS,
     FIELD_RESPONSE_BOARD_CONTRACT,
     HANDOFF_SIGNATURE_CONTRACT,
-    LOT_RISK_CONTRACT,
     MODULE_ESCALATIONS,
     QUALIFICATION_BOARD_CONTRACT,
     REPLAY_SUITE,
@@ -27,7 +29,6 @@ from app.domains.scanner.domain import (
     RUNTIME_BRIEF_CONTRACT,
     RUNTIME_SCORECARD_CONTRACT,
     SCANNERS,
-    SERVICE_NAME,
     SEVERITY_RANK,
     SHIFT_HANDOFF_SCHEMA,
     SUBSYSTEM_ESCALATION_CONTRACT,
@@ -35,78 +36,191 @@ from app.domains.scanner.domain import (
 )
 from app.shared.operator_access import build_operator_auth_status
 from app.shared.runtime_store import record_runtime_event, summarize_runtime_events
-from app.shared.signatures import signing_key_id, sign_manifest
+from app.shared.signatures import sign_manifest, signing_key_id
 
-DOMAIN = "scanner"
+logger = logging.getLogger("scanner.helpers")
+
+DOMAIN: str = "scanner"
 
 # Route path helpers
-FIELD_RESPONSE_ROUTE = "/api/scanner/field-response-board"
-SUBSYSTEM_ESCALATION_ROUTE = "/api/scanner/subsystem-escalation"
-QUALIFICATION_ROUTE = "/api/scanner/qualification-board"
-LOT_RISK_ROUTE = "/api/scanner/lot-risk"
-CUSTOMER_READINESS_ROUTE = "/api/scanner/customer-readiness"
-SHIFT_HANDOFF_ROUTE = "/api/scanner/shift-handoff"
-SHIFT_HANDOFF_SIGNATURE_ROUTE = "/api/scanner/shift-handoff/signature"
+FIELD_RESPONSE_ROUTE: str = "/api/scanner/field-response-board"
+SUBSYSTEM_ESCALATION_ROUTE: str = "/api/scanner/subsystem-escalation"
+QUALIFICATION_ROUTE: str = "/api/scanner/qualification-board"
+LOT_RISK_ROUTE: str = "/api/scanner/lot-risk"
+CUSTOMER_READINESS_ROUTE: str = "/api/scanner/customer-readiness"
+SHIFT_HANDOFF_ROUTE: str = "/api/scanner/shift-handoff"
+SHIFT_HANDOFF_SIGNATURE_ROUTE: str = "/api/scanner/shift-handoff/signature"
 
+
+# ---------------------------------------------------------------------------
+# Utility helpers
+# ---------------------------------------------------------------------------
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    """Return the current UTC timestamp as an ISO-8601 string.
+
+    Returns:
+        ISO-formatted UTC datetime string.
+    """
+    return datetime.now(UTC).isoformat()
 
 
 def record_route_hit(route: str) -> None:
+    """Persist a ``route_hit`` event for the scanner domain.
+
+    Args:
+        route: The API path that was accessed.
+    """
     record_runtime_event("route_hit", domain=DOMAIN, at=utc_now_iso(), route=route)
 
 
-def get_scanner_or_404(tool_id: str) -> Dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Lookup helpers
+# ---------------------------------------------------------------------------
+
+def get_scanner_or_404(tool_id: str) -> dict[str, Any]:
+    """Look up a scanner by tool ID or raise HTTP 404.
+
+    Args:
+        tool_id: Unique scanner tool identifier (e.g. ``"scanner-euv-02"``).
+
+    Returns:
+        The matching scanner dictionary from :data:`SCANNERS`.
+
+    Raises:
+        HTTPException: 404 when no scanner matches *tool_id*.
+    """
     for scanner in SCANNERS:
         if scanner["tool_id"] == tool_id:
             return scanner
+    logger.warning("[scanner] scanner not found: %s", tool_id)
     raise HTTPException(status_code=404, detail=f"Unknown scanner: {tool_id}")
 
 
-def get_incident_or_404(incident_id: str) -> Dict[str, Any]:
+def get_incident_or_404(incident_id: str) -> dict[str, Any]:
+    """Look up a field incident by ID or raise HTTP 404.
+
+    Args:
+        incident_id: Unique incident identifier (e.g. ``"inc-3407"``).
+
+    Returns:
+        The matching incident dictionary from :data:`FIELD_INCIDENTS`.
+
+    Raises:
+        HTTPException: 404 when no incident matches *incident_id*.
+    """
     for item in FIELD_INCIDENTS:
         if item["incident_id"] == incident_id:
             return item
+    logger.warning("[scanner] incident not found: %s", incident_id)
     raise HTTPException(status_code=404, detail=f"Unknown incident: {incident_id}")
 
 
-def get_lot_or_404(lot_id: str) -> Dict[str, Any]:
+def get_lot_or_404(lot_id: str) -> dict[str, Any]:
+    """Look up an application qualification record by lot ID or raise HTTP 404.
+
+    Args:
+        lot_id: Qualification lot identifier (e.g. ``"lot-n2-118"``).
+
+    Returns:
+        The matching qualification dictionary.
+
+    Raises:
+        HTTPException: 404 when no qualification record matches *lot_id*.
+    """
     qualification = APPLICATION_QUALIFICATIONS.get(lot_id)
     if qualification:
         return qualification
+    logger.warning("[scanner] qualification lot not found: %s", lot_id)
     raise HTTPException(status_code=404, detail=f"Unknown qualification lot: {lot_id}")
 
 
+# ---------------------------------------------------------------------------
+# Path helpers
+# ---------------------------------------------------------------------------
+
 def field_response_path() -> str:
+    """Return the canonical path for the field response board.
+
+    Returns:
+        Route path string.
+    """
     return FIELD_RESPONSE_ROUTE
 
 
 def subsystem_escalation_path(tool_id: str) -> str:
+    """Return the parameterised path for a subsystem escalation query.
+
+    Args:
+        tool_id: Scanner tool identifier.
+
+    Returns:
+        Route path string with ``tool_id`` query parameter.
+    """
     return f"{SUBSYSTEM_ESCALATION_ROUTE}?tool_id={tool_id}"
 
 
 def qualification_path(lot_id: str) -> str:
+    """Return the parameterised path for a qualification board query.
+
+    Args:
+        lot_id: Lot identifier.
+
+    Returns:
+        Route path string with ``lot_id`` query parameter.
+    """
     return f"{QUALIFICATION_ROUTE}?lot_id={lot_id}"
 
 
 def customer_readiness_path(customer: str) -> str:
+    """Return the parameterised path for a customer readiness query.
+
+    Args:
+        customer: Customer identifier string.
+
+    Returns:
+        Route path string with ``customer`` query parameter.
+    """
     return f"{CUSTOMER_READINESS_ROUTE}?customer={customer}"
 
 
-def focus_incident() -> Dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Focus selectors
+# ---------------------------------------------------------------------------
+
+def focus_incident() -> dict[str, Any]:
+    """Return the highest-severity field incident.
+
+    Returns:
+        The incident dictionary with the lowest severity rank (most critical).
+    """
     return sorted(FIELD_INCIDENTS, key=lambda item: SEVERITY_RANK[item["severity"]])[0]
 
 
-def focus_lot() -> Dict[str, Any]:
+def focus_lot() -> dict[str, Any]:
+    """Return the qualification record linked to the focus incident.
+
+    Returns:
+        The application qualification dictionary for the focus incident's lot.
+    """
     incident = focus_incident()
     return get_lot_or_404(incident["lot_id"])
 
 
-def build_field_response_board() -> Dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Domain logic builders
+# ---------------------------------------------------------------------------
+
+def build_field_response_board() -> dict[str, Any]:
+    """Build the field response board sorted by severity and SLA.
+
+    Returns:
+        Field response board payload with summary, spotlight, and items.
+    """
     incident_items = sorted(FIELD_INCIDENTS, key=lambda item: (SEVERITY_RANK[item["severity"]], item["sla_minutes"]))
     spotlight = incident_items[0]
     blocked = sum(1 for item in incident_items if item["qualification_blocker"])
+    logger.info("[scanner] field response board: %d incidents, %d blockers", len(incident_items), blocked)
     return {
         "contract_version": FIELD_RESPONSE_BOARD_CONTRACT,
         "summary": {
@@ -133,7 +247,18 @@ def build_field_response_board() -> Dict[str, Any]:
     }
 
 
-def build_subsystem_escalation(tool_id: str) -> Dict[str, Any]:
+def build_subsystem_escalation(tool_id: str) -> dict[str, Any]:
+    """Build the subsystem escalation payload for a scanner.
+
+    Args:
+        tool_id: Scanner tool identifier.
+
+    Returns:
+        Escalation payload with linked incident and subsystem detail.
+
+    Raises:
+        HTTPException: 404 when no escalation lane exists for the scanner.
+    """
     get_scanner_or_404(tool_id)
     payload = MODULE_ESCALATIONS.get(tool_id)
     if payload is None:
@@ -155,7 +280,17 @@ def build_subsystem_escalation(tool_id: str) -> Dict[str, Any]:
     }
 
 
-def build_qualification_board(lot_id: str) -> Dict[str, Any]:
+def build_qualification_board(lot_id: str) -> dict[str, Any]:
+    """Build the qualification board payload for a specific lot.
+
+    Computes deltas between current measurements and qualification targets.
+
+    Args:
+        lot_id: Qualification lot identifier.
+
+    Returns:
+        Qualification board payload with deltas and route bundle.
+    """
     payload = get_lot_or_404(lot_id)
     delta_overlay = round(payload["current_overlay_nm"] - payload["target_overlay_nm"], 2)
     delta_cd = round(payload["current_cd_delta_nm"] - payload["target_cd_delta_nm"], 2)
@@ -182,7 +317,18 @@ def build_qualification_board(lot_id: str) -> Dict[str, Any]:
     }
 
 
-def build_customer_readiness(customer: str) -> Dict[str, Any]:
+def build_customer_readiness(customer: str) -> dict[str, Any]:
+    """Build the customer readiness payload for a customer program.
+
+    Args:
+        customer: Customer identifier (e.g. ``"alpha-mobile"``).
+
+    Returns:
+        Customer readiness payload with status, blockers, and release conditions.
+
+    Raises:
+        HTTPException: 404 when the customer program is unknown.
+    """
     if customer not in CUSTOMER_READINESS:
         raise HTTPException(status_code=404, detail=f"Unknown customer program: {customer}")
     readiness = CUSTOMER_READINESS[customer]
@@ -200,7 +346,12 @@ def build_customer_readiness(customer: str) -> Dict[str, Any]:
     }
 
 
-def build_shift_handoff_payload() -> Dict[str, Any]:
+def build_shift_handoff_payload() -> dict[str, Any]:
+    """Build the scanner shift handoff payload.
+
+    Returns:
+        Handoff payload with focus incident, acknowledgements, and review path.
+    """
     focus = focus_incident()
     lot = focus_lot()
     return {
@@ -231,8 +382,17 @@ def build_shift_handoff_payload() -> Dict[str, Any]:
     }
 
 
-def build_handoff_signature(payload: Dict[str, Any]) -> Dict[str, Any]:
+def build_handoff_signature(payload: dict[str, Any]) -> dict[str, Any]:
+    """Sign the handoff payload and return the signature envelope.
+
+    Args:
+        payload: The shift handoff payload dictionary to sign.
+
+    Returns:
+        Signature envelope with algorithm, key ID, digest, and HMAC.
+    """
     sigs = sign_manifest(payload, DOMAIN)
+    logger.info("[scanner] handoff signature generated for %s", payload.get("handoff_id", "unknown"))
     return {
         "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
         "signature_id": payload["handoff_id"],
@@ -244,10 +404,22 @@ def build_handoff_signature(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def build_handoff_verify(payload: Dict[str, Any], expected: Dict[str, Any]) -> Dict[str, Any]:
+def build_handoff_verify(payload: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    """Verify a handoff signature against the expected envelope.
+
+    Args:
+        payload: The shift handoff payload to re-sign and compare.
+        expected: The previously generated signature envelope.
+
+    Returns:
+        Verification result with ``overall_valid`` and individual checks.
+    """
     current_signature = build_handoff_signature(payload)
+    overall_valid = _hmac.compare_digest(current_signature["signature"], expected["signature"])
+    if not overall_valid:
+        logger.warning("[scanner] handoff signature verification failed")
     return {
-        "overall_valid": _hmac.compare_digest(current_signature["signature"], expected["signature"]),
+        "overall_valid": overall_valid,
         "checks": {
             "signature_match": _hmac.compare_digest(current_signature["signature"], expected["signature"]),
             "digest_match": current_signature["sha256"] == expected["sha256"],
@@ -256,7 +428,15 @@ def build_handoff_verify(payload: Dict[str, Any], expected: Dict[str, Any]) -> D
     }
 
 
-def build_runtime_brief() -> Dict[str, Any]:
+def build_runtime_brief() -> dict[str, Any]:
+    """Build the comprehensive runtime brief for the scanner domain.
+
+    This is the primary entry-point payload showing incidents, escalations,
+    qualification status, and customer readiness in one surface.
+
+    Returns:
+        Runtime brief payload.
+    """
     focus = focus_incident()
     lot = focus_lot()
     readiness = build_customer_readiness("alpha-mobile")["payload"]
@@ -326,7 +506,12 @@ def build_runtime_brief() -> Dict[str, Any]:
     }
 
 
-def build_runtime_scorecard() -> Dict[str, Any]:
+def build_runtime_scorecard() -> dict[str, Any]:
+    """Build the runtime scorecard for the scanner domain.
+
+    Returns:
+        Scorecard payload with incident/lot/customer counts and runtime info.
+    """
     runtime = summarize_runtime_events(DOMAIN)
     return {
         "readiness_contract": RUNTIME_SCORECARD_CONTRACT,
@@ -352,7 +537,12 @@ def build_runtime_scorecard() -> Dict[str, Any]:
     }
 
 
-def build_review_pack() -> Dict[str, Any]:
+def build_review_pack() -> dict[str, Any]:
+    """Build the shift-ready review pack for the scanner domain.
+
+    Returns:
+        Review pack payload with proof bundle, focus story, and operator promises.
+    """
     focus = focus_incident()
     lot = focus_lot()
     return {
@@ -398,7 +588,12 @@ def build_review_pack() -> Dict[str, Any]:
     }
 
 
-def build_replay_summary() -> Dict[str, Any]:
+def build_replay_summary() -> dict[str, Any]:
+    """Build the replay suite summary for the scanner domain.
+
+    Returns:
+        Replay summary with scenario count and pass percentage.
+    """
     score = round(
         100
         * sum(item["checks"] for item in REPLAY_SUITE if item["status"] == "pass")

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 INDEX_HTML = ROOT / "app" / "static" / "index.html"
 

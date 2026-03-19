@@ -4,7 +4,7 @@ Contains all fabs, tools, alarms, lots, replay suites, tool ownership, audit eve
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 SERVICE_NAME = "fab-ops-yield-control-tower"
 ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
@@ -131,7 +131,7 @@ REPLAY_SUITE = [
     {"scenario": "shift-handoff-gap", "status": "pass", "checks": 8},
 ]
 
-TOOL_OWNERSHIP: Dict[str, Dict[str, Any]] = {
+TOOL_OWNERSHIP: dict[str, dict[str, Any]] = {
     "etch-14": {
         "tool_id": "etch-14",
         "primary_operator": "ops-west-night",
