@@ -349,7 +349,8 @@ async function boot() {
 
   function setRuntimeBanner(state, message) {
     runtimeBanner.className = `runtime-banner is-${state}`;
-    runtimeBanner.textContent = message;
+    const spinner = state === "loading" ? '<span class="loading-spinner" aria-hidden="true"></span> ' : '';
+    runtimeBanner.innerHTML = spinner + message;
   }
 
   function setRefreshBusy(isBusy) {
