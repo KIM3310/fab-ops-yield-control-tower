@@ -1,1 +1,1 @@
-"""Fab ops yield control tower package."""
+"""Semiconductor ops platform package."""

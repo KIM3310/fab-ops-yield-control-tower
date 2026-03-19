@@ -1,20 +1,15 @@
 """
-Business logic helpers for fab-ops-yield-control-tower.
+Business logic helpers for the fab-ops domain.
 Contains all build_* functions, utility helpers, and domain logic.
 """
-
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
-import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import HTTPException
 
-from app.domain import (
+from app.domains.fab_ops.domain import (
     ALARM_REPORT_SCHEMA,
     ALARM_SEVERITY_RANK,
     ALARMS,
@@ -31,28 +26,19 @@ from app.domain import (
     TOOL_OWNERSHIP,
     TOOLS,
 )
-from app.operator_access import build_operator_auth_status
-from app.runtime_store import record_runtime_event, summarize_runtime_events
+from app.shared.operator_access import build_operator_auth_status
+from app.shared.runtime_store import record_runtime_event, summarize_runtime_events
+from app.shared.signatures import signing_key_id, sign_manifest, verify_signature, stable_json
+
+DOMAIN = "fab_ops"
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def handoff_signing_key() -> str:
-    return str(os.getenv("FAB_OPS_HANDOFF_SIGNING_KEY", "fab-ops-demo-signing-key")).strip() or "fab-ops-demo-signing-key"
-
-
-def handoff_signing_key_id() -> str:
-    return str(os.getenv("FAB_OPS_HANDOFF_SIGNING_KEY_ID", "fab-ops-demo-v1")).strip() or "fab-ops-demo-v1"
-
-
-def stable_json(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-
-
 def record_route_hit(route: str) -> None:
-    record_runtime_event("route_hit", at=utc_now_iso(), route=route)
+    record_runtime_event("route_hit", domain=DOMAIN, at=utc_now_iso(), route=route)
 
 
 def get_tool_or_404(tool_id: str) -> Dict[str, Any]:
@@ -193,10 +179,10 @@ def build_focus_lot() -> Dict[str, Any]:
         'maintenance_owner': ownership['maintenance_owner'],
         'handoff_headline': handoff['headline'],
         'review_path': [
-            '/api/runtime/brief',
-            '/api/recovery-board?mode=hold',
-            f"/api/release-gate?lot_id={spotlight_lot['lot_id']}",
-            '/api/shift-handoff/signature',
+            '/api/fab-ops/runtime/brief',
+            '/api/fab-ops/recovery-board?mode=hold',
+            f"/api/fab-ops/release-gate?lot_id={spotlight_lot['lot_id']}",
+            '/api/fab-ops/shift-handoff/signature',
         ],
     }
 
@@ -247,9 +233,7 @@ def build_recovery_what_if(lot_id: str, *, yield_gain: float = 0.2, maintenance_
     simulated_eta = 240 if simulated_decision == "hold-release" else 90 if simulated_decision == "reroute-review" else 30
 
     return {
-        "status": "ok",
-        "service": SERVICE_NAME,
-        "generated_at": utc_now_iso(),
+        "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
         "contract_version": "fab-ops-recovery-what-if-v1",
         "lot_id": lot_id,
         "baseline": {**baseline, "release_eta_minutes": baseline_eta},
@@ -271,10 +255,10 @@ def build_recovery_what_if(lot_id: str, *, yield_gain: float = 0.2, maintenance_
             "Use recovery board + release gate + what-if together during maintenance approval review.",
         ],
         "route_bundle": {
-            "recovery_board": "/api/recovery-board",
-            "recovery_what_if": "/api/recovery-what-if",
-            "release_gate": f"/api/release-gate?lot_id={lot_id}",
-            "shift_handoff_signature": "/api/shift-handoff/signature",
+            "recovery_board": "/api/fab-ops/recovery-board",
+            "recovery_what_if": "/api/fab-ops/recovery-what-if",
+            "release_gate": f"/api/fab-ops/release-gate?lot_id={lot_id}",
+            "shift_handoff_signature": "/api/fab-ops/shift-handoff/signature",
         },
     }
 
@@ -305,22 +289,20 @@ def build_release_board() -> Dict[str, Any]:
             "Keep failed checks and maintenance ownership paired so a release decision always names the next operator.",
             "Use release board plus handoff signature as the final go/no-go set before shift change.",
         ],
-        "route_bundle": {"release_board": "/api/release-board", "recovery_board": "/api/recovery-board", "release_gate": "/api/release-gate?lot_id=lot-8812", "shift_handoff": "/api/shift-handoff"},
+        "route_bundle": {"release_board": "/api/fab-ops/release-board", "recovery_board": "/api/fab-ops/recovery-board", "release_gate": "/api/fab-ops/release-gate?lot_id=lot-8812", "shift_handoff": "/api/fab-ops/shift-handoff"},
     }
 
 
 def build_handoff_signature() -> Dict[str, Any]:
     handoff = build_shift_handoff()
-    manifest_bytes = stable_json(handoff).encode("utf-8")
-    sha256 = hashlib.sha256(manifest_bytes).hexdigest()
-    signature = hmac.new(handoff_signing_key().encode("utf-8"), manifest_bytes, hashlib.sha256).hexdigest()
+    sigs = sign_manifest(handoff, DOMAIN)
     return {
         "fab_id": handoff["fab_id"], "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
         "signature_id": f"handoff-{handoff['fab_id']}-{handoff['shift']}", "algorithm": "hmac-sha256",
-        "key_id": handoff_signing_key_id(), "sha256": sha256, "signature": signature,
-        "digest_preview": sha256[:16], "signed_by": "ops-west-night", "signed_at": handoff["generated_at"],
+        "key_id": signing_key_id(DOMAIN), "sha256": sigs["sha256"], "signature": sigs["signature"],
+        "digest_preview": sigs["sha256"][:16], "signed_by": "ops-west-night", "signed_at": handoff["generated_at"],
         "release_channel": "morning-shift-briefing-pack", "manifest": handoff,
-        "verification_route": "/api/shift-handoff/verify",
+        "verification_route": "/api/fab-ops/shift-handoff/verify",
         "verification_steps": [
             "Confirm open critical alarms are still listed in the handoff pack.",
             "Recompute SHA-256 over the handoff manifest before release or reroute.",
@@ -331,21 +313,19 @@ def build_handoff_signature() -> Dict[str, Any]:
 
 def build_handoff_signature_verification(*, algorithm: str | None = None, key_id: str | None = None, sha256: str | None = None, signature: str | None = None) -> Dict[str, Any]:
     current = build_handoff_signature()
-    provided_algorithm = str(algorithm or current["algorithm"]).strip()
-    provided_key_id = str(key_id or current["key_id"]).strip()
-    provided_sha256 = str(sha256 or current["sha256"]).strip()
-    provided_signature = str(signature or current["signature"]).strip()
-    checks = {
-        "algorithm_match": hmac.compare_digest(provided_algorithm, current["algorithm"]),
-        "key_id_match": hmac.compare_digest(provided_key_id, current["key_id"]),
-        "sha256_match": hmac.compare_digest(provided_sha256, current["sha256"]),
-        "signature_match": hmac.compare_digest(provided_signature, current["signature"]),
-    }
+    verification = verify_signature(
+        current["manifest"],
+        provided_algorithm=algorithm,
+        provided_key_id=key_id,
+        provided_sha256=sha256,
+        provided_signature=signature,
+        domain=DOMAIN,
+    )
     return {
         "fab_id": current["fab_id"], "verification_contract": "fab-ops-handoff-signature-verify-v1",
         "signature_contract": HANDOFF_SIGNATURE_CONTRACT, "signature_id": current["signature_id"],
-        "overall_valid": all(checks.values()), "checks": checks,
-        "verification_route": "/api/shift-handoff/verify",
+        "overall_valid": verification["overall_valid"], "checks": verification["checks"],
+        "verification_route": "/api/fab-ops/shift-handoff/verify",
     }
 
 
@@ -393,8 +373,8 @@ def build_review_summary(severity: str | None = None, risk_bucket: str | None = 
             "replay_score_pct": replay_summary["summary"]["score_pct"],
         },
         "spotlight": {"alarm": spotlight_alarm, "lot": spotlight_lot},
-        "fastest_review_path": ["/health", "/api/review-summary", "/api/tool-ownership", "/api/release-gate", "/api/shift-handoff"],
-        "route_bundle": {"review_summary": "/api/review-summary", "review_pack": "/api/review-pack", "tool_ownership": "/api/tool-ownership?tool_id=etch-14", "release_gate": "/api/release-gate?lot_id=lot-8812", "shift_handoff": "/api/shift-handoff"},
+        "fastest_review_path": ["/health", "/api/fab-ops/review-summary", "/api/fab-ops/tool-ownership", "/api/fab-ops/release-gate", "/api/fab-ops/shift-handoff"],
+        "route_bundle": {"review_summary": "/api/fab-ops/review-summary", "review_pack": "/api/fab-ops/review-pack", "tool_ownership": "/api/fab-ops/tool-ownership?tool_id=etch-14", "release_gate": "/api/fab-ops/release-gate?lot_id=lot-8812", "shift_handoff": "/api/fab-ops/shift-handoff"},
     }
 
 
@@ -437,7 +417,7 @@ def build_recovery_board(mode: str | None = None) -> Dict[str, Any]:
             "Keep tool ownership, release gate, and handoff pack together during shift review.",
             "Treat the signed handoff as the final next-shift artifact after recovery decisions are made.",
         ],
-        "route_bundle": {"recovery_board": "/api/recovery-board", "recovery_board_schema": "/api/recovery-board/schema", "review_summary": "/api/review-summary", "tool_ownership": "/api/tool-ownership?tool_id=etch-14", "release_gate": "/api/release-gate?lot_id=lot-8812", "shift_handoff": "/api/shift-handoff"},
+        "route_bundle": {"recovery_board": "/api/fab-ops/recovery-board", "recovery_board_schema": "/api/fab-ops/recovery-board/schema", "review_summary": "/api/fab-ops/review-summary", "tool_ownership": "/api/fab-ops/tool-ownership?tool_id=etch-14", "release_gate": "/api/fab-ops/release-gate?lot_id=lot-8812", "shift_handoff": "/api/fab-ops/shift-handoff"},
     }
 
 
@@ -445,7 +425,7 @@ def build_recovery_board_schema() -> Dict[str, Any]:
     return {
         "schema": "fab-ops-recovery-board-v1",
         "required_fields": ["contract_version", "summary.visible_lots", "summary.hold_count", "items", "route_bundle.recovery_board"],
-        "links": {"recovery_board": "/api/recovery-board", "recovery_what_if": "/api/recovery-what-if", "recovery_board_schema": "/api/recovery-board/schema", "review_summary": "/api/review-summary", "review_pack": "/api/review-pack", "runtime_scorecard": "/api/runtime/scorecard"},
+        "links": {"recovery_board": "/api/fab-ops/recovery-board", "recovery_what_if": "/api/fab-ops/recovery-what-if", "recovery_board_schema": "/api/fab-ops/recovery-board/schema", "review_summary": "/api/fab-ops/review-summary", "review_pack": "/api/fab-ops/review-pack", "runtime_scorecard": "/api/fab-ops/runtime/scorecard"},
     }
 
 
@@ -453,7 +433,7 @@ def build_review_summary_schema() -> Dict[str, Any]:
     return {
         "schema": "fab-ops-review-summary-v1",
         "required_fields": ["service", "contract_version", "summary.alarm_count", "summary.replay_score_pct", "fastest_review_path", "route_bundle.review_summary"],
-        "links": {"review_summary": "/api/review-summary", "recovery_board": "/api/recovery-board", "review_pack": "/api/review-pack", "runtime_brief": "/api/runtime/brief"},
+        "links": {"review_summary": "/api/fab-ops/review-summary", "recovery_board": "/api/fab-ops/recovery-board", "review_pack": "/api/fab-ops/review-pack", "runtime_brief": "/api/fab-ops/runtime/brief"},
     }
 
 
@@ -461,8 +441,8 @@ def build_runtime_brief() -> Dict[str, Any]:
     summary = build_fab_summary()
     recovery_board = build_recovery_board()
     release_board = build_release_board()
-    operator_auth = build_operator_auth_status()
-    persistence = summarize_runtime_events()
+    operator_auth = build_operator_auth_status(DOMAIN)
+    persistence = summarize_runtime_events(DOMAIN)
     focus_lot = build_focus_lot()
     return {
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
@@ -483,19 +463,19 @@ def build_runtime_brief() -> Dict[str, Any]:
         "ops_snapshot": summary,
         "review_flow": [
             "Open /health to confirm the fab runtime posture and review routes.",
-            "Read /api/runtime/brief for the control-tower contract and evidence counts.",
-            "Use /api/recovery-board to separate hold lots from watch and release-ready lots.",
-            "Use /api/release-board to confirm the whole queue before discussing any single lot release.",
-            "Inspect /api/tool-ownership and /api/release-gate before acting on a shift decision.",
-            "Export /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before the next operator release.",
+            "Read /api/fab-ops/runtime/brief for the control-tower contract and evidence counts.",
+            "Use /api/fab-ops/recovery-board to separate hold lots from watch and release-ready lots.",
+            "Use /api/fab-ops/release-board to confirm the whole queue before discussing any single lot release.",
+            "Inspect /api/fab-ops/tool-ownership and /api/fab-ops/release-gate before acting on a shift decision.",
+            "Export /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before the next operator release.",
         ],
         "two_minute_review": [
             "Open /health to confirm critical-alarm and replay surfaces are available.",
-            "Read /api/runtime/brief for the control-tower contract and current ops snapshot.",
-            "Inspect /api/recovery-board?mode=hold to find the lot that blocks release posture.",
-            "Inspect /api/release-board before treating any downstream lot as release-ready.",
-            "Inspect /api/tool-ownership?tool_id=etch-14 and /api/release-gate?lot_id=lot-8812 before trusting release posture.",
-            "Review /api/shift-handoff, /api/shift-handoff/signature, and /api/shift-handoff/verify before handing the queue to the next shift.",
+            "Read /api/fab-ops/runtime/brief for the control-tower contract and current ops snapshot.",
+            "Inspect /api/fab-ops/recovery-board?mode=hold to find the lot that blocks release posture.",
+            "Inspect /api/fab-ops/release-board before treating any downstream lot as release-ready.",
+            "Inspect /api/fab-ops/tool-ownership?tool_id=etch-14 and /api/fab-ops/release-gate?lot_id=lot-8812 before trusting release posture.",
+            "Review /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
         ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
@@ -504,10 +484,10 @@ def build_runtime_brief() -> Dict[str, Any]:
         ],
         "proof_assets": [
             {"label": "Health Surface", "href": "/health", "kind": "route"},
-            {"label": "Recovery Board", "href": "/api/recovery-board?mode=hold", "kind": "route"},
-            {"label": "Release Board", "href": "/api/release-board", "kind": "route"},
+            {"label": "Recovery Board", "href": "/api/fab-ops/recovery-board?mode=hold", "kind": "route"},
+            {"label": "Release Board", "href": "/api/fab-ops/release-board", "kind": "route"},
         ],
-        "links": {"runtime_scorecard": "/api/runtime/scorecard", "review_summary": "/api/review-summary", "recovery_board": "/api/recovery-board", "release_board": "/api/release-board", "recovery_what_if": "/api/recovery-what-if", "review_pack": "/api/review-pack"},
+        "links": {"runtime_scorecard": "/api/fab-ops/runtime/scorecard", "review_summary": "/api/fab-ops/review-summary", "recovery_board": "/api/fab-ops/recovery-board", "release_board": "/api/fab-ops/release-board", "recovery_what_if": "/api/fab-ops/recovery-what-if", "review_pack": "/api/fab-ops/review-pack"},
     }
 
 
@@ -522,7 +502,7 @@ def build_review_pack() -> Dict[str, Any]:
         "readiness_contract": "fab-ops-review-pack-v1",
         "headline": "Shift-ready control tower review pack tying alarms, yield risk, tool watchlist, and handoff export into one operator surface.",
         "proof_bundle": {
-            "review_routes": ["/health", "/api/meta", "/api/runtime/brief", "/api/runtime/scorecard", "/api/review-summary", "/api/recovery-board", "/api/release-board", "/api/recovery-what-if", "/api/recovery-board/schema", "/api/review-pack"],
+            "review_routes": ["/health", "/api/fab-ops/meta", "/api/fab-ops/runtime/brief", "/api/fab-ops/runtime/scorecard", "/api/fab-ops/review-summary", "/api/fab-ops/recovery-board", "/api/fab-ops/release-board", "/api/fab-ops/recovery-what-if", "/api/fab-ops/recovery-board/schema", "/api/fab-ops/review-pack"],
             "critical_alarm_count": runtime_brief["ops_snapshot"]["critical_alarm_count"],
             "severe_lot_count": runtime_brief["ops_snapshot"]["severe_lot_count"],
             "replay_pass_count": len([case for case in REPLAY_SUITE if case["status"] == "pass"]),
@@ -549,13 +529,13 @@ def build_review_pack() -> Dict[str, Any]:
         "review_sequence": ["Health -> Runtime Brief -> Recovery Board -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary"],
         "two_minute_review": runtime_brief["two_minute_review"],
         "proof_assets": runtime_brief["proof_assets"],
-        "links": {"runtime_scorecard": "/api/runtime/scorecard", "review_summary": "/api/review-summary", "recovery_board": "/api/recovery-board", "release_board": "/api/release-board", "recovery_what_if": "/api/recovery-what-if", "runtime_brief": "/api/runtime/brief"},
+        "links": {"runtime_scorecard": "/api/fab-ops/runtime/scorecard", "review_summary": "/api/fab-ops/review-summary", "recovery_board": "/api/fab-ops/recovery-board", "release_board": "/api/fab-ops/release-board", "recovery_what_if": "/api/fab-ops/recovery-what-if", "runtime_brief": "/api/fab-ops/runtime/brief"},
     }
 
 
 def build_meta() -> Dict[str, Any]:
-    operator_auth = build_operator_auth_status()
-    persistence = summarize_runtime_events()
+    operator_auth = build_operator_auth_status(DOMAIN)
+    persistence = summarize_runtime_events(DOMAIN)
     return {
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
         "runtime_contract": "fab-ops-runtime-brief-v1",
@@ -563,7 +543,7 @@ def build_meta() -> Dict[str, Any]:
         "review_summary_contract": "fab-ops-review-summary-v1",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
-        "routes": ["/health", "/api/meta", "/api/runtime/brief", "/api/runtime/scorecard", "/api/review-summary", "/api/review-summary/schema", "/api/recovery-board", "/api/release-board", "/api/recovery-what-if", "/api/recovery-board/schema", "/api/review-pack", "/api/schema/alarm-report", "/api/schema/shift-handoff", "/api/fabs/summary", "/api/tools", "/api/tool-ownership", "/api/alarms", "/api/lots/at-risk", "/api/release-gate", "/api/shift-handoff", "/api/shift-handoff/signature", "/api/shift-handoff/verify", "/api/audit/feed", "/api/evals/replays"],
+        "routes": ["/health", "/api/fab-ops/meta", "/api/fab-ops/runtime/brief", "/api/fab-ops/runtime/scorecard", "/api/fab-ops/review-summary", "/api/fab-ops/review-summary/schema", "/api/fab-ops/recovery-board", "/api/fab-ops/release-board", "/api/fab-ops/recovery-what-if", "/api/fab-ops/recovery-board/schema", "/api/fab-ops/review-pack", "/api/fab-ops/schema/alarm-report", "/api/fab-ops/schema/shift-handoff", "/api/fab-ops/fabs/summary", "/api/fab-ops/tools", "/api/fab-ops/tool-ownership", "/api/fab-ops/alarms", "/api/fab-ops/lots/at-risk", "/api/fab-ops/release-gate", "/api/fab-ops/shift-handoff", "/api/fab-ops/shift-handoff/signature", "/api/fab-ops/shift-handoff/verify", "/api/fab-ops/audit/feed", "/api/fab-ops/evals/replays"],
         "capabilities": ["fab-control-tower", "tool-health-board", "tool-ownership-surface", "release-gate-surface", "release-board-surface", "recovery-board-surface", "lot-risk-prioritization", "shift-handoff-surface", "audit-feed-surface", "review-pack-surface", "replay-suite-surface"],
         "diagnostics": {
             "demo_mode": "synthetic-fab-telemetry", "shift_handoff_ready": True,
@@ -578,8 +558,8 @@ def build_meta() -> Dict[str, Any]:
 
 def build_runtime_scorecard() -> Dict[str, Any]:
     summary = build_fab_summary()
-    persistence = summarize_runtime_events()
-    operator_auth = build_operator_auth_status()
+    persistence = summarize_runtime_events(DOMAIN)
+    operator_auth = build_operator_auth_status(DOMAIN)
     audit_feed = build_audit_feed()
     replay_summary = build_replay_summary()
     recovery_board = build_recovery_board()
@@ -588,7 +568,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-runtime-scorecard-v1",
         "headline": "Runtime scorecard for fab handoff posture, release pressure, and persisted operator evidence.",
-        "runtime": {"operator_auth": operator_auth, "persistence": persistence, "review_routes": ["/health", "/api/runtime/brief", "/api/runtime/scorecard", "/api/review-summary", "/api/recovery-board", "/api/release-board", "/api/review-pack", "/api/shift-handoff/signature", "/api/shift-handoff/verify"]},
+        "runtime": {"operator_auth": operator_auth, "persistence": persistence, "review_routes": ["/health", "/api/fab-ops/runtime/brief", "/api/fab-ops/runtime/scorecard", "/api/fab-ops/review-summary", "/api/fab-ops/recovery-board", "/api/fab-ops/release-board", "/api/fab-ops/review-pack", "/api/fab-ops/shift-handoff/signature", "/api/fab-ops/shift-handoff/verify"]},
         "summary": {
             "critical_alarm_count": summary["critical_alarm_count"],
             "severe_lot_count": summary["severe_lot_count"],
@@ -606,5 +586,5 @@ def build_runtime_scorecard() -> Dict[str, Any]:
             "Treat the signed handoff surface plus verification as the final operator artifact for next-shift review.",
             "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
         ],
-        "links": {"health": "/health", "runtime_brief": "/api/runtime/brief", "review_summary": "/api/review-summary", "recovery_board": "/api/recovery-board", "release_board": "/api/release-board", "recovery_what_if": "/api/recovery-what-if", "review_pack": "/api/review-pack", "handoff_signature": "/api/shift-handoff/signature", "handoff_verify": "/api/shift-handoff/verify"},
+        "links": {"health": "/health", "runtime_brief": "/api/fab-ops/runtime/brief", "review_summary": "/api/fab-ops/review-summary", "recovery_board": "/api/fab-ops/recovery-board", "release_board": "/api/fab-ops/release-board", "recovery_what_if": "/api/fab-ops/recovery-what-if", "review_pack": "/api/fab-ops/review-pack", "handoff_signature": "/api/fab-ops/shift-handoff/signature", "handoff_verify": "/api/fab-ops/shift-handoff/verify"},
     }

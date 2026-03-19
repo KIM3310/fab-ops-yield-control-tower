@@ -2,7 +2,6 @@
 Hardcoded domain data for fab-ops-yield-control-tower.
 Contains all fabs, tools, alarms, lots, replay suites, tool ownership, audit events, and constants.
 """
-
 from __future__ import annotations
 
 from typing import Any, Dict, List

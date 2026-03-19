@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fab-ops-yield-control-tower"
-version = "0.1.0"
-description = "Fab operations control tower with yield alarms, handoff review, and audit surfaces."
+name = "semiconductor-ops-platform"
+version = "0.2.0"
+description = "Unified semiconductor ops platform: fab control tower (alarms, lots, tools, recovery board) and scanner field response (field incidents, subsystem escalation, qualification review)."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Kim" }]

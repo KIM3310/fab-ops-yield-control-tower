@@ -1,52 +1,34 @@
-# Fab Ops Yield Control Tower
+# Semiconductor Ops Platform
 
-`fab-ops-yield-control-tower` is a manufacturing operations demo for semiconductor and industrial environments. It keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, and `shift handoff` in one reviewable operator surface.
+`semiconductor-ops-platform` is a unified manufacturing operations platform for semiconductor environments. It combines two domains into a single FastAPI application with shared infrastructure and zero code duplication.
 
-![Review pack diagram](docs/review-pack.svg)
+## Domains
 
-## Portfolio posture
-- Read this repo like a shift-ready control room with synthetic fab data, not like a manufacturing-flavored dashboard mockup.
-- Recovery board, release gate, and signed handoff routes should all line up before you talk about production readiness.
+### Fab Ops Yield Control Tower (`/api/fab-ops/`)
+Keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, `recovery board`, and `shift handoff` in one reviewable operator surface.
 
-## Role signals
-- **AI engineer / industrial systems:** the repo focuses on alarms, release gates, recovery lanes, and shift continuity instead of generic chat.
-- **Solutions architect:** partial-outage handling and signed handoff surfaces make the control-tower boundary clear.
-- **Field / solutions engineer:** the workflow can be walked quickly from queue posture to release decision to handoff proof.
+### Scanner Field Response (`/api/scanner/`)
+A semiconductor equipment field-response workflow for `field response`, `subsystem escalation`, `qualification review`, and `signed handoff`. Keeps one scanner incident visible from local triage through qualification review and customer milestone readiness.
 
+## Architecture
 
-## Portfolio context
-- **Portfolio family:** governed ops and control towers
-- **This repo's role:** industrial / semiconductor control-tower branch focused on release and handoff continuity.
-- **Related repos:** `regulated-case-workbench`, `twincity-ui`, `Nexus-Hive`
-
-## Runtime vs review/site surfaces
-- Primary runtime: the FastAPI app in `app/` plus the local UI assets under `app/static/` are the live operator surface.
-- Review/site surfaces: `site/` and `docs/` hold static reviewer material and diagrams; use them for recorded walkthroughs, not live runtime state.
-- Repo map: `scripts/` contains scenario helpers, `tests/` contains regression checks, and `infra/` contains deployment notes.
-
-## Reviewer walkthrough in one story
-1. Start with the static review/site material only to frame the fab scenario and seeded lots.
-2. Switch to the live FastAPI surface for the real release-gate, recovery-board, and handoff decisions.
-3. Finish on audit feed plus replay evals so the walkthrough lands on continuity evidence instead of a frozen screenshot.
-
-## What it demonstrates
-
-- Fab control tower framing instead of a generic AI copilot
-- Alarm -> lot -> tool -> SOP linkage for grounded triage
-- Shift handoff export surface for operator continuity
-- Tool ownership, release gate, audit feed, and signed handoff proof
-- Recovery board that separates hold, watch, and release-ready lots
-- Replay-style review evidence for manufacturing incident scenarios
-- Runtime brief, review pack, schema endpoints, and CI
-
-## Review Pack At A Glance
-
-- Tool ownership and maintenance escalation lanes stay visible before any release decision.
-- Release gate makes the top lot decision explicit instead of implied by the alarm queue.
-- Recovery board compresses release posture into hold/watch/ready lanes before the handoff is exported.
-- Shift handoff now includes a digest-style signature proof for next-shift review.
-- Audit feed shows the latest handoff and escalation events without live fab systems.
-- The landing screen now supports focused tool and lot selection, so reviewers can swap the control-tower route they inspect instead of relying on one hard-coded example.
+```
+app/
+  shared/                  # Zero-duplication shared modules
+    operator_access.py     # Unified operator auth (per-domain env vars)
+    runtime_store.py       # Unified event persistence (per-domain store files)
+    signatures.py          # Unified HMAC-SHA256 signing and verification
+  domains/
+    fab_ops/               # Fab ops domain
+      domain.py            # Hardcoded fab/tool/alarm/lot data
+      helpers.py           # Business logic (build_* functions)
+      routes.py            # FastAPI router (/api/fab-ops/...)
+    scanner/               # Scanner domain
+      domain.py            # Hardcoded scanner/incident/qualification data
+      helpers.py           # Business logic (build_* functions)
+      routes.py            # FastAPI router (/api/scanner/...)
+  main.py                  # Unified entrypoint
+```
 
 ## Quickstart
 
@@ -62,58 +44,53 @@ Open `http://127.0.0.1:8000`.
 
 ## Runtime Surfaces
 
+### Platform
 - `GET /health`
-- `GET /api/meta`
-- `GET /api/runtime/brief`
-- `GET /api/runtime/scorecard`
-- `GET /api/review-pack`
-- `GET /api/recovery-board`
-- `GET /api/recovery-what-if`
-- `GET /api/release-board`
-- `GET /api/recovery-board/schema`
-- `GET /api/schema/alarm-report`
-- `GET /api/schema/shift-handoff`
-- `GET /api/fabs/summary`
-- `GET /api/tools`
-- `GET /api/tool-ownership`
-- `GET /api/alarms`
-- `GET /api/lots/at-risk`
-- `GET /api/release-gate`
-- `GET /api/shift-handoff`
-- `GET /api/shift-handoff/signature`
-- `GET /api/audit/feed`
-- `GET /api/evals/replays`
 
-## Review Flow (Short)
+### Fab Ops (`/api/fab-ops/`)
+- `GET /api/fab-ops/meta`
+- `GET /api/fab-ops/runtime/brief`
+- `GET /api/fab-ops/runtime/scorecard`
+- `GET /api/fab-ops/review-pack`
+- `GET /api/fab-ops/review-summary`
+- `GET /api/fab-ops/recovery-board`
+- `GET /api/fab-ops/release-board`
+- `GET /api/fab-ops/recovery-what-if`
+- `GET /api/fab-ops/recovery-board/schema`
+- `GET /api/fab-ops/schema/alarm-report`
+- `GET /api/fab-ops/schema/shift-handoff`
+- `GET /api/fab-ops/fabs/summary`
+- `GET /api/fab-ops/tools`
+- `GET /api/fab-ops/tool-ownership`
+- `GET /api/fab-ops/alarms`
+- `GET /api/fab-ops/lots/at-risk`
+- `GET /api/fab-ops/release-gate`
+- `GET /api/fab-ops/shift-handoff`
+- `GET /api/fab-ops/shift-handoff/signature`
+- `GET /api/fab-ops/shift-handoff/verify`
+- `GET /api/fab-ops/audit/feed`
+- `GET /api/fab-ops/evals/replays`
 
-1. `health`
-2. `runtime brief`
-3. `recovery board`
-4. `release board`
-5. `tool ownership`
-6. `release gate`
-7. `alarm queue + lots at risk`
-8. `shift handoff + signature`
-9. `audit feed + replay evals`
-
-## Review Flow (Detailed)
-
-1. Open `/health` to confirm critical-alarm and replay surfaces are available.
-2. Read `/api/runtime/brief` for the control-tower contract and current ops snapshot.
-3. Inspect `/api/recovery-board?mode=hold` to isolate the lot that blocks release posture.
-4. Inspect `/api/release-board` to confirm queue-level release posture before arguing from a single lot.
-5. Run `/api/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true` before trusting a maintenance-based recovery claim.
-6. Use the landing-screen selectors or inspect example routes such as `/api/tool-ownership?tool_id=etch-14` and `/api/release-gate?lot_id=lot-8812` before trusting release posture.
-7. Review `/api/shift-handoff` and `/api/shift-handoff/signature` before handing the queue to the next shift.
-
-## Proof Assets
-
-- `/health`
-- `/api/recovery-board?mode=hold`
-- `/api/release-board`
-- `/api/tool-ownership?tool_id=etch-14` (example seeded tool)
-- `/api/release-gate?lot_id=lot-8812` (example seeded lot)
-- `/api/shift-handoff/signature`
+### Scanner (`/api/scanner/`)
+- `GET /api/scanner/meta`
+- `GET /api/scanner/runtime/brief`
+- `GET /api/scanner/runtime/scorecard`
+- `GET /api/scanner/review-pack`
+- `GET /api/scanner/schema/field-incident`
+- `GET /api/scanner/schema/application-qualification`
+- `GET /api/scanner/scanners`
+- `GET /api/scanner/incidents`
+- `GET /api/scanner/field-response-board`
+- `GET /api/scanner/subsystem-escalation`
+- `GET /api/scanner/qualification-board`
+- `GET /api/scanner/customer-readiness`
+- `GET /api/scanner/lot-risk`
+- `GET /api/scanner/shift-handoff`
+- `GET /api/scanner/shift-handoff/signature`
+- `GET /api/scanner/shift-handoff/verify`
+- `GET /api/scanner/evals/replays`
+- `GET /api/scanner/audit/feed`
+- `GET /api/scanner/operator/runtime`
 
 ## Local Verification
 
@@ -122,5 +99,13 @@ python -m pip install -U pip
 python -m pip install -e ".[dev]"
 python3 -m compileall -q app tests
 python -m pytest
-node --check app/static/app.js
 ```
+
+## What was unified
+
+Both domains previously had near-identical copies of:
+- **operator_access.py** -- operator token auth with HMAC comparison and role checking
+- **runtime_store.py** -- JSONL event persistence with summarization
+- **HMAC-SHA256 signature logic** -- signing keys, stable JSON, digest computation
+
+These are now single implementations in `app/shared/` parameterized by domain name, eliminating all duplication while preserving per-domain environment variable isolation.

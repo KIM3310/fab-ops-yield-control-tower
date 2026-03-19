@@ -29,28 +29,39 @@ def main() -> None:
     with TestClient(app) as client:
         health = client.get("/health")
         health.raise_for_status()
-        client.get("/api/runtime/brief").raise_for_status()
-        client.get("/api/review-summary?severity=critical").raise_for_status()
-        recovery = client.get("/api/recovery-board?mode=hold")
+
+        # Fab ops domain
+        client.get("/api/fab-ops/runtime/brief").raise_for_status()
+        client.get("/api/fab-ops/review-summary?severity=critical").raise_for_status()
+        recovery = client.get("/api/fab-ops/recovery-board?mode=hold")
         recovery.raise_for_status()
-        release_gate = client.get("/api/release-gate?lot_id=lot-8812", headers=headers)
+        release_gate = client.get("/api/fab-ops/release-gate?lot_id=lot-8812", headers=headers)
         release_gate.raise_for_status()
-        scorecard = client.get("/api/runtime/scorecard")
+        scorecard = client.get("/api/fab-ops/runtime/scorecard")
         scorecard.raise_for_status()
         scorecard_body = scorecard.json()
+
+        # Scanner domain
+        client.get("/api/scanner/runtime/brief").raise_for_status()
+        scanner_field = client.get("/api/scanner/field-response-board")
+        scanner_field.raise_for_status()
 
     print(
         json.dumps(
             {
                 "ok": True,
                 "service": health.json()["service"],
-                "critical_alarm_count": scorecard_body["summary"]["critical_alarm_count"],
-                "hold_lots": scorecard_body["summary"]["hold_lots"],
-                "persisted_events": scorecard_body["runtime"]["persistence"]["event_count"],
-                "event_type_counts": scorecard_body["runtime"]["persistence"]["event_type_counts"],
-                "operator_auth": scorecard_body["runtime"]["operator_auth"],
-                "release_decision": release_gate.json()["payload"]["decision"],
-                "recovery_spotlight": recovery.json()["spotlight"]["lot_id"],
+                "fab_ops": {
+                    "critical_alarm_count": scorecard_body["summary"]["critical_alarm_count"],
+                    "hold_lots": scorecard_body["summary"]["hold_lots"],
+                    "persisted_events": scorecard_body["runtime"]["persistence"]["event_count"],
+                    "release_decision": release_gate.json()["payload"]["decision"],
+                    "recovery_spotlight": recovery.json()["spotlight"]["lot_id"],
+                },
+                "scanner": {
+                    "incidents": scanner_field.json()["summary"]["incidents"],
+                    "qualification_blockers": scanner_field.json()["summary"]["qualification_blockers"],
+                },
             },
             indent=2,
         )
