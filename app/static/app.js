@@ -80,9 +80,9 @@ const RECORDED_FAB = {
     ],
   },
   reviewPack: {
-    headline: "Recorded review pack for yield risk, recovery, and handoff posture.",
+    headline: "Shift review pack for yield risk, recovery, and handoff status.",
     operator_promises: [
-      "Alarms, lots, tools, and handoff stay in one reviewer-visible surface.",
+      "Alarms, lots, tools, and handoff stay in one operator view.",
       "Recovery what-if and release-gate decisions remain tied to the same lot context.",
     ],
     two_minute_review: [
@@ -215,11 +215,11 @@ const REVIEW_LENSES = {
     actions: ["Focus Severe Lot", "Copy Shift Snapshot", "Copy Focused Route"],
   },
   reviewer: {
-    headline: "Review proof lens",
-    summary: "Keep review pack, trust boundary, and replay evidence together so the control tower feels auditable, not just flashy.",
+    headline: "Audit lens",
+    summary: "Keep review pack, trust boundary, and replay evidence together so the control tower stays auditable.",
     cards: [
-      ["01 · Review pack", "Read operator promises and trust boundary before you touch the severe lot."],
-      ["02 · Proof route", "Use the focused route to connect recovery board, release gate, and signature."],
+      ["01 · Review pack", "Read operator promises and trust boundary before touching the severe lot."],
+      ["02 · Focused route", "Connect recovery board, release gate, and signature in one path."],
       ["03 · Replay", "Use replay summary as the confidence layer after the route is clear."],
     ],
     actions: ["Copy Focused Route", "Copy Severe Lot", "Refresh Control Tower"],

@@ -541,7 +541,7 @@ def build_review_pack() -> dict[str, Any]:
     """Build the shift-ready review pack for the scanner domain.
 
     Returns:
-        Review pack payload with proof bundle, focus story, and operator promises.
+        Review pack payload with focus story and operator promises.
     """
     focus = focus_incident()
     lot = focus_lot()

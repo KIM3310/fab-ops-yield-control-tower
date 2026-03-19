@@ -749,7 +749,7 @@ def build_review_pack() -> dict[str, Any]:
     return {
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-review-pack-v1",
-        "headline": "Shift-ready control tower review pack tying alarms, yield risk, tool watchlist, and handoff export into one operator surface.",
+        "headline": "Control tower summary tying alarms, yield risk, tool watchlist, and handoff export into one view.",
         "proof_bundle": {
             "review_routes": ["/health", "/api/fab-ops/meta", "/api/fab-ops/runtime/brief", "/api/fab-ops/runtime/scorecard", "/api/fab-ops/review-summary", "/api/fab-ops/recovery-board", "/api/fab-ops/release-board", "/api/fab-ops/recovery-what-if", "/api/fab-ops/recovery-board/schema", "/api/fab-ops/review-pack"],
             "critical_alarm_count": runtime_brief["ops_snapshot"]["critical_alarm_count"],

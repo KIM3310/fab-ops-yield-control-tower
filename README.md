@@ -5,7 +5,7 @@
 ## Domains
 
 ### Fab Ops Yield Control Tower (`/api/fab-ops/`)
-Keeps `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, `recovery board`, and `shift handoff` in one reviewable operator surface.
+Manages `alarms`, `lot-at-risk prioritization`, `tool ownership`, `release gate`, `recovery board`, and `shift handoff` in a single operator dashboard.
 
 ### Scanner Field Response (`/api/scanner/`)
 A semiconductor equipment field-response workflow for `field response`, `subsystem escalation`, `qualification review`, and `signed handoff`. Keeps one scanner incident visible from local triage through qualification review and customer milestone readiness.
@@ -42,7 +42,7 @@ uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000`.
 
-## Runtime Surfaces
+## API endpoints
 
 ### Platform
 - `GET /health`
