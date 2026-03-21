@@ -7,8 +7,8 @@ response lives here so that route handlers stay thin.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -48,7 +48,7 @@ def utc_now_iso() -> str:
     Returns:
         ISO-formatted UTC datetime, e.g. ``"2026-03-08T07:12:00+00:00"``.
     """
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def record_route_hit(route: str) -> None:
@@ -64,7 +64,7 @@ def record_route_hit(route: str) -> None:
 # Lookup helpers
 # ---------------------------------------------------------------------------
 
-def get_tool_or_404(tool_id: str) -> Dict[str, Any]:
+def get_tool_or_404(tool_id: str) -> dict[str, Any]:
     """Look up a tool by ID or raise HTTP 404.
 
     Args:
@@ -83,7 +83,7 @@ def get_tool_or_404(tool_id: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_id}")
 
 
-def get_lot_or_404(lot_id: str) -> Dict[str, Any]:
+def get_lot_or_404(lot_id: str) -> dict[str, Any]:
     """Look up a lot-at-risk by ID or raise HTTP 404.
 
     Args:
@@ -102,7 +102,7 @@ def get_lot_or_404(lot_id: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Unknown lot: {lot_id}")
 
 
-def normalize_review_filter(name: str, value: Optional[str], allowed: Set[str]) -> Optional[str]:
+def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> str | None:
     """Validate and normalise an optional filter parameter.
 
     Returns ``None`` when *value* is empty or ``None``.  Raises HTTP 400 if
@@ -130,7 +130,7 @@ def normalize_review_filter(name: str, value: Optional[str], allowed: Set[str]) 
 # Schema builders
 # ---------------------------------------------------------------------------
 
-def build_alarm_report_schema() -> Dict[str, Any]:
+def build_alarm_report_schema() -> dict[str, Any]:
     """Return the canonical alarm report schema definition.
 
     Returns:
@@ -151,7 +151,7 @@ def build_alarm_report_schema() -> Dict[str, Any]:
     }
 
 
-def build_shift_handoff_schema() -> Dict[str, Any]:
+def build_shift_handoff_schema() -> dict[str, Any]:
     """Return the canonical shift handoff schema definition.
 
     Returns:
@@ -176,7 +176,7 @@ def build_shift_handoff_schema() -> Dict[str, Any]:
 # Domain logic builders
 # ---------------------------------------------------------------------------
 
-def build_tool_ownership(tool_id: str) -> Dict[str, Any]:
+def build_tool_ownership(tool_id: str) -> dict[str, Any]:
     """Build the enriched tool ownership record for *tool_id*.
 
     Merges static ownership data with live tool status fields.
@@ -203,7 +203,7 @@ def build_tool_ownership(tool_id: str) -> Dict[str, Any]:
     }
 
 
-def build_release_gate(lot_id: str) -> Dict[str, Any]:
+def build_release_gate(lot_id: str) -> dict[str, Any]:
     """Evaluate the release gate decision for a lot.
 
     The decision is one of ``"hold-release"``, ``"reroute-review"``, or
@@ -226,7 +226,7 @@ def build_release_gate(lot_id: str) -> Dict[str, Any]:
     else:
         decision = "release-with-sampling"
 
-    failed_checks: List[str] = []
+    failed_checks: list[str] = []
     if tool["status"] == "alarm":
         failed_checks.append("critical tool alarm still open")
     if lot["yield_risk_score"] >= 0.85:
@@ -251,7 +251,7 @@ def build_release_gate(lot_id: str) -> Dict[str, Any]:
     }
 
 
-def build_shift_handoff() -> Dict[str, Any]:
+def build_shift_handoff() -> dict[str, Any]:
     """Build the night-shift handoff pack for fab-west-1.
 
     Sorts lots by yield risk (descending) and identifies tools on the
@@ -279,7 +279,7 @@ def build_shift_handoff() -> Dict[str, Any]:
     }
 
 
-def build_focus_lot() -> Dict[str, Any]:
+def build_focus_lot() -> dict[str, Any]:
     """Build the spotlight focus-lot summary centred on lot-8812.
 
     Composes alarm, tool, release gate, ownership, and handoff data into
@@ -318,7 +318,7 @@ def build_focus_lot() -> Dict[str, Any]:
     }
 
 
-def build_fab_summary() -> Dict[str, Any]:
+def build_fab_summary() -> dict[str, Any]:
     """Build a high-level summary of the fab's operational posture.
 
     Returns:
@@ -343,7 +343,7 @@ def build_recovery_what_if(
     *,
     yield_gain: float = 0.2,
     maintenance_complete: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run a what-if simulation for a recovery scenario.
 
     Simulates the effect of a yield improvement and/or maintenance completion
@@ -373,7 +373,7 @@ def build_recovery_what_if(
     else:
         simulated_decision = "release-with-sampling"
 
-    simulated_failed_checks: List[str] = []
+    simulated_failed_checks: list[str] = []
     if simulated_tool_status == "alarm":
         simulated_failed_checks.append("critical tool alarm still open")
     if simulated_yield_risk >= 0.85:
@@ -421,7 +421,7 @@ def build_recovery_what_if(
     }
 
 
-def build_release_board() -> Dict[str, Any]:
+def build_release_board() -> dict[str, Any]:
     """Build the release board showing all lots sorted by yield risk.
 
     Each lot is enriched with its release gate decision and ownership info.
@@ -429,7 +429,7 @@ def build_release_board() -> Dict[str, Any]:
     Returns:
         Release board payload with summary, spotlight, and item list.
     """
-    items: List[dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
         gate = build_release_gate(lot["lot_id"])
         ownership = build_tool_ownership(lot["tool_id"])
@@ -458,7 +458,7 @@ def build_release_board() -> Dict[str, Any]:
     }
 
 
-def build_handoff_signature() -> Dict[str, Any]:
+def build_handoff_signature() -> dict[str, Any]:
     """Build and sign the shift handoff manifest.
 
     Produces an HMAC-SHA256 signature over the canonical JSON of the handoff
@@ -487,11 +487,11 @@ def build_handoff_signature() -> Dict[str, Any]:
 
 def build_handoff_signature_verification(
     *,
-    algorithm: Optional[str] = None,
-    key_id: Optional[str] = None,
-    sha256: Optional[str] = None,
-    signature: Optional[str] = None,
-) -> Dict[str, Any]:
+    algorithm: str | None = None,
+    key_id: str | None = None,
+    sha256: str | None = None,
+    signature: str | None = None,
+) -> dict[str, Any]:
     """Verify the current handoff signature against provided values.
 
     When parameters are ``None`` the current (correct) values are used,
@@ -523,7 +523,7 @@ def build_handoff_signature_verification(
     }
 
 
-def build_audit_feed() -> Dict[str, Any]:
+def build_audit_feed() -> dict[str, Any]:
     """Build the audit event feed for the fab-ops domain.
 
     Returns:
@@ -539,7 +539,7 @@ def build_audit_feed() -> Dict[str, Any]:
     }
 
 
-def build_replay_summary() -> Dict[str, Any]:
+def build_replay_summary() -> dict[str, Any]:
     """Build the replay suite summary for the fab-ops domain.
 
     Returns:
@@ -558,7 +558,7 @@ def build_replay_summary() -> Dict[str, Any]:
     }
 
 
-def build_review_summary(severity: Optional[str] = None, risk_bucket: Optional[str] = None) -> Dict[str, Any]:
+def build_review_summary(severity: str | None = None, risk_bucket: str | None = None) -> dict[str, Any]:
     """Build a filtered review summary of alarms and lots.
 
     Args:
@@ -591,7 +591,7 @@ def build_review_summary(severity: Optional[str] = None, risk_bucket: Optional[s
     }
 
 
-def build_recovery_board(mode: Optional[str] = None) -> Dict[str, Any]:
+def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
     """Build the recovery board filtered by board status mode.
 
     Args:
@@ -601,7 +601,7 @@ def build_recovery_board(mode: Optional[str] = None) -> Dict[str, Any]:
         Recovery board payload with summary, items, and review actions.
     """
     normalized_mode = normalize_review_filter("mode", mode, ALLOWED_RECOVERY_MODES) or "all"
-    items: List[dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
         gate = build_release_gate(lot["lot_id"])
         tool = get_tool_or_404(lot["tool_id"])
@@ -642,7 +642,7 @@ def build_recovery_board(mode: Optional[str] = None) -> Dict[str, Any]:
     }
 
 
-def build_recovery_board_schema() -> Dict[str, Any]:
+def build_recovery_board_schema() -> dict[str, Any]:
     """Return the recovery board JSON schema definition.
 
     Returns:
@@ -655,7 +655,7 @@ def build_recovery_board_schema() -> Dict[str, Any]:
     }
 
 
-def build_review_summary_schema() -> Dict[str, Any]:
+def build_review_summary_schema() -> dict[str, Any]:
     """Return the review summary JSON schema definition.
 
     Returns:
@@ -668,7 +668,7 @@ def build_review_summary_schema() -> Dict[str, Any]:
     }
 
 
-def build_runtime_brief() -> Dict[str, Any]:
+def build_runtime_brief() -> dict[str, Any]:
     """Build the comprehensive runtime brief for the fab-ops control tower.
 
     This is the primary entry-point payload that ties together alarm counts,
@@ -731,7 +731,7 @@ def build_runtime_brief() -> Dict[str, Any]:
     }
 
 
-def build_review_pack() -> Dict[str, Any]:
+def build_review_pack() -> dict[str, Any]:
     """Build the shift-ready review pack for the fab-ops domain.
 
     Aggregates the runtime brief, audit feed, recovery board, release board,
@@ -781,7 +781,7 @@ def build_review_pack() -> Dict[str, Any]:
     }
 
 
-def build_meta() -> Dict[str, Any]:
+def build_meta() -> dict[str, Any]:
     """Build the fab-ops domain metadata and diagnostics payload.
 
     Returns:
@@ -809,7 +809,7 @@ def build_meta() -> Dict[str, Any]:
     }
 
 
-def build_runtime_scorecard() -> Dict[str, Any]:
+def build_runtime_scorecard() -> dict[str, Any]:
     """Build the runtime scorecard aggregating all operational metrics.
 
     Returns:

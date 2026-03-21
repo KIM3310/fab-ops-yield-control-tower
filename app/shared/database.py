@@ -12,18 +12,18 @@ When the SQLite backend is active, tables are created automatically on first
 import via ``Base.metadata.create_all``.
 """
 
+import contextlib
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Union,  Dict, List,  Optional,  Any
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Float,
     Integer,
     String,
     Text,
@@ -58,13 +58,13 @@ class RuntimeEvent(Base):  # type: ignore[misc]
     id = Column(Integer, primary_key=True, autoincrement=True)
     domain = Column(String(32), nullable=False, index=True)
     event_type = Column(String(64), nullable=False, index=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     route = Column(String(256), nullable=True)
     payload_json = Column(Text, nullable=True)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary matching the legacy JSONL format."""
-        base: Dict[str, Any] = {
+        base: dict[str, Any] = {
             "event_type": self.event_type,
             "domain": self.domain,
             "at": self.timestamp.isoformat() if self.timestamp else None,
@@ -72,10 +72,8 @@ class RuntimeEvent(Base):  # type: ignore[misc]
         if self.route:
             base["route"] = self.route
         if self.payload_json:
-            try:
+            with contextlib.suppress(json.JSONDecodeError):
                 base.update(json.loads(self.payload_json))
-            except json.JSONDecodeError:
-                pass
         return base
 
 
@@ -94,10 +92,10 @@ class ShiftHandoff(Base):  # type: ignore[misc]
     signature_hmac = Column(String(64), nullable=True)
     signed_by = Column(String(64), nullable=True)
     signed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     payload_json = Column(Text, nullable=False)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary."""
         return {
             "id": self.id,
@@ -125,13 +123,13 @@ class AuditRecord(Base):  # type: ignore[misc]
     actor = Column(String(64), nullable=False)
     tool_id = Column(String(64), nullable=True)
     lot_id = Column(String(64), nullable=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     details_json = Column(Text, nullable=True)
     is_exported = Column(Boolean, nullable=False, default=False)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary."""
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "id": self.id,
             "at": self.timestamp.isoformat() if self.timestamp else None,
             "event": self.event_name,
@@ -143,10 +141,8 @@ class AuditRecord(Base):  # type: ignore[misc]
         if self.lot_id:
             result["lot_id"] = self.lot_id
         if self.details_json:
-            try:
+            with contextlib.suppress(json.JSONDecodeError):
                 result["details"] = json.loads(self.details_json)
-            except json.JSONDecodeError:
-                pass
         return result
 
 
@@ -212,12 +208,10 @@ def record_event_sqlite(
     try:
         route = payload.pop("route", None)
         at_str = payload.pop("at", None)
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
         if at_str:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 ts = datetime.fromisoformat(str(at_str))
-            except (ValueError, TypeError):
-                pass
 
         event = RuntimeEvent(
             domain=domain,
@@ -237,7 +231,7 @@ def record_event_sqlite(
         session.close()
 
 
-def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> Dict[str, Any]:
+def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> dict[str, Any]:
     """Read recent events from SQLite and return an aggregated summary.
 
     Returns a dictionary matching the shape produced by the JSONL summarizer
@@ -250,7 +244,7 @@ def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> Dict[
     Returns:
         Summary dictionary with counts and recent events.
     """
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "enabled": True,
         "backend": "sqlite",
         "path": DATABASE_URL,
@@ -285,7 +279,7 @@ def summarize_events_sqlite(domain: str = "fab_ops", limit: int = 4000) -> Dict[
                 summary["last_event_at"] = at
 
             et = d.get("event_type", "")
-            counts: Dict[str, int] = summary["event_type_counts"]
+            counts: dict[str, int] = summary["event_type_counts"]
             counts[et] = counts.get(et, 0) + 1
 
             if et == "route_hit":
@@ -310,10 +304,10 @@ def record_handoff_sqlite(
     shift: str,
     fab_or_site_id: str,
     headline: str,
-    payload: Dict[str, Any],
-    signature_sha256: Optional[str] = None,
-    signature_hmac: Optional[str] = None,
-    signed_by: Optional[str] = None,
+    payload: dict[str, Any],
+    signature_sha256: str | None = None,
+    signature_hmac: str | None = None,
+    signed_by: str | None = None,
 ) -> None:
     """Persist a shift handoff record to SQLite.
 
@@ -339,7 +333,7 @@ def record_handoff_sqlite(
             signature_sha256=signature_sha256,
             signature_hmac=signature_hmac,
             signed_by=signed_by,
-            signed_at=datetime.now(timezone.utc) if signed_by else None,
+            signed_at=datetime.now(UTC) if signed_by else None,
             payload_json=json.dumps(payload),
         )
         session.add(record)
@@ -356,9 +350,9 @@ def record_audit_sqlite(
     domain: str,
     event_name: str,
     actor: str,
-    tool_id: Optional[str] = None,
-    lot_id: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
+    tool_id: str | None = None,
+    lot_id: str | None = None,
+    details: dict[str, Any] | None = None,
 ) -> None:
     """Persist an audit record to SQLite.
 
@@ -390,7 +384,7 @@ def record_audit_sqlite(
         session.close()
 
 
-def migrate_jsonl_to_sqlite(jsonl_path: Union[str, Path], domain: str = "fab_ops") -> int:
+def migrate_jsonl_to_sqlite(jsonl_path: str | Path, domain: str = "fab_ops") -> int:
     """Migrate events from a JSONL file into the SQLite database.
 
     Each line in the JSONL file is parsed and inserted as a RuntimeEvent.
@@ -425,12 +419,10 @@ def migrate_jsonl_to_sqlite(jsonl_path: Union[str, Path], domain: str = "fab_ops
             event_type = data.pop("event_type", "unknown")
             route = data.pop("route", None)
             at_str = data.pop("at", None)
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
             if at_str:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     ts = datetime.fromisoformat(str(at_str))
-                except (ValueError, TypeError):
-                    pass
             data.pop("domain", None)
 
             event = RuntimeEvent(

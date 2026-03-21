@@ -8,8 +8,8 @@ they remain thin and testable.
 
 import hmac as _hmac
 import logging
-from datetime import datetime, timezone
-from typing import Dict, List,  Any
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -61,7 +61,7 @@ def utc_now_iso() -> str:
     Returns:
         ISO-formatted UTC datetime string.
     """
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def record_route_hit(route: str) -> None:
@@ -77,7 +77,7 @@ def record_route_hit(route: str) -> None:
 # Lookup helpers
 # ---------------------------------------------------------------------------
 
-def get_scanner_or_404(tool_id: str) -> Dict[str, Any]:
+def get_scanner_or_404(tool_id: str) -> dict[str, Any]:
     """Look up a scanner by tool ID or raise HTTP 404.
 
     Args:
@@ -96,7 +96,7 @@ def get_scanner_or_404(tool_id: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Unknown scanner: {tool_id}")
 
 
-def get_incident_or_404(incident_id: str) -> Dict[str, Any]:
+def get_incident_or_404(incident_id: str) -> dict[str, Any]:
     """Look up a field incident by ID or raise HTTP 404.
 
     Args:
@@ -115,7 +115,7 @@ def get_incident_or_404(incident_id: str) -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Unknown incident: {incident_id}")
 
 
-def get_lot_or_404(lot_id: str) -> Dict[str, Any]:
+def get_lot_or_404(lot_id: str) -> dict[str, Any]:
     """Look up an application qualification record by lot ID or raise HTTP 404.
 
     Args:
@@ -187,7 +187,7 @@ def customer_readiness_path(customer: str) -> str:
 # Focus selectors
 # ---------------------------------------------------------------------------
 
-def focus_incident() -> Dict[str, Any]:
+def focus_incident() -> dict[str, Any]:
     """Return the highest-severity field incident.
 
     Returns:
@@ -196,7 +196,7 @@ def focus_incident() -> Dict[str, Any]:
     return sorted(FIELD_INCIDENTS, key=lambda item: SEVERITY_RANK[item["severity"]])[0]
 
 
-def focus_lot() -> Dict[str, Any]:
+def focus_lot() -> dict[str, Any]:
     """Return the qualification record linked to the focus incident.
 
     Returns:
@@ -210,7 +210,7 @@ def focus_lot() -> Dict[str, Any]:
 # Domain logic builders
 # ---------------------------------------------------------------------------
 
-def build_field_response_board() -> Dict[str, Any]:
+def build_field_response_board() -> dict[str, Any]:
     """Build the field response board sorted by severity and SLA.
 
     Returns:
@@ -246,7 +246,7 @@ def build_field_response_board() -> Dict[str, Any]:
     }
 
 
-def build_subsystem_escalation(tool_id: str) -> Dict[str, Any]:
+def build_subsystem_escalation(tool_id: str) -> dict[str, Any]:
     """Build the subsystem escalation payload for a scanner.
 
     Args:
@@ -279,7 +279,7 @@ def build_subsystem_escalation(tool_id: str) -> Dict[str, Any]:
     }
 
 
-def build_qualification_board(lot_id: str) -> Dict[str, Any]:
+def build_qualification_board(lot_id: str) -> dict[str, Any]:
     """Build the qualification board payload for a specific lot.
 
     Computes deltas between current measurements and qualification targets.
@@ -316,7 +316,7 @@ def build_qualification_board(lot_id: str) -> Dict[str, Any]:
     }
 
 
-def build_customer_readiness(customer: str) -> Dict[str, Any]:
+def build_customer_readiness(customer: str) -> dict[str, Any]:
     """Build the customer readiness payload for a customer program.
 
     Args:
@@ -345,7 +345,7 @@ def build_customer_readiness(customer: str) -> Dict[str, Any]:
     }
 
 
-def build_shift_handoff_payload() -> Dict[str, Any]:
+def build_shift_handoff_payload() -> dict[str, Any]:
     """Build the scanner shift handoff payload.
 
     Returns:
@@ -381,7 +381,7 @@ def build_shift_handoff_payload() -> Dict[str, Any]:
     }
 
 
-def build_handoff_signature(payload: Dict[str, Any]) -> Dict[str, Any]:
+def build_handoff_signature(payload: dict[str, Any]) -> dict[str, Any]:
     """Sign the handoff payload and return the signature envelope.
 
     Args:
@@ -403,7 +403,7 @@ def build_handoff_signature(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def build_handoff_verify(payload: Dict[str, Any], expected: Dict[str, Any]) -> Dict[str, Any]:
+def build_handoff_verify(payload: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
     """Verify a handoff signature against the expected envelope.
 
     Args:
@@ -427,7 +427,7 @@ def build_handoff_verify(payload: Dict[str, Any], expected: Dict[str, Any]) -> D
     }
 
 
-def build_runtime_brief() -> Dict[str, Any]:
+def build_runtime_brief() -> dict[str, Any]:
     """Build the comprehensive runtime brief for the scanner domain.
 
     This is the primary entry-point payload showing incidents, escalations,
@@ -505,7 +505,7 @@ def build_runtime_brief() -> Dict[str, Any]:
     }
 
 
-def build_runtime_scorecard() -> Dict[str, Any]:
+def build_runtime_scorecard() -> dict[str, Any]:
     """Build the runtime scorecard for the scanner domain.
 
     Returns:
@@ -536,7 +536,7 @@ def build_runtime_scorecard() -> Dict[str, Any]:
     }
 
 
-def build_review_pack() -> Dict[str, Any]:
+def build_review_pack() -> dict[str, Any]:
     """Build the shift-ready review pack for the scanner domain.
 
     Returns:
@@ -587,7 +587,7 @@ def build_review_pack() -> Dict[str, Any]:
     }
 
 
-def build_replay_summary() -> Dict[str, Any]:
+def build_replay_summary() -> dict[str, Any]:
     """Build the replay suite summary for the scanner domain.
 
     Returns:

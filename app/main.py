@@ -12,7 +12,7 @@ in app/shared/ and is used by both domains without duplication.
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List,  Any
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +43,7 @@ STATIC_DIR = APP_DIR / "static"
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-OPENAPI_TAGS: List[dict[str, str]] = [
+OPENAPI_TAGS: list[dict[str, str]] = [
     {
         "name": "platform",
         "description": "Platform-level health checks and diagnostics.",
@@ -108,7 +108,7 @@ logger.info("Registered domain routers: fab-ops, scanner")
 # ---------------------------------------------------------------------------
 
 @app.get("/health", tags=["platform"])
-async def health() -> Dict[str, Any]:
+async def health() -> dict[str, Any]:
     """Return platform health status and navigation links for both domains.
 
     This is the top-level readiness probe. It enumerates the two domains

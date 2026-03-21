@@ -7,7 +7,7 @@ handlers are intentionally thin -- business logic lives in
 """
 
 import logging
-from typing import Dict, List,  Optional,  Any
+from typing import Any
 
 from fastapi import APIRouter, Query, Request
 
@@ -46,21 +46,21 @@ router = APIRouter(prefix="/api/fab-ops", tags=["fab-ops"])
 
 
 @router.get("/meta")
-async def meta() -> Dict[str, Any]:
+async def meta() -> dict[str, Any]:
     """Return fab-ops domain metadata, contracts, and diagnostic info."""
     record_route_hit("/api/fab-ops/meta")
     return build_meta()
 
 
 @router.get("/runtime/brief")
-async def runtime_brief() -> Dict[str, Any]:
+async def runtime_brief() -> dict[str, Any]:
     """Return the comprehensive runtime brief for the fab control tower."""
     record_route_hit("/api/fab-ops/runtime/brief")
     return build_runtime_brief()
 
 
 @router.get("/runtime/scorecard")
-async def runtime_scorecard() -> Dict[str, Any]:
+async def runtime_scorecard() -> dict[str, Any]:
     """Return the runtime scorecard with aggregated operational metrics."""
     record_route_hit("/api/fab-ops/runtime/scorecard")
     return build_runtime_scorecard()
@@ -68,36 +68,36 @@ async def runtime_scorecard() -> Dict[str, Any]:
 
 @router.get("/review-summary")
 async def review_summary(
-    severity: Optional[str] = Query(default=None),
-    risk_bucket: Optional[str] = Query(default=None),
-) -> Dict[str, Any]:
+    severity: str | None = Query(default=None),
+    risk_bucket: str | None = Query(default=None),
+) -> dict[str, Any]:
     """Return a filtered review summary of alarms and lots at risk."""
     record_route_hit("/api/fab-ops/review-summary")
     return build_review_summary(severity=severity, risk_bucket=risk_bucket)
 
 
 @router.get("/review-summary/schema")
-async def review_summary_schema() -> Dict[str, Any]:
+async def review_summary_schema() -> dict[str, Any]:
     """Return the review summary JSON schema definition."""
     return build_review_summary_schema()
 
 
 @router.get("/recovery-board")
-async def recovery_board(mode: Optional[str] = Query(default=None)) -> Dict[str, Any]:
+async def recovery_board(mode: str | None = Query(default=None)) -> dict[str, Any]:
     """Return the recovery board, optionally filtered by board status mode."""
     record_route_hit("/api/fab-ops/recovery-board")
     return build_recovery_board(mode=mode)
 
 
 @router.get("/release-board")
-async def release_board() -> Dict[str, Any]:
+async def release_board() -> dict[str, Any]:
     """Return the release board with all lots sorted by yield risk."""
     record_route_hit("/api/fab-ops/release-board")
     return build_release_board()
 
 
 @router.get("/recovery-board/schema")
-async def recovery_board_schema() -> Dict[str, Any]:
+async def recovery_board_schema() -> dict[str, Any]:
     """Return the recovery board JSON schema definition."""
     return build_recovery_board_schema()
 
@@ -107,7 +107,7 @@ async def recovery_what_if(
     lot_id: str = Query(default="lot-8812"),
     yield_gain: float = Query(default=0.2),
     maintenance_complete: bool = Query(default=False),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run a what-if recovery simulation for the specified lot."""
     record_route_hit("/api/fab-ops/recovery-what-if")
     return build_recovery_what_if(
@@ -118,14 +118,14 @@ async def recovery_what_if(
 
 
 @router.get("/review-pack")
-async def review_pack() -> Dict[str, Any]:
+async def review_pack() -> dict[str, Any]:
     """Return the shift-ready review pack aggregating all fab-ops surfaces."""
     record_route_hit("/api/fab-ops/review-pack")
     return build_review_pack()
 
 
 @router.get("/schema/alarm-report")
-async def alarm_report_schema() -> Dict[str, Any]:
+async def alarm_report_schema() -> dict[str, Any]:
     """Return the alarm report schema definition."""
     return {
         "status": "ok",
@@ -136,7 +136,7 @@ async def alarm_report_schema() -> Dict[str, Any]:
 
 
 @router.get("/schema/shift-handoff")
-async def shift_handoff_schema() -> Dict[str, Any]:
+async def shift_handoff_schema() -> dict[str, Any]:
     """Return the shift handoff schema definition."""
     return {
         "status": "ok",
@@ -147,7 +147,7 @@ async def shift_handoff_schema() -> Dict[str, Any]:
 
 
 @router.get("/fabs/summary")
-async def fabs_summary() -> Dict[str, Any]:
+async def fabs_summary() -> dict[str, Any]:
     """Return a summary of the fab's operational posture."""
     record_route_hit("/api/fab-ops/fabs/summary")
     return {
@@ -158,7 +158,7 @@ async def fabs_summary() -> Dict[str, Any]:
 
 
 @router.get("/tools")
-async def tools() -> Dict[str, Any]:
+async def tools() -> dict[str, Any]:
     """Return the list of all tools in the fab."""
     record_route_hit("/api/fab-ops/tools")
     return {
@@ -169,7 +169,7 @@ async def tools() -> Dict[str, Any]:
 
 
 @router.get("/tool-ownership")
-async def tool_ownership(tool_id: str = Query(default="etch-14")) -> Dict[str, Any]:
+async def tool_ownership(tool_id: str = Query(default="etch-14")) -> dict[str, Any]:
     """Return the ownership record for a specific tool."""
     record_route_hit("/api/fab-ops/tool-ownership")
     return {
@@ -180,7 +180,7 @@ async def tool_ownership(tool_id: str = Query(default="etch-14")) -> Dict[str, A
 
 
 @router.get("/alarms")
-async def alarms() -> Dict[str, Any]:
+async def alarms() -> dict[str, Any]:
     """Return the list of all active alarms."""
     record_route_hit("/api/fab-ops/alarms")
     return {
@@ -191,7 +191,7 @@ async def alarms() -> Dict[str, Any]:
 
 
 @router.get("/lots/at-risk")
-async def lots_at_risk() -> Dict[str, Any]:
+async def lots_at_risk() -> dict[str, Any]:
     """Return lots at risk sorted by yield risk score (descending)."""
     record_route_hit("/api/fab-ops/lots/at-risk")
     items = sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True)
@@ -203,7 +203,7 @@ async def lots_at_risk() -> Dict[str, Any]:
 
 
 @router.get("/release-gate")
-async def release_gate(request: Request, lot_id: str = Query(default="lot-8812")) -> Dict[str, Any]:
+async def release_gate(request: Request, lot_id: str = Query(default="lot-8812")) -> dict[str, Any]:
     """Evaluate and return the release gate decision for a lot (auth required)."""
     require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/release-gate")
@@ -216,7 +216,7 @@ async def release_gate(request: Request, lot_id: str = Query(default="lot-8812")
 
 
 @router.get("/shift-handoff")
-async def shift_handoff(request: Request) -> Dict[str, Any]:
+async def shift_handoff(request: Request) -> dict[str, Any]:
     """Export the shift handoff pack (auth required)."""
     require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/shift-handoff")
@@ -229,7 +229,7 @@ async def shift_handoff(request: Request) -> Dict[str, Any]:
 
 
 @router.get("/shift-handoff/signature")
-async def shift_handoff_signature(request: Request) -> Dict[str, Any]:
+async def shift_handoff_signature(request: Request) -> dict[str, Any]:
     """Export the signed shift handoff envelope (auth required)."""
     require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/shift-handoff/signature")
@@ -250,11 +250,11 @@ async def shift_handoff_signature(request: Request) -> Dict[str, Any]:
 @router.get("/shift-handoff/verify")
 async def shift_handoff_verify(
     request: Request,
-    algorithm: Optional[str] = Query(default=None),
-    key_id: Optional[str] = Query(default=None),
-    sha256: Optional[str] = Query(default=None),
-    signature: Optional[str] = Query(default=None),
-) -> Dict[str, Any]:
+    algorithm: str | None = Query(default=None),
+    key_id: str | None = Query(default=None),
+    sha256: str | None = Query(default=None),
+    signature: str | None = Query(default=None),
+) -> dict[str, Any]:
     """Verify the shift handoff signature (auth required)."""
     require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/shift-handoff/verify")
@@ -280,14 +280,14 @@ async def shift_handoff_verify(
 
 
 @router.get("/audit/feed")
-async def audit_feed() -> Dict[str, Any]:
+async def audit_feed() -> dict[str, Any]:
     """Return the audit event feed for the fab-ops domain."""
     record_route_hit("/api/fab-ops/audit/feed")
     return build_audit_feed()
 
 
 @router.get("/evals/replays")
-async def replay_evals() -> Dict[str, Any]:
+async def replay_evals() -> dict[str, Any]:
     """Return the replay suite summary for the fab-ops domain."""
     record_route_hit("/api/fab-ops/evals/replays")
     return build_replay_summary()

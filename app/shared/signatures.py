@@ -11,26 +11,26 @@ import hmac as _hmac
 import json
 import logging
 import os
-from typing import Dict, List,  Optional,  Any
+from typing import Any
 
 logger = logging.getLogger("shared.signatures")
 
-_SIGNING_KEY_DEFAULTS: Dict[str, str] = {
+_SIGNING_KEY_DEFAULTS: dict[str, str] = {
     "fab_ops": "fab-ops-demo-signing-key",
     "scanner": "scanner-demo-signing-key",
 }
 
-_SIGNING_KEY_ID_DEFAULTS: Dict[str, str] = {
+_SIGNING_KEY_ID_DEFAULTS: dict[str, str] = {
     "fab_ops": "fab-ops-demo-v1",
     "scanner": "scanner-demo-v1",
 }
 
-_SIGNING_KEY_ENVS: Dict[str, str] = {
+_SIGNING_KEY_ENVS: dict[str, str] = {
     "fab_ops": "FAB_OPS_HANDOFF_SIGNING_KEY",
     "scanner": "SCANNER_RESPONSE_SIGNING_KEY",
 }
 
-_SIGNING_KEY_ID_ENVS: Dict[str, str] = {
+_SIGNING_KEY_ID_ENVS: dict[str, str] = {
     "fab_ops": "FAB_OPS_HANDOFF_SIGNING_KEY_ID",
     "scanner": "SCANNER_RESPONSE_SIGNING_KEY_ID",
 }
@@ -107,7 +107,7 @@ def compute_hmac_sha256(key: str, data: bytes) -> str:
     return _hmac.new(key.encode("utf-8"), data, hashlib.sha256).hexdigest()
 
 
-def sign_manifest(manifest: Any, domain: str = "fab_ops") -> Dict[str, str]:
+def sign_manifest(manifest: Any, domain: str = "fab_ops") -> dict[str, str]:
     """Sign a manifest dict and return sha256 + hmac signature.
 
     The manifest is first serialised to canonical JSON (sorted keys, compact
@@ -132,12 +132,12 @@ def sign_manifest(manifest: Any, domain: str = "fab_ops") -> Dict[str, str]:
 def verify_signature(
     manifest: Any,
     *,
-    provided_algorithm: Optional[str] = None,
-    provided_key_id: Optional[str] = None,
-    provided_sha256: Optional[str] = None,
-    provided_signature: Optional[str] = None,
+    provided_algorithm: str | None = None,
+    provided_key_id: str | None = None,
+    provided_sha256: str | None = None,
+    provided_signature: str | None = None,
     domain: str = "fab_ops",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Verify a manifest signature and return check results.
 
     Each of the four *provided_** parameters is compared against the
@@ -164,7 +164,7 @@ def verify_signature(
     sha = str(provided_sha256 or current["sha256"]).strip()
     sig = str(provided_signature or current["signature"]).strip()
 
-    checks: Dict[str, bool] = {
+    checks: dict[str, bool] = {
         "algorithm_match": _hmac.compare_digest(algo, current_algorithm),
         "key_id_match": _hmac.compare_digest(kid, current_key_id),
         "sha256_match": _hmac.compare_digest(sha, current["sha256"]),

@@ -14,18 +14,18 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List,  Any
+from typing import Any
 
 logger = logging.getLogger("shared.runtime_store")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-_DEFAULT_STORE_FILES: Dict[str, str] = {
+_DEFAULT_STORE_FILES: dict[str, str] = {
     "fab_ops": "fab-ops-events.jsonl",
     "scanner": "scanner-response-events.jsonl",
 }
 
-_ENV_PREFIXES: Dict[str, str] = {
+_ENV_PREFIXES: dict[str, str] = {
     "fab_ops": "FAB_OPS",
     "scanner": "SCANNER",
 }
@@ -88,7 +88,7 @@ def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: An
         return
 
     store_path = _ensure_store_file(domain)
-    event: Dict[str, Any] = {"event_type": event_type, **payload}
+    event: dict[str, Any] = {"event_type": event_type, **payload}
     try:
         with store_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, ensure_ascii=True) + "\n")
@@ -98,7 +98,7 @@ def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: An
         raise
 
 
-def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> Dict[str, Any]:
+def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> dict[str, Any]:
     """Read the most recent events from the store and return an aggregated summary.
 
     Delegates to the SQLite backend when ``PERSISTENCE_BACKEND=sqlite``.
@@ -116,7 +116,7 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> Dict
         return summarize_events_sqlite(domain, limit)
 
     store_path = runtime_store_path(domain)
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "enabled": True,
         "path": str(store_path),
         "event_count": 0,
@@ -141,7 +141,7 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> Dict
         if not line.strip():
             continue
         try:
-            event: Dict[str, Any] = json.loads(line)
+            event: dict[str, Any] = json.loads(line)
         except json.JSONDecodeError:
             logger.warning("[%s] skipping malformed event line in store", domain)
             continue
@@ -151,7 +151,7 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> Dict
         if isinstance(at, str) and (summary["last_event_at"] is None or at > summary["last_event_at"]):
             summary["last_event_at"] = at
         event_type = event.get("event_type")
-        event_counts: Dict[str, int] = summary["event_type_counts"]
+        event_counts: dict[str, int] = summary["event_type_counts"]
         event_counts[event_type] = event_counts.get(event_type, 0) + 1
         if event_type == "route_hit":
             summary["route_hits"] += 1
