@@ -8,7 +8,7 @@ response lives here so that route handlers stay thin.
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException
 
@@ -58,6 +58,26 @@ def record_route_hit(route: str) -> None:
         route: The API path that was accessed.
     """
     record_runtime_event("route_hit", domain=DOMAIN, at=utc_now_iso(), route=route)
+
+
+def _yield_risk(item: dict[str, Any]) -> float:
+    return float(cast(float | str, item["yield_risk_score"]))
+
+
+def _lot_id(item: dict[str, Any]) -> str:
+    return cast(str, item["lot_id"])
+
+
+def _tool_id(item: dict[str, Any]) -> str:
+    return cast(str, item["tool_id"])
+
+
+def _alarm_rank(item: dict[str, Any]) -> int:
+    return ALARM_SEVERITY_RANK.get(str(item["severity"]), 99)
+
+
+def _replay_checks(item: dict[str, Any]) -> int:
+    return int(cast(int | str, item["checks"]))
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +280,7 @@ def build_shift_handoff() -> dict[str, Any]:
     Returns:
         Shift handoff payload with headline, alarms, lots, and acknowledgements.
     """
-    sorted_lots = sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True)
+    sorted_lots = sorted(LOTS_AT_RISK, key=_yield_risk, reverse=True)
     watchlist = [tool for tool in TOOLS if tool["status"] != "healthy"]
     return {
         "fab_id": "fab-west-1",
@@ -325,7 +345,7 @@ def build_fab_summary() -> dict[str, Any]:
         Dictionary with tool counts, alarm counts, and health breakdown.
     """
     critical_alarms = [alarm for alarm in ALARMS if alarm["severity"] == "critical"]
-    severe_lots = [lot for lot in LOTS_AT_RISK if lot["yield_risk_score"] >= 0.8]
+    severe_lots = [lot for lot in LOTS_AT_RISK if _yield_risk(lot) >= 0.8]
     return {
         "fab_id": "fab-west-1",
         "headline": "Night shift is stable but etch-bay-a is blocking one severe lot.",
@@ -430,9 +450,9 @@ def build_release_board() -> dict[str, Any]:
         Release board payload with summary, spotlight, and item list.
     """
     items: list[dict[str, Any]] = []
-    for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
-        gate = build_release_gate(lot["lot_id"])
-        ownership = build_tool_ownership(lot["tool_id"])
+    for lot in sorted(LOTS_AT_RISK, key=_yield_risk, reverse=True):
+        gate = build_release_gate(_lot_id(lot))
+        ownership = build_tool_ownership(_tool_id(lot))
         items.append({
             "lot_id": lot["lot_id"], "tool_id": lot["tool_id"], "decision": gate["decision"],
             "yield_risk_score": lot["yield_risk_score"], "risk_bucket": lot["risk_bucket"],
@@ -545,8 +565,8 @@ def build_replay_summary() -> dict[str, Any]:
     Returns:
         Replay summary with scenario count, check totals, and pass percentage.
     """
-    total_checks = sum(case["checks"] for case in REPLAY_SUITE)
-    passed_checks = sum(case["checks"] for case in REPLAY_SUITE if case["status"] == "pass")
+    total_checks = sum(_replay_checks(case) for case in REPLAY_SUITE)
+    passed_checks = sum(_replay_checks(case) for case in REPLAY_SUITE if case["status"] == "pass")
     return {
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
         "summary": {
@@ -572,8 +592,10 @@ def build_review_summary(severity: str | None = None, risk_bucket: str | None = 
     risk_bucket_filter = normalize_review_filter("risk_bucket", risk_bucket, ALLOWED_RISK_BUCKETS)
     filtered_alarms = [item for item in ALARMS if severity_filter is None or item["severity"] == severity_filter]
     filtered_lots = [item for item in LOTS_AT_RISK if risk_bucket_filter is None or item["risk_bucket"] == risk_bucket_filter]
-    spotlight_alarm = sorted(filtered_alarms, key=lambda item: (ALARM_SEVERITY_RANK.get(item["severity"], 99), item["started_at"]))[0] if filtered_alarms else None
-    spotlight_lot = sorted(filtered_lots, key=lambda item: item["yield_risk_score"], reverse=True)[0] if filtered_lots else None
+    spotlight_alarm = (
+        sorted(filtered_alarms, key=lambda item: (_alarm_rank(item), str(item["started_at"])))[0] if filtered_alarms else None
+    )
+    spotlight_lot = sorted(filtered_lots, key=_yield_risk, reverse=True)[0] if filtered_lots else None
     replay_summary = build_replay_summary()
     return {
         "status": "ok", "service": SERVICE_NAME, "generated_at": utc_now_iso(),
@@ -602,9 +624,9 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
     """
     normalized_mode = normalize_review_filter("mode", mode, ALLOWED_RECOVERY_MODES) or "all"
     items: list[dict[str, Any]] = []
-    for lot in sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True):
-        gate = build_release_gate(lot["lot_id"])
-        tool = get_tool_or_404(lot["tool_id"])
+    for lot in sorted(LOTS_AT_RISK, key=_yield_risk, reverse=True):
+        gate = build_release_gate(_lot_id(lot))
+        tool = get_tool_or_404(_tool_id(lot))
         ownership = build_tool_ownership(tool["tool_id"])
         if gate["decision"] == "hold-release":
             board_status = "hold"

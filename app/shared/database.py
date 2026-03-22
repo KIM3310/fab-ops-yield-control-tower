@@ -22,14 +22,14 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     Integer,
     String,
     Text,
     create_engine,
 )
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 logger = logging.getLogger("shared.database")
 
@@ -42,7 +42,11 @@ PERSISTENCE_BACKEND = os.getenv("PERSISTENCE_BACKEND", "sqlite").strip().lower()
 _DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "semiconductor_ops.db"
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_DEFAULT_DB_PATH}").strip()
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Declarative SQLAlchemy base with typing support."""
+
+
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -50,17 +54,17 @@ Base = declarative_base()
 # ---------------------------------------------------------------------------
 
 
-class RuntimeEvent(Base):  # type: ignore[misc]
+class RuntimeEvent(Base):
     """Persisted runtime event (route hits, gate checks, exports)."""
 
     __tablename__ = "runtime_events"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    domain = Column(String(32), nullable=False, index=True)
-    event_type = Column(String(64), nullable=False, index=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
-    route = Column(String(256), nullable=True)
-    payload_json = Column(Text, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    route: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary matching the legacy JSONL format."""
@@ -77,23 +81,23 @@ class RuntimeEvent(Base):  # type: ignore[misc]
         return base
 
 
-class ShiftHandoff(Base):  # type: ignore[misc]
+class ShiftHandoff(Base):
     """Persisted shift handoff record with signature metadata."""
 
     __tablename__ = "shift_handoffs"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    domain = Column(String(32), nullable=False, index=True)
-    handoff_id = Column(String(128), nullable=False)
-    shift = Column(String(32), nullable=False)
-    fab_or_site_id = Column(String(64), nullable=False)
-    headline = Column(Text, nullable=False)
-    signature_sha256 = Column(String(64), nullable=True)
-    signature_hmac = Column(String(64), nullable=True)
-    signed_by = Column(String(64), nullable=True)
-    signed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
-    payload_json = Column(Text, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    handoff_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    shift: Mapped[str] = mapped_column(String(32), nullable=False)
+    fab_or_site_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    signature_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signature_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary."""
@@ -112,20 +116,20 @@ class ShiftHandoff(Base):  # type: ignore[misc]
         }
 
 
-class AuditRecord(Base):  # type: ignore[misc]
+class AuditRecord(Base):
     """Persisted audit trail entry."""
 
     __tablename__ = "audit_records"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    domain = Column(String(32), nullable=False, index=True)
-    event_name = Column(String(128), nullable=False)
-    actor = Column(String(64), nullable=False)
-    tool_id = Column(String(64), nullable=True)
-    lot_id = Column(String(64), nullable=True)
-    timestamp = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
-    details_json = Column(Text, nullable=True)
-    is_exported = Column(Boolean, nullable=False, default=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    event_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor: Mapped[str] = mapped_column(String(64), nullable=False)
+    tool_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lot_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    details_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_exported: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dictionary."""
@@ -150,8 +154,8 @@ class AuditRecord(Base):  # type: ignore[misc]
 # Engine and session factory
 # ---------------------------------------------------------------------------
 
-_engine = None
-_SessionLocal = None
+_engine: Engine | None = None
+_SessionLocal: sessionmaker[Session] | None = None
 
 
 def _get_engine():

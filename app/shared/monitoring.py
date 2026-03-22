@@ -16,7 +16,7 @@ import logging
 import os
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
@@ -131,7 +131,10 @@ def _metrics_endpoint(_request: Request) -> Response:
 # ---------------------------------------------------------------------------
 
 
-async def _request_id_middleware(request: Request, call_next: Callable) -> Response:  # type: ignore[type-arg]
+async def _request_id_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     """Assign a unique request ID to every inbound request.
 
     The ID is taken from the incoming ``X-Request-ID`` header when present,
@@ -151,7 +154,10 @@ async def _request_id_middleware(request: Request, call_next: Callable) -> Respo
 # ---------------------------------------------------------------------------
 
 
-async def _metrics_middleware(request: Request, call_next: Callable) -> Response:  # type: ignore[type-arg]
+async def _metrics_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     """Collect Prometheus metrics for every request."""
     if not _PROMETHEUS_AVAILABLE or not ENABLE_METRICS:
         return await call_next(request)

@@ -9,7 +9,7 @@ they remain thin and testable.
 import hmac as _hmac
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException
 
@@ -183,6 +183,18 @@ def customer_readiness_path(customer: str) -> str:
     return f"{CUSTOMER_READINESS_ROUTE}?customer={customer}"
 
 
+def _severity_rank(item: dict[str, Any]) -> int:
+    return SEVERITY_RANK[str(item["severity"])]
+
+
+def _incident_sla(item: dict[str, Any]) -> int:
+    return int(item["sla_minutes"])
+
+
+def _replay_checks(item: dict[str, Any]) -> int:
+    return int(cast(int | str, item["checks"]))
+
+
 # ---------------------------------------------------------------------------
 # Focus selectors
 # ---------------------------------------------------------------------------
@@ -193,7 +205,7 @@ def focus_incident() -> dict[str, Any]:
     Returns:
         The incident dictionary with the lowest severity rank (most critical).
     """
-    return sorted(FIELD_INCIDENTS, key=lambda item: SEVERITY_RANK[item["severity"]])[0]
+    return sorted(FIELD_INCIDENTS, key=_severity_rank)[0]
 
 
 def focus_lot() -> dict[str, Any]:
@@ -203,7 +215,7 @@ def focus_lot() -> dict[str, Any]:
         The application qualification dictionary for the focus incident's lot.
     """
     incident = focus_incident()
-    return get_lot_or_404(incident["lot_id"])
+    return get_lot_or_404(cast(str, incident["lot_id"]))
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +228,7 @@ def build_field_response_board() -> dict[str, Any]:
     Returns:
         Field response board payload with summary, spotlight, and items.
     """
-    incident_items = sorted(FIELD_INCIDENTS, key=lambda item: (SEVERITY_RANK[item["severity"]], item["sla_minutes"]))
+    incident_items = sorted(FIELD_INCIDENTS, key=lambda item: (_severity_rank(item), _incident_sla(item)))
     spotlight = incident_items[0]
     blocked = sum(1 for item in incident_items if item["qualification_blocker"])
     logger.info("[scanner] field response board: %d incidents, %d blockers", len(incident_items), blocked)
@@ -239,8 +251,8 @@ def build_field_response_board() -> dict[str, Any]:
         },
         "route_bundle": {
             "field_response": field_response_path(),
-            "subsystem_escalation": subsystem_escalation_path(spotlight["tool_id"]),
-            "qualification_board": qualification_path(spotlight["lot_id"]),
+            "subsystem_escalation": subsystem_escalation_path(cast(str, spotlight["tool_id"])),
+            "qualification_board": qualification_path(cast(str, spotlight["lot_id"])),
             "shift_handoff": SHIFT_HANDOFF_ROUTE,
         },
     }
@@ -595,8 +607,8 @@ def build_replay_summary() -> dict[str, Any]:
     """
     score = round(
         100
-        * sum(item["checks"] for item in REPLAY_SUITE if item["status"] == "pass")
-        / max(1, sum(item["checks"] for item in REPLAY_SUITE)),
+        * sum(_replay_checks(item) for item in REPLAY_SUITE if item["status"] == "pass")
+        / max(1, sum(_replay_checks(item) for item in REPLAY_SUITE)),
         2,
     )
     return {

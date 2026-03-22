@@ -7,7 +7,7 @@ handlers are intentionally thin -- business logic lives in
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Query, Request
 
@@ -194,7 +194,7 @@ async def alarms() -> dict[str, Any]:
 async def lots_at_risk() -> dict[str, Any]:
     """Return lots at risk sorted by yield risk score (descending)."""
     record_route_hit("/api/fab-ops/lots/at-risk")
-    items = sorted(LOTS_AT_RISK, key=lambda item: item["yield_risk_score"], reverse=True)
+    items = sorted(LOTS_AT_RISK, key=lambda item: float(cast(float | str, item["yield_risk_score"])), reverse=True)
     return {
         "status": "ok",
         "service": SERVICE_NAME,

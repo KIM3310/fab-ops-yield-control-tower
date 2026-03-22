@@ -11,7 +11,7 @@ ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
 SHIFT_HANDOFF_SCHEMA = "fab-ops-shift-handoff-v1"
 HANDOFF_SIGNATURE_CONTRACT = "fab-ops-handoff-signature-v1"
 ALARM_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-ALLOWED_RECOVERY_MODES = {"all", "hold", "watch", "ready"}
+ALLOWED_RECOVERY_MODES: set[str] = {"all", "hold", "watch", "ready"}
 
 FABS = [
     {
@@ -182,5 +182,5 @@ AUDIT_EVENTS = [
     },
 ]
 
-ALLOWED_SEVERITIES = {item["severity"] for item in ALARMS}
-ALLOWED_RISK_BUCKETS = {item["risk_bucket"] for item in LOTS_AT_RISK}
+ALLOWED_SEVERITIES: set[str] = {str(item["severity"]) for item in ALARMS}
+ALLOWED_RISK_BUCKETS: set[str] = {str(item["risk_bucket"]) for item in LOTS_AT_RISK}

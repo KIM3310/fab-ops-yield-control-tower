@@ -321,5 +321,5 @@ AUDIT_EVENTS = [
     },
 ]
 
-ALLOWED_SEVERITIES = {item["severity"] for item in FIELD_INCIDENTS}
+ALLOWED_SEVERITIES: set[str] = {str(item["severity"]) for item in FIELD_INCIDENTS}
 ALLOWED_CUSTOMERS = set(CUSTOMER_READINESS)

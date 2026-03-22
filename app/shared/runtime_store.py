@@ -152,6 +152,8 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> dict
             summary["last_event_at"] = at
         event_type = event.get("event_type")
         event_counts: dict[str, int] = summary["event_type_counts"]
+        if not isinstance(event_type, str):
+            event_type = "unknown"
         event_counts[event_type] = event_counts.get(event_type, 0) + 1
         if event_type == "route_hit":
             summary["route_hits"] += 1

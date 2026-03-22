@@ -7,7 +7,7 @@ handlers are intentionally thin -- business logic lives in
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
@@ -195,7 +195,7 @@ def customer_readiness(customer: str = Query(...)) -> dict[str, Any]:
 def lot_risk() -> dict[str, Any]:
     """Return the lot risk board sorted by risk score (descending)."""
     record_route_hit("/api/scanner/lot-risk")
-    items = sorted(WAFER_RISK_ITEMS, key=lambda item: item["risk_score"], reverse=True)
+    items = sorted(WAFER_RISK_ITEMS, key=lambda item: float(cast(float | str, item["risk_score"])), reverse=True)
     return {
         "contract_version": LOT_RISK_CONTRACT,
         "summary": {
