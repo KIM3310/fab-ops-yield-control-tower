@@ -15,6 +15,9 @@ def test_platform_health() -> None:
     assert payload["service"] == "semiconductor-ops-platform"
     assert "fab_ops" in payload["domains"]
     assert "scanner" in payload["domains"]
+    assert payload["reviewer_fast_path"][0] == "/health"
+    assert payload["proof_routes"]["fab_ops_review_pack"] == "/api/fab-ops/review-pack"
+    assert payload["proof_routes"]["scanner_review_pack"] == "/api/scanner/review-pack"
 
 
 # ---------------------------------------------------------------------------

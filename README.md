@@ -101,6 +101,17 @@ kubectl apply -f infra/k8s/hpa.yaml
 
 Interactive docs are available at `/docs` (Swagger UI) and `/redoc` (ReDoc) when the server is running.
 
+## Reviewer Fast Path
+
+Suggested first-pass sequence for reviewers:
+
+1. `GET /health` — verify both domains and top-level proof routes
+2. `GET /api/fab-ops/runtime/brief` — inspect fab posture and focus-lot story
+3. `GET /api/fab-ops/review-pack` — read the shift-ready operator pack
+4. `GET /api/scanner/runtime/brief` — inspect field-response posture
+5. `GET /api/scanner/review-pack` — confirm handoff and qualification proof
+6. `GET /metrics` — check request and latency instrumentation after the review surfaces line up
+
 ### Platform
 
 | Endpoint | Description |
