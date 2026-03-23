@@ -36,6 +36,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.domains.fab_ops.routes import router as fab_ops_router  # noqa: E402
 from app.domains.scanner.routes import router as scanner_router  # noqa: E402
 from app.shared.monitoring import setup_monitoring  # noqa: E402
+from app.shared.resource_pack import build_platform_resource_pack  # noqa: E402
 
 STATIC_DIR = APP_DIR / "static"
 
@@ -124,12 +125,14 @@ async def health() -> dict[str, Any]:
         "service": "semiconductor-ops-platform",
         "reviewer_fast_path": [
             "/health",
+            "/api/resource-pack",
             "/api/fab-ops/runtime/brief",
             "/api/fab-ops/review-pack",
             "/api/scanner/runtime/brief",
             "/api/scanner/review-pack",
         ],
         "proof_routes": {
+            "resource_pack": "/api/resource-pack",
             "fab_ops_review_pack": "/api/fab-ops/review-pack",
             "fab_ops_release_board": "/api/fab-ops/release-board",
             "scanner_review_pack": "/api/scanner/review-pack",
@@ -148,10 +151,17 @@ async def health() -> dict[str, Any]:
             },
         },
         "links": {
+            "resource_pack": "/api/resource-pack",
             "fab_ops_health": "/api/fab-ops/meta",
             "scanner_health": "/api/scanner/meta",
         },
     }
+
+
+@app.get("/api/resource-pack", tags=["platform"])
+async def resource_pack() -> dict[str, Any]:
+    """Return a built-in manufacturing review pack for the platform."""
+    return build_platform_resource_pack()
 
 
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")

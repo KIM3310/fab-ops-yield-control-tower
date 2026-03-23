@@ -106,17 +106,19 @@ Interactive docs are available at `/docs` (Swagger UI) and `/redoc` (ReDoc) when
 Suggested first-pass sequence for reviewers:
 
 1. `GET /health` — verify both domains and top-level proof routes
-2. `GET /api/fab-ops/runtime/brief` — inspect fab posture and focus-lot story
-3. `GET /api/fab-ops/review-pack` — read the shift-ready operator pack
-4. `GET /api/scanner/runtime/brief` — inspect field-response posture
-5. `GET /api/scanner/review-pack` — confirm handoff and qualification proof
-6. `GET /metrics` — check request and latency instrumentation after the review surfaces line up
+2. `GET /api/resource-pack` — inspect built-in manufacturing review cases and checks
+3. `GET /api/fab-ops/runtime/brief` — inspect fab posture and focus-lot story
+4. `GET /api/fab-ops/review-pack` — read the shift-ready operator pack
+5. `GET /api/scanner/runtime/brief` — inspect field-response posture
+6. `GET /api/scanner/review-pack` — confirm handoff and qualification proof
+7. `GET /metrics` — check request and latency instrumentation after the review surfaces line up
 
 ### Platform
 
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Platform health and domain navigation |
+| `GET /api/resource-pack` | Built-in manufacturing review pack |
 | `GET /metrics` | Prometheus metrics (request counts, latencies) |
 | `GET /docs` | OpenAPI Swagger UI |
 

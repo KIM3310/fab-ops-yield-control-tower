@@ -10,14 +10,23 @@ from app.main import app
 def test_platform_health() -> None:
     client = TestClient(app)
     health = client.get("/health")
+    resource_pack = client.get("/api/resource-pack")
     assert health.status_code == 200
     payload = health.json()
     assert payload["service"] == "semiconductor-ops-platform"
     assert "fab_ops" in payload["domains"]
     assert "scanner" in payload["domains"]
     assert payload["reviewer_fast_path"][0] == "/health"
+    assert payload["reviewer_fast_path"][1] == "/api/resource-pack"
+    assert payload["proof_routes"]["resource_pack"] == "/api/resource-pack"
     assert payload["proof_routes"]["fab_ops_review_pack"] == "/api/fab-ops/review-pack"
     assert payload["proof_routes"]["scanner_review_pack"] == "/api/scanner/review-pack"
+    assert payload["links"]["resource_pack"] == "/api/resource-pack"
+    assert resource_pack.status_code == 200
+    resource_payload = resource_pack.json()
+    assert resource_payload["contract_version"] == "semiconductor-ops-resource-pack-v1"
+    assert resource_payload["summary"]["fab_alarm_count"] >= 2
+    assert resource_payload["reviewer_fast_path"][1] == "/api/resource-pack"
 
 
 # ---------------------------------------------------------------------------
