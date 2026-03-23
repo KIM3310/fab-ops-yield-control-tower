@@ -26,6 +26,7 @@ def test_platform_health() -> None:
     resource_payload = resource_pack.json()
     assert resource_payload["contract_version"] == "semiconductor-ops-resource-pack-v1"
     assert resource_payload["summary"]["fab_alarm_count"] >= 2
+    assert "external_data" in resource_payload
     assert resource_payload["reviewer_fast_path"][1] == "/api/resource-pack"
 
 

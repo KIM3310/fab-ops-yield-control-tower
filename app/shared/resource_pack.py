@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import csv
+from pathlib import Path
 from typing import Any
 
 from app.domains.fab_ops.domain import ALARMS, LOTS_AT_RISK
 from app.domains.scanner.domain import FIELD_INCIDENTS
+
+EXTERNAL_DIR = Path(__file__).resolve().parents[2] / "data" / "external" / "uci_secom"
 
 
 def build_platform_resource_pack() -> dict[str, Any]:
@@ -18,6 +22,12 @@ def build_platform_resource_pack() -> dict[str, Any]:
             "scanner_incident_count": len(FIELD_INCIDENTS),
             "operator_check_count": 4,
             "validation_case_count": 4,
+            "external_dataset_count": 1 if (EXTERNAL_DIR / "uci-secom.csv").exists() else 0,
+        },
+        "external_data": {
+            "present": (EXTERNAL_DIR / "uci-secom.csv").exists(),
+            "path": "data/external/uci_secom/uci-secom.csv",
+            "row_count": _count_csv_rows(EXTERNAL_DIR / "uci-secom.csv"),
         },
         "fab_review_cases": [
             {
@@ -101,3 +111,10 @@ def build_platform_resource_pack() -> dict[str, Any]:
             "/metrics",
         ],
     }
+
+
+def _count_csv_rows(path: Path) -> int:
+    if not path.exists():
+        return 0
+    with path.open(newline="", encoding="utf-8") as handle:
+        return max(0, sum(1 for _ in csv.reader(handle)) - 1)
