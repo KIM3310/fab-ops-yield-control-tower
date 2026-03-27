@@ -9,7 +9,7 @@ description = "Unified semiconductor ops platform: fab control tower (alarms, lo
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Kim" }]
-license = { text = "MIT" }
+license = "MIT"
 dependencies = [
   "fastapi==0.115.8",
   "uvicorn==0.34.0",
