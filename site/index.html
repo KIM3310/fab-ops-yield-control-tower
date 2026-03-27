@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <meta name="description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Fab Ops Yield Control Tower">
+  <meta property="og:description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fab Ops Yield Control Tower">
+  <meta name="twitter:description" content="Semiconductor-style alarm triage, lot risk, and shift handoff control tower"><title>Fab Ops Yield Control Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#edf5fb; --panel:#fbfeff; --ink:#121820; --muted:#586679; --line:#d1dde8; --accent:#0f6db7; --soft:#ebf5ff; }
+    *{box-sizing:border-box} body{margin:0;font-family:"IBM Plex Sans",sans-serif;background:linear-gradient(180deg,#f7fbff 0,#eaf1f8 100%);color:var(--ink)}
+    .shell{max-width:1100px;margin:0 auto;padding:32px 20px 56px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 18px 40px rgba(15,23,42,.05)}
+    .hero,.grid{display:grid;gap:16px}.hero{margin-bottom:18px}.eyebrow,.chip{display:inline-flex;padding:8px 12px;border-radius:999px;font-size:.82rem;font-weight:700}.eyebrow{background:#101827;color:#fff}.chip{background:var(--soft);color:var(--accent)}
+    h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.04em;margin:0}.hero h1{font-size:clamp(2.4rem,4.8vw,4.4rem);line-height:.96}.lede{max-width:860px;margin:0;color:var(--muted);line-height:1.75}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:18px}.list{margin:0;padding-left:18px;color:var(--muted);line-height:1.8}.links a{color:var(--accent);text-decoration:none;font-weight:600}
+    .quick-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+    .quick-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff}
+    .quick-card strong{display:block;margin-bottom:8px}
+    .focus-strip{display:grid;gap:14px;padding:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(135deg,#fff, #f2f8ff);margin-top:18px}
+    .focus-strip h2{font-size:1.4rem}
+    .focus-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.focus-card{padding:14px;border:1px solid var(--line);border-radius:18px;background:#fff}.focus-card strong{display:block;margin-top:8px}
+    .focus-actions{display:flex;gap:10px;flex-wrap:wrap}.focus-actions button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}.focus-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .focus-note{font-size:.92rem;color:var(--muted)}
+    /* --- Focus visible --- */
+    button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    /* --- Transitions --- */
+    .panel, .quick-card, .focus-card, button { transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: scale(0.97); }
+    /* --- Skip link --- */
+    .skip-link { position: absolute; top: -100%; left: 16px; z-index: 100; padding: 10px 16px; background: var(--accent); color: #fff; border-radius: 0 0 12px 12px; text-decoration: none; font-weight: 600; font-size: .9rem; }
+    .skip-link:focus { top: 0; }
+    @media (max-width:900px){.two{grid-template-columns:1fr}}
+    @media (max-width:900px){.quick-strip,.focus-grid{grid-template-columns:1fr}}
+    @media (max-width:480px){ .shell{padding:16px 10px 36px} .panel{border-radius:16px;padding:16px} h1{font-size:1.8rem} .focus-actions{flex-direction:column} .focus-actions button{width:100%} }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#focus-lot-panel">Skip to lot spotlight</a>
+  <main class="shell" role="main">
+    <section class="panel hero">
+      <div>
+        <span class="eyebrow">fab-ops-yield-control-tower</span>
+        <span class="chip">manufacturing ops</span>
+        <span class="chip">control tower</span>
+      </div>
+      <h1>Alarm triage, lot risk, release gates, and shift handoff for fab operations.</h1>
+      <p class="lede">This public Pages site is a quick overview of the control tower workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and a signed next-shift handoff that still reads clearly under pressure.</p>
+      <div class="quick-strip">
+        <article class="quick-card">
+          <strong>01 · Runtime brief</strong>
+          <p>Anchor the walkthrough in operator posture before touching alarms or release claims.</p>
+        </article>
+        <article class="quick-card">
+          <strong>02 · Recovery board</strong>
+          <p>Show hold / watch / ready lanes, then use the what-if drill so the recovery claim stays explicit instead of implied.</p>
+        </article>
+        <article class="quick-card">
+          <strong>03 · Shift handoff</strong>
+          <p>End with the signed handoff to prove continuity, not just dashboard cosmetics.</p>
+        </article>
+      </div>
+      <section class="focus-strip" id="focus-lot-panel">
+        <div>
+          <span class="chip">one-lot continuity</span>
+          <h2>Lot-8812 stays visible from hold decision to signed handoff.</h2>
+          <p class="focus-note">Top-fold spotlight keeps the severe lot, owning tool, release decision, and next operator move on one line of review instead of scattering them across the walkthrough.</p>
+        </div>
+        <div class="focus-grid">
+          <article class="focus-card"><span class="chip">Alarm</span><strong>alm-2041 · critical</strong></article>
+          <article class="focus-card"><span class="chip">Tool</span><strong>etch-14 · chamber A2</strong></article>
+          <article class="focus-card"><span class="chip">Release gate</span><strong>hold-release</strong></article>
+          <article class="focus-card"><span class="chip">Next move</span><strong>maintenance approval + reroute review</strong></article>
+        </div>
+        <div class="focus-actions">
+          <button id="copyLotPathBtn" class="primary" type="button">Copy Lot Path</button>
+          <button id="copyHandoffPathBtn" type="button">Copy Shift Handoff</button>
+        </div>
+        <p class="focus-note" id="focusLotStatus">Fast path: runtime brief → recovery board → release gate → shift handoff signature.</p>
+      </section>
+    </section>
+
+    <section class="grid two">
+      <article class="panel">
+        <h2>Operational story</h2>
+        <ul class="list">
+          <li>Alarm queue linked to tool and lot context.</li>
+          <li>Recovery board with hold, watch, and release-ready lanes.</li>
+          <li>Tool ownership and escalation lane visibility.</li>
+          <li>Shift handoff plus signature proof for continuity.</li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Runtime posture</h2>
+        <ul class="list">
+          <li>The public summary stays static for fast loading and recruiter-safe review.</li>
+          <li>The production-style FastAPI backend is now live on Cloud Run.</li>
+          <li>API docs, health, shift handoff, and scanner export routes are externally reachable.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid two">
+      <article class="panel links">
+        <h2>Start here</h2>
+        <ul class="list">
+          <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/README.md">README</a></li>
+          <li><a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/review-pack.svg">Architecture diagram</a></li>
+          <li><a href="https://fab-ops-api-45mkqlemxq-du.a.run.app/health">Live API health</a></li>
+          <li><a href="https://fab-ops-api-45mkqlemxq-du.a.run.app/docs">Live API docs</a></li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>Quick walkthrough</h2>
+        <ul class="list">
+          <li>Start with runtime brief and recovery board.</li>
+          <li>Run the recovery what-if for one severe lot before trusting the release gate.</li>
+          <li>Finish with shift handoff and signature proof, then use audit feed as supporting evidence.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+  <script>
+    async function copyFabText(text) {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_err) {}
+      try {
+        const helper = document.createElement('textarea');
+        helper.value = text;
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.focus();
+        helper.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(helper);
+        return Boolean(ok);
+      } catch (_err) {
+        return false;
+      }
+    }
+
+    const focusLotStatus = document.getElementById('focusLotStatus');
+    document.getElementById('copyLotPathBtn')?.addEventListener('click', async () => {
+      const ok = await copyFabText([
+        'Fab Ops one-lot review path',
+        '- /api/runtime/brief',
+        '- /api/recovery-board?mode=hold',
+        '- /api/release-gate?lot_id=lot-8812',
+        '- /api/shift-handoff/signature',
+      ].join('\n'));
+      if (focusLotStatus) focusLotStatus.textContent = ok ? 'Lot path copied.' : 'Failed to copy lot path.';
+    });
+    document.getElementById('copyHandoffPathBtn')?.addEventListener('click', async () => {
+      const ok = await copyFabText([
+        'Fab Ops shift handoff snapshot',
+        'Lot: lot-8812',
+        'Release gate: hold-release',
+        'Owner: maint-etch-cell-a',
+        'Next move: maintenance approval + reroute review',
+      ].join('\n'));
+      if (focusLotStatus) focusLotStatus.textContent = ok ? 'Shift handoff snapshot copied.' : 'Failed to copy shift handoff snapshot.';
+    });
+  </script>
+</body>
+</html>

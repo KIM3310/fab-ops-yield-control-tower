@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semiconductor-ops-platform"
+version = "1.0.0"
+description = "Unified semiconductor ops platform: fab control tower (alarms, lots, tools, recovery board) and scanner field response (field incidents, subsystem escalation, qualification review)."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Kim" }]
+license = { text = "MIT" }
+dependencies = [
+  "fastapi==0.115.8",
+  "uvicorn==0.34.0",
+  "sqlalchemy==2.0.36",
+  "prometheus-client==0.21.1",
+  "boto3==1.36.14",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.5",
+  "httpx==0.28.1",
+  "ruff==0.9.10",
+  "mypy==1.15.0",
+  "pytest-cov==6.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
+ignore_missing_imports = true

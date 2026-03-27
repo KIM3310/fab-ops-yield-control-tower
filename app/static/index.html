@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fab Ops Yield Control Tower</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#alarm-list">Skip to alarm queue</a>
+  <div class="page-shell" role="main">
+    <header class="hero panel">
+      <div>
+        <p class="eyebrow">Manufacturing Ops</p>
+        <h1>Fab Ops Yield Control Tower</h1>
+        <p class="lede">Alarm triage, lot-at-risk ranking, tool watchlist, and shift handoff in one reviewable surface.</p>
+      </div>
+      <p id="runtime-banner" class="runtime-banner is-loading" role="status" aria-live="polite">
+        Refreshing control tower data…
+      </p>
+      <div class="hero-action-stack">
+        <div class="hero-actions">
+          <button id="focus-severe-lot-btn" class="ghost-btn" type="button">Focus Severe Lot</button>
+          <button id="copy-review-route-btn" class="ghost-btn" type="button">Copy Focused Route</button>
+          <button id="refresh-board-btn" class="ghost-btn" type="button">Refresh Control Tower</button>
+        </div>
+        <details class="hero-more-actions">
+          <summary>More handoff actions</summary>
+          <div class="hero-actions hero-actions--secondary">
+            <button id="copy-severe-lot-btn" class="ghost-btn" type="button">Copy Severe Lot</button>
+            <button id="copy-shift-snapshot-btn" class="ghost-btn" type="button">Copy Shift Snapshot</button>
+          </div>
+        </details>
+      </div>
+      <p class="stack-meta">Fast top-fold path: focus the severe lot, copy the route, then open handoff copy only when the blocker and owner are aligned.</p>
+      <div class="hero-metrics">
+        <div class="metric-card">
+          <span class="metric-label">Runtime</span>
+          <strong id="brief-status">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Critical Alarms</span>
+          <strong id="critical-count">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Severe Lots</span>
+          <strong id="severe-count">Loading</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Replay Score</span>
+          <strong id="replay-score">Loading</strong>
+        </div>
+      </div>
+      <section class="panel" id="continuity-checkpoint-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Shift continuity checkpoint</p>
+            <h2>Keep blocker, owner, freshness, and signature aligned.</h2>
+          </div>
+        </div>
+        <div class="grid grid-3">
+          <article class="info-card">
+            <h3>Owner Lane</h3>
+            <p id="continuity-owner-lane" class="stack-meta">Loading owner lane...</p>
+          </article>
+          <article class="info-card">
+            <h3>Proof Freshness</h3>
+            <p id="continuity-proof-freshness" class="stack-meta">Loading proof freshness...</p>
+          </article>
+          <article class="info-card">
+            <h3>Signature Hold</h3>
+            <p id="continuity-signature" class="stack-meta">Loading handoff signature...</p>
+          </article>
+        </div>
+        <p id="continuity-guard" class="stack-meta">Shift continuity stays blocked until owner, release gate, and signature line up.</p>
+        <p id="continuity-blockers" class="stack-meta">Gate blockers stay visible with the focused lot before any shift handoff is copied.</p>
+      </section>
+    </header>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Audience Lens</p>
+          <h2 id="lens-headline">Operator Lens</h2>
+          <p id="lens-summary" class="stack-meta">Start with the severe lot, then compare recovery and release posture before copying a handoff.</p>
+        </div>
+        <div class="panel-controls action-row">
+          <button id="lens-operator-btn" class="ghost-btn is-active" type="button">Shift lead</button>
+          <button id="lens-reviewer-btn" class="ghost-btn" type="button">Review proof</button>
+          <button id="lens-executive-btn" class="ghost-btn" type="button">Ops director</button>
+        </div>
+      </div>
+      <div class="grid grid-3" id="lens-grid">
+        <article class="panel">
+          <h2>01 · Severe lot</h2>
+          <p class="stack-meta">Focus the top blocker before you explain any other metric.</p>
+        </article>
+        <article class="panel">
+          <h2>02 · Recovery</h2>
+          <p class="stack-meta">Use recovery what-if and release gate together so the next action is concrete.</p>
+        </article>
+        <article class="panel">
+          <h2>03 · Shift handoff</h2>
+          <p class="stack-meta">Copy the shift snapshot only after the blocker and handoff proof match.</p>
+        </article>
+      </div>
+      <div class="action-row" style="margin-top:14px;">
+        <button id="lens-primary-btn" class="ghost-btn" type="button">Focus Severe Lot</button>
+        <button id="lens-secondary-btn" class="ghost-btn" type="button">Copy Shift Snapshot</button>
+        <button id="lens-tertiary-btn" class="ghost-btn" type="button">Copy Focused Route</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Review Pack</p>
+          <h2 id="review-headline">Loading review pack...</h2>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <article class="info-card">
+          <h3>Operator Promises</h3>
+          <ul id="review-promises" class="bullet-list"></ul>
+        </article>
+        <article class="info-card">
+          <h3>Trust Boundary</h3>
+          <ul id="review-boundary" class="bullet-list"></ul>
+        </article>
+        <article class="info-card">
+          <h3>Focused Review Route</h3>
+          <ul id="review-route-preview" class="bullet-list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Lot Storyline</p>
+          <h2>Recovery What-If to Handoff Continuity</h2>
+          <p class="stack-meta">Keep one lot in view from hold pressure through release evidence and the signed next-shift packet.</p>
+        </div>
+      </div>
+      <div class="grid grid-2 storyline-grid">
+        <article class="info-card">
+          <h3>Decision Story</h3>
+          <ul id="storyline-summary" class="bullet-list"></ul>
+        </article>
+        <article class="info-card">
+          <h3>Reviewer Continuity Route</h3>
+          <ul id="storyline-route" class="bullet-list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Recovery Board</p>
+          <h2>Hold, Watch, and Release-Ready Lots</h2>
+        </div>
+        <div class="panel-controls">
+          <label for="recovery-mode-select" class="metric-label">Mode</label>
+          <select id="recovery-mode-select" class="control-select">
+            <option value="all">All</option>
+            <option value="hold">Hold</option>
+            <option value="watch">Watch</option>
+            <option value="ready">Ready</option>
+          </select>
+        </div>
+      </div>
+      <div id="recovery-board" class="stack-list"></div>
+    </section>
+
+    <section class="grid grid-3">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Alarm Queue</p>
+            <h2>Active Alarms</h2>
+          </div>
+        </div>
+        <div id="alarm-list" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Yield Risk</p>
+            <h2>Lots At Risk</h2>
+          </div>
+        </div>
+        <div id="lot-list" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tool Watchlist</p>
+            <h2>Equipment State</h2>
+          </div>
+        </div>
+        <div id="tool-list" class="stack-list"></div>
+      </article>
+    </section>
+
+    <section class="grid grid-2">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Recovery What-If</p>
+            <h2>Release ETA Drill</h2>
+          </div>
+        </div>
+        <div id="recovery-what-if" class="stack-list"></div>
+      </article>
+    </section>
+
+    <section class="grid grid-3">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tool Ownership</p>
+            <h2>Escalation Lane</h2>
+          </div>
+          <div class="panel-controls">
+            <label for="tool-select" class="metric-label">Tool</label>
+            <select id="tool-select" class="control-select"></select>
+          </div>
+        </div>
+        <div id="tool-ownership" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Release Gate</p>
+            <h2>Top Lot Decision</h2>
+          </div>
+          <div class="panel-controls">
+            <label for="lot-select" class="metric-label">Lot</label>
+            <select id="lot-select" class="control-select"></select>
+          </div>
+        </div>
+        <div id="release-gate" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Audit Feed</p>
+            <h2>Recent Events</h2>
+          </div>
+        </div>
+        <div id="audit-feed" class="stack-list"></div>
+      </article>
+    </section>
+
+    <section class="grid grid-3">
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Shift Handoff</p>
+            <h2 id="handoff-headline">Loading handoff...</h2>
+          </div>
+        </div>
+        <ul id="handoff-actions" class="bullet-list"></ul>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Signed Proof</p>
+            <h2>Handoff Signature</h2>
+          </div>
+        </div>
+        <div id="handoff-signature" class="stack-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Replay Evals</p>
+            <h2>Scenario Summary</h2>
+          </div>
+        </div>
+        <div id="replay-list" class="stack-list"></div>
+      </article>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

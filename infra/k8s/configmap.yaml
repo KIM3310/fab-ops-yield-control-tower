@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: semiconductor-ops-config
+  labels:
+    app: semiconductor-ops-platform
+data:
+  NODE_ENV: "production"
+  PORT: "8000"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  PERSISTENCE_BACKEND: "sqlite"
+  DATABASE_URL: "sqlite:///./data/semiconductor_ops.db"
+  ENABLE_METRICS: "true"
+  METRICS_PATH: "/metrics"
+  # Domain-specific tokens should be set via Secrets, not ConfigMap.
+  # These are safe non-secret defaults:
+  FAB_OPS_HANDOFF_SIGNING_KEY_ID: "fab-ops-prod-v1"
+  SCANNER_RESPONSE_SIGNING_KEY_ID: "scanner-prod-v1"
