@@ -363,6 +363,66 @@ async def audit_feed() -> dict[str, Any]:
     return payload
 
 
+@router.get("/yield-trend")
+async def yield_trend() -> dict[str, Any]:
+    """Return yield trend data by tool over recent shifts."""
+    record_route_hit("/api/fab-ops/yield-trend")
+    shifts = ["shift-1 (06:00)", "shift-2 (14:00)", "shift-3 (22:00)"]
+    trend_data = []
+    for tool in TOOLS:
+        base = 0.92 if tool["status"] == "healthy" else 0.78 if tool["status"] == "warning" else 0.64
+        trend_data.append({
+            "tool_id": tool["tool_id"],
+            "fab_id": tool["fab_id"],
+            "status": tool["status"],
+            "shifts": [
+                {"shift": s, "yield_pct": round(base + (i * 0.02) - 0.01, 4)}
+                for i, s in enumerate(shifts)
+            ],
+        })
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "generated_at": utc_now_iso(),
+        "items": trend_data,
+    }
+
+
+@router.post("/alarms/{alarm_id}/acknowledge")
+async def alarm_acknowledge(
+    request: Request,
+    alarm_id: str,
+    operator_id: str = Query(default="ops-lead-1"),
+) -> dict[str, Any]:
+    """Acknowledge an active alarm (auth required)."""
+    require_operator_token(request, DOMAIN)
+    record_route_hit("/api/fab-ops/alarms/acknowledge")
+    alarm = next((a for a in ALARMS if a["alarm_id"] == alarm_id), None)
+    if alarm is None:
+        return {"status": "error", "message": f"Alarm {alarm_id} not found"}
+    ack_at = utc_now_iso()
+    record_runtime_event(
+        "alarm_acknowledged",
+        domain=DOMAIN,
+        at=ack_at,
+        alarm_id=alarm_id,
+        operator_id=operator_id,
+        severity=alarm["severity"],
+    )
+    return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "payload": {
+            "alarm_id": alarm_id,
+            "acknowledged_by": operator_id,
+            "acknowledged_at": ack_at,
+            "severity": alarm["severity"],
+            "category": alarm["category"],
+            "symptom": alarm["symptom"],
+        },
+    }
+
+
 @router.get("/evals/replays")
 async def replay_evals() -> dict[str, Any]:
     """Return the replay suite summary for the fab-ops domain."""
