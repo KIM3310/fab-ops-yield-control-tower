@@ -8,8 +8,9 @@ version = "1.0.0"
 description = "Unified semiconductor ops platform: fab control tower (alarms, lots, tools, recovery board) and scanner field response (field incidents, subsystem escalation, qualification review)."
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "Kim" }]
+authors = [{name = "Doeon Kim", email = "ehdjs1351@gmail.com"}]
 license = "MIT"
+keywords = ["semiconductor", "fab-ops", "yield", "fastapi", "manufacturing"]
 dependencies = [
   "fastapi==0.115.8",
   "uvicorn==0.34.0",
@@ -52,3 +53,6 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = ["boto3.*", "botocore.*"]
 ignore_missing_imports = true
+
+[project.urls]
+Repository = "https://github.com/KIM3310/fab-ops-yield-control-tower"

@@ -11,3 +11,5 @@ data/
 *.db
 htmlcov/
 .coverage
+dist/
+.mypy_cache/
