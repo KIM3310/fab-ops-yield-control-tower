@@ -7,6 +7,8 @@
 
 Unified manufacturing operations platform for semiconductor environments. Two production domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
 
+Technical review pack: [`docs/technical-review-pack.md`](docs/technical-review-pack.md)
+
 ## Domains
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
