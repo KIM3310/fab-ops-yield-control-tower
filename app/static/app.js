@@ -668,7 +668,7 @@ async function boot() {
         <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
       `);
       renderStoryline();
-      setRuntimeBanner("ok", "Recorded recruiter review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
+        setRuntimeBanner("ok", "Recorded technical review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
       setRefreshBusy(false);
       return;
     }
