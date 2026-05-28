@@ -9,6 +9,18 @@ Unified manufacturing operations platform for semiconductor environments. Two pr
 
 Technical review pack: [`docs/technical-review-pack.md`](docs/technical-review-pack.md)
 
+## Product and Review Surface
+
+A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one reviewable system.
+
+| Lens | Definition |
+|---|---|
+| Buyer or user | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
+| Commercial route | Sell as a factory control-tower prototype, yield-review workshop, or operator dashboard starter kit. |
+| Review signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review-pack material. |
+| Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
+| Fast proof | Run the documented verification commands and inspect review-pack artifacts and staged process data. |
+
 ## Domains
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
