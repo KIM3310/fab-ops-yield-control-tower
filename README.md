@@ -21,6 +21,13 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 | Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
 | Fast proof | Run the documented verification commands and inspect review-pack artifacts and staged process data. |
 
+## Reviewer Fast Path
+
+- **First minute:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
+- **Local demo:** Run `make install`, activate `.venv`, and start `uvicorn app.main:app --reload`; review `http://127.0.0.1:8000/docs`.
+- **Verification:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
+- **Commercial read:** Sell the pattern as a fab control-tower pilot or manufacturing operations review workshop.
+
 ## Domains
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
