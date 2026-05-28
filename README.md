@@ -28,6 +28,10 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 - **Verification:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
 - **Commercial read:** Sell the pattern as a fab control-tower pilot or manufacturing operations review workshop.
 
+## Commercialization Playbook
+
+- [Monetization and GTM playbook](docs/monetization-playbook.md) maps the repository to buyer segments, offer ladder, pricing hypotheses, proof gates, and risk boundaries.
+
 ## Domains
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
