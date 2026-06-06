@@ -24,6 +24,7 @@
     .quick-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
     .quick-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff}
     .quick-card strong{display:block;margin-bottom:8px}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-weight:700;text-decoration:none}.button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     .focus-strip{display:grid;gap:14px;padding:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(135deg,#fff, #f2f8ff);margin-top:18px}
     .focus-strip h2{font-size:1.4rem}
     .focus-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.focus-card{padding:14px;border:1.5px solid rgba(0,0,0,0.08);border-radius:18px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06)}.focus-card strong{display:block;margin-top:8px}
@@ -54,6 +55,11 @@
       </div>
       <h1>Alarm triage, lot risk, release gates, and shift handoff for fab operations.</h1>
       <p class="lede">This public Pages site is a quick overview of the control tower workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and a signed next-shift handoff that still reads clearly under pressure.</p>
+      <div class="hero-actions">
+        <a class="button primary" href="#focus-lot-panel">Open lot proof</a>
+        <a class="button" href="https://fab-ops-api-45mkqlemxq-du.a.run.app/health">View live health</a>
+        <a class="button" href="https://fab-ops-api-45mkqlemxq-du.a.run.app/docs">Open API docs</a>
+      </div>
       <div class="quick-strip">
         <article class="quick-card">
           <strong>01 · Runtime brief</strong>
