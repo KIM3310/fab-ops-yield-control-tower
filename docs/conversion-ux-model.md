@@ -49,9 +49,9 @@ This note specializes the repository for service launch. It combines product str
 
 ## Conversion Path
 
-- Risk-reversing entry: Factory control-tower pilot ($8k-$25k workshop) with one acceptance metric.
+- Risk-reversing entry: Factory control-tower pilot (scope after buyer intake) with one acceptance metric.
 - Pilot: Yield review workshop (buyer-approved implementation diagnostic) using buyer-approved data and named operators.
-- Recurring layer: Operator dashboard starter kit ($5k-$20k/month ops analytics support) for monitoring, governance, support, or managed review.
+- Recurring layer: Operator dashboard starter kit (scope after buyer intake) for monitoring, governance, support, or managed review.
 
 ## Scope Frame
 

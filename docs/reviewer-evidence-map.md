@@ -51,9 +51,9 @@ Use this page as the short path through the repository. It keeps the review grou
 
 | Possible offer | Working scope assumption |
 |---|---|
-| Factory control-tower pilot | $8k-$25k workshop |
+| Factory control-tower pilot | Scope after buyer intake |
 | Yield review workshop | buyer-approved implementation diagnostic |
-| Operator dashboard starter kit | $5k-$20k/month ops analytics support |
+| Operator dashboard starter kit | Scope after buyer intake |
 
 ## Boundaries
 

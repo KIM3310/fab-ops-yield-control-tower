@@ -12,7 +12,7 @@ This is the buyer-ready version of the repository. It turns the technical proof 
 | Buyer | Fab operations leaders, process engineers, manufacturing IT, and field response teams. |
 | Pain wedge | Dual-domain operations control tower with shift handoff, release gating, and resource-pack evidence. |
 | Front-door offer | Factory control-tower pilot |
-| Entry scope | $8k-$25k workshop |
+| Entry scope | Scope after buyer intake |
 | Proof before pitch | make verify passes |
 | Next buyer action | Review one proof artifact, then choose diagnostic, workshop, pilot, support, or revival path. |
 
@@ -20,9 +20,9 @@ This is the buyer-ready version of the repository. It turns the technical proof 
 
 | Offer | Scope assumption | Buyer-facing scope |
 |---|---|---|
-| Factory control-tower pilot | $8k-$25k workshop | Create one fab scenario video |
+| Factory control-tower pilot | Scope after buyer intake | Create one fab scenario video |
 | Yield review workshop | buyer-approved implementation diagnostic | Build plant-readiness checklist |
-| Operator dashboard starter kit | $5k-$20k/month ops analytics support | Offer shift-handoff pilot |
+| Operator dashboard starter kit | Scope after buyer intake | Offer shift-handoff pilot |
 
 ## Close Path
 
