@@ -7,13 +7,13 @@ Last reviewed: 2026-06-03 KST
 
 Unified semiconductor ops platform: fab control tower (alarms, lots, tools, recovery board) and scanner field response (field incidents, subsystem escalation, qualification review).
 
-This repository is packaged as a concrete system surface, not a loose code sample. The enterprise value is a narrow proof that can be inspected, run, tested, and converted into a paid pilot or implementation motion.
+This repository is packaged as a concrete system surface, not a loose code sample. The enterprise value is a narrow proof that can be inspected, run, tested, and converted into a reviewed implementation motion.
 
 ## Buyer And Service Path
 
 | Area | Position |
 | --- | --- |
-| Target buyer | Manufacturing operations and semiconductor support teams |
+| Target reviewer | Manufacturing operations and semiconductor support teams |
 | Service wedge | Factory operations control tower prototype |
 | Review signal | Yield monitoring, shift handoff, qualification analytics |
 | Delivery shape | Fixed-scope pilot, integration sprint, and handoff-ready operating pack |
@@ -34,7 +34,7 @@ This repository is packaged as a concrete system surface, not a loose code sampl
 | Local verification | `make verify` |
 | Runtime stack | Python, Makefile automation |
 | Demo readiness | README, architecture docs, and proof assets should explain the first five minutes of evaluation. |
-| Support handoff | Capture setup, known limits, recovery steps, and customer-specific extension points before a paid pilot. |
+| Support handoff | Capture setup, known limits, recovery steps, and customer-specific extension points before a production test. |
 | Release discipline | Do not ship dependency mega-bumps, workflow edits, or demo URL changes without rerunning repository validators and project checks. |
 
 ## Debug And Reliability Checklist
@@ -47,4 +47,4 @@ This repository is packaged as a concrete system surface, not a loose code sampl
 
 ## Service Next Step
 
-Turn the repo into a customer-facing offer by pairing the proof surface with one discovery question, one measurable success metric, and one paid follow-up package. The smallest viable package should be easy to buy, easy to verify, and bounded enough to deliver without custom platform work.
+Turn the repo into a customer-facing offer by pairing the proof surface with one discovery question, one measurable success metric, and one bounded follow-up path. The smallest viable package should be easy to verify and bounded enough to deliver without custom platform work.

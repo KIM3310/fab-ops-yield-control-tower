@@ -47,13 +47,13 @@ Use this page as the short path through the repository. It keeps the review grou
 - Review-pack artifacts exist
 - Staged process data is clear
 
-## Commercial Notes
+## Review Notes
 
 | Possible offer | Working scope assumption |
 |---|---|
-| Factory control-tower pilot | Scope after buyer intake |
-| Yield review workshop | buyer-approved implementation diagnostic |
-| Operator dashboard starter kit | Scope after buyer intake |
+| Factory control-tower pilot | Scope after reviewer intake |
+| Yield review workshop | reviewer-approved implementation diagnostic |
+| Operator dashboard starter kit | Scope after reviewer intake |
 
 ## Boundaries
 

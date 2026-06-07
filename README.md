@@ -15,8 +15,8 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 
 | Lens | Definition |
 |---|---|
-| Buyer or user | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
-| Commercial route | Sell as a factory control-tower prototype, yield-review workshop, or operator dashboard starter kit. |
+| Audience | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
+| Review path | Validate the demo, README, architecture notes, and quality gate before deeper workflow review. |
 | Review signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review-pack material. |
 | Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
 | Fast proof | Run the documented verification commands and inspect review-pack artifacts and staged process data. |
@@ -26,20 +26,16 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 - **First minute:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
 - **Local demo:** Run `make install`, activate `.venv`, and start `uvicorn app.main:app --reload`; review `http://127.0.0.1:8000/docs`.
 - **Verification:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
-- **Commercial read:** Sell the pattern as a fab control-tower pilot or manufacturing operations review workshop.
 
 ## Service Launch Playbook
 
-- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to buyer segments, offer ladder, proof gates, proof gates, and risk boundaries.
+- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to review audiences, offer ladder, proof gates, proof gates, and risk boundaries.
 
 ## Review Notes
 
 - [Review guide](docs/reviewer-evidence-map.md) summarizes the project angle, first files to inspect, verification commands, and known boundaries.
 - [Quality notes](docs/quality-gate.md) lists the local checks, CI surface, and release expectations for this repository.
-- [Service growth model](docs/service-growth-model.md) maps the project to an ethical service path, activation loop, scope logic, and growth experiments.
 - [Enterprise readiness notes](docs/enterprise-readiness.md) outlines security, data, operations, integration, and handoff expectations.
-- [Conversion UX model](docs/conversion-ux-model.md) maps the buyer path, behavioral design, UI/UX direction, scope frame, and ethical conversion guardrails.
-- [Commercial offer](docs/commercial-offer.md) packages the repository into a buyer-ready offer ladder, proof gate, outreach angle, and close path.
 
 ## Domains
 
@@ -149,7 +145,7 @@ This repository includes a neutral cloud and AI engineering blueprint that maps 
 
 ## Enterprise Productization
 
-- [Product operating model](docs/product-operating-model.md) defines the buyer, paid wedge, trust boundary, operating checks, and service path for this repository.
+- [Product operating model](docs/product-operating-model.md) defines the reviewer, trust boundary, trust boundary, operating checks, and service path for this repository.
 
 ## Service Architecture
 
