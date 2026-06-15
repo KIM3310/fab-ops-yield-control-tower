@@ -17,7 +17,7 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 |---|---|
 | Audience | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
 | Review path | Validate the demo, README, architecture notes, and quality gate before deeper workflow review. |
-| Review signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review-pack material. |
+| Architecture signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review-pack material. |
 | Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
 | Fast proof | Run the documented verification commands and inspect review-pack artifacts and staged process data. |
 
@@ -146,6 +146,10 @@ This repository includes a neutral cloud and AI engineering blueprint that maps 
 ## Enterprise Productization
 
 - [Product operating model](docs/product-operating-model.md) defines the reviewer, trust boundary, trust boundary, operating checks, and service path for this repository.
+
+## System Architecture
+
+- [System architecture](docs/system-architecture.md) maps the runtime boundary, data/control flow, cloud or local deployment surface, and operating assumptions for this repository.
 
 ## Service Architecture
 
