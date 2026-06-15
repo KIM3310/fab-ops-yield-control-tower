@@ -1,8 +1,8 @@
-# Review Guide - Semiconductor Ops Platform
+# Architecture Guide - Semiconductor Ops Platform
 
 Updated: 2026-05-30
 
-Use this page as the short path through the repository. It keeps the review grounded in the code, docs, commands, and boundaries that are already present.
+Use this page as the short path through the repository. It keeps the architecture grounded in the code, docs, commands, and boundaries that are already present.
 
 ## Summary
 
@@ -16,9 +16,9 @@ Use this page as the short path through the repository. It keeps the review grou
 ## Open First
 
 1. Start with the README fast path and architecture section.
-2. Open `docs/service-launch-playbook.md` only when reviewing the product or service angle.
+2. Open `docs/service-launch-playbook.md` only when architectureing the product or service angle.
 3. Check the commands below before making claims about quality.
-4. Skim the CI workflows and fixture data before deeper implementation review.
+4. Skim the CI workflows and fixture data before deeper implementation architecture.
 5. Read the boundaries section before presenting the project externally.
 
 ## Checks
@@ -32,7 +32,7 @@ Use this page as the short path through the repository. It keeps the review grou
 
 - .github/workflows/architecture-blueprint.yml
 - .github/workflows/ci.yml
-- .github/workflows/dependency-review.yml
+- .github/workflows/dependency-architecture.yml
 - .github/workflows/pages-auto-deploy.yml
 - .github/workflows/repository-health.yml
 - .github/workflows/repository-surface.yml
@@ -41,19 +41,19 @@ Use this page as the short path through the repository. It keeps the review grou
 ## Evidence
 
 - pytest/ruff-style local verification path
-- infrastructure-as-code review surface
+- infrastructure-as-code architecture surface
 - containerized delivery path
 - make verify passes
-- Review-pack artifacts exist
+- Architecture-pack artifacts exist
 - Staged process data is clear
 
-## Review Notes
+## Architecture Notes
 
 | Possible offer | Working scope assumption |
 |---|---|
-| Factory control-tower pilot | Scope after reviewer intake |
-| Yield review workshop | reviewer-approved implementation diagnostic |
-| Operator dashboard starter kit | Scope after reviewer intake |
+| Factory control-tower pilot | Scope after product intake |
+| Yield architecture workshop | operator-approved implementation diagnostic |
+| Operator dashboard starter kit | Scope after product intake |
 
 ## Boundaries
 

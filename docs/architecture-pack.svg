@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
   <rect width="1200" height="720" fill="#071017"/>
   <rect x="48" y="48" width="1104" height="624" rx="32" fill="#0D1821" stroke="#243544" stroke-width="2"/>
-  <text x="84" y="118" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="40" font-weight="700">fab-ops-yield-control-tower review pack</text>
+  <text x="84" y="118" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="40" font-weight="700">fab-ops-yield-control-tower architecture pack</text>
   <text x="84" y="154" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="20">Alarm queue, lot risk, tool ownership, release gate, signed handoff, and audit feed in one manufacturing control tower.</text>
 
   <rect x="84" y="198" width="300" height="158" rx="24" fill="#112433" stroke="#5DC8FF" stroke-width="2"/>
@@ -37,7 +37,7 @@
   <rect x="816" y="420" width="300" height="186" rx="24" fill="#131B24" stroke="#AEB7C3" stroke-width="2"/>
   <text x="842" y="460" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="24" font-weight="700">6. Audit Feed</text>
   <text x="842" y="496" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">Latest shift and maintenance events</text>
-  <text x="842" y="522" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">stay reviewable without MES access.</text>
+  <text x="842" y="522" fill="#EDF2F7" font-family="IBM Plex Sans, Arial, sans-serif" font-size="18">stay inspectable without MES access.</text>
   <text x="842" y="554" fill="#9DB0BF" font-family="IBM Plex Sans, Arial, sans-serif" font-size="16">/api/audit/feed + /api/evals/replays</text>
 
   <path d="M384 277H450" stroke="#35526A" stroke-width="4" stroke-linecap="round"/>

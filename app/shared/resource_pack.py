@@ -49,7 +49,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
                 "case_id": "scanner-euv-shift-brief",
                 "focus_tool": "scanner-euv-02",
                 "goal": "Keep field response, subsystem escalation, and qualification review tied together.",
-                "next_surface": "/api/scanner/review-pack",
+                "next_surface": "/api/scanner/architecture-pack",
             },
             {
                 "case_id": "scanner-customer-readiness",
@@ -62,27 +62,27 @@ def build_platform_resource_pack() -> dict[str, Any]:
             {
                 "check_id": "health-first",
                 "surface": "/health",
-                "why_it_matters": "Reviewers should confirm both domains are online before drilling into lots or incidents.",
+                "why_it_matters": "Operators should confirm both domains are online before drilling into lots or incidents.",
             },
             {
                 "check_id": "export-proof-board",
                 "surface": "/api/export-proof-board",
-                "why_it_matters": "Platform-level export proof should stay visible before a reviewer trusts either domain handoff story.",
+                "why_it_matters": "Platform-level export proof should stay visible before a architecture trusts either domain handoff story.",
             },
             {
-                "check_id": "fab-review-pack",
-                "surface": "/api/fab-ops/review-pack",
+                "check_id": "fab-architecture-pack",
+                "surface": "/api/fab-ops/architecture-pack",
                 "why_it_matters": "Fab posture should stay reviewable from alarm to signed handoff.",
             },
             {
-                "check_id": "scanner-review-pack",
-                "surface": "/api/scanner/review-pack",
+                "check_id": "scanner-architecture-pack",
+                "surface": "/api/scanner/architecture-pack",
                 "why_it_matters": "Scanner qualification and handoff evidence should stay visible without extra tooling.",
             },
             {
                 "check_id": "metrics-check",
                 "surface": "/metrics",
-                "why_it_matters": "Latency and request counters should back the runtime story after the review surfaces line up.",
+                "why_it_matters": "Latency and request counters should back the runtime story after the architecture surfaces line up.",
             },
         ],
         "validation_cases": [
@@ -98,7 +98,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
             },
             {
                 "case_id": "scanner-qualification",
-                "goal": "Qualification blockers should remain visible in scanner review surfaces.",
+                "goal": "Qualification blockers should remain visible in scanner architecture surfaces.",
                 "proof_surface": "/api/scanner/qualification-board",
             },
             {
@@ -107,14 +107,14 @@ def build_platform_resource_pack() -> dict[str, Any]:
                 "proof_surface": "/api/scanner/shift-handoff/verify",
             },
         ],
-        "reviewer_fast_path": [
+        "architecture_fast_path": [
             "/health",
             "/api/resource-pack",
             "/api/export-proof-board",
             "/api/fab-ops/runtime/brief",
-            "/api/fab-ops/review-pack",
+            "/api/fab-ops/architecture-pack",
             "/api/scanner/runtime/brief",
-            "/api/scanner/review-pack",
+            "/api/scanner/architecture-pack",
             "/metrics",
         ],
     }

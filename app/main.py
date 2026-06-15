@@ -129,7 +129,7 @@ async def health() -> dict[str, Any]:
         "service": "semiconductor-ops-platform",
         "persistence": persistence_readiness(),
         "aws": aws_status(),
-        "reviewer_fast_path": [
+        "architecture_fast_path": [
             "/health",
             "/api/resource-pack",
             "/api/export-proof-board",
@@ -140,9 +140,9 @@ async def health() -> dict[str, Any]:
             "resource_pack": "/api/resource-pack",
             "export_proof_board": "/api/export-proof-board",
             "fab_ops_release_board": "/api/fab-ops/release-board",
-            "fab_ops_review_pack": "/api/fab-ops/review-pack",
+            "fab_ops_architecture_pack": "/api/fab-ops/architecture-pack",
             "scanner_field_response": "/api/scanner/field-response-board",
-            "scanner_review_pack": "/api/scanner/review-pack",
+            "scanner_architecture_pack": "/api/scanner/architecture-pack",
         },
         "domains": {
             "fab_ops": {
@@ -170,7 +170,7 @@ def build_export_proof_board() -> dict[str, Any]:
         "status": "ok",
         "service": "semiconductor-ops-export-proof-board",
         "contract_version": "semiconductor-ops-export-proof-board-v1",
-        "headline": "Platform-level export proof board that ties both domain ledgers into one review surface.",
+        "headline": "Platform-level export proof board that ties both domain ledgers into one architecture surface.",
         "aws": aws_status(),
         "persistence": persistence_readiness(),
         "domains": {

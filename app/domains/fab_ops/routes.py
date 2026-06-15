@@ -25,7 +25,7 @@ from app.domains.fab_ops.helpers import (
     build_release_board,
     build_release_gate,
     build_replay_summary,
-    build_review_pack,
+    build_architecture_pack,
     build_review_summary,
     build_review_summary_schema,
     build_runtime_brief,
@@ -56,7 +56,7 @@ def _handoff_id_from_payload(payload: dict[str, Any]) -> str:
     return str(payload.get("handoff_id") or f"handoff-{payload.get('fab_id', 'unknown')}-{payload.get('shift', 'unknown')}")
 
 
-def _build_export_ledger(*, runtime_brief_path: str, review_pack_path: str) -> dict[str, Any]:
+def _build_export_ledger(*, runtime_brief_path: str, architecture_pack_path: str) -> dict[str, Any]:
     runtime = summarize_runtime_events(DOMAIN)
     export_events = [
         event
@@ -73,7 +73,7 @@ def _build_export_ledger(*, runtime_brief_path: str, review_pack_path: str) -> d
             "last_event_at": runtime.get("last_event_at"),
         },
         "recent_exports": export_events[-6:],
-        "reviewer_fast_path": [runtime_brief_path, "/api/fab-ops/runtime/export-ledger", review_pack_path],
+        "architecture_fast_path": [runtime_brief_path, "/api/fab-ops/runtime/export-ledger", architecture_pack_path],
     }
 
 
@@ -100,11 +100,11 @@ async def runtime_scorecard() -> dict[str, Any]:
 
 @router.get("/runtime/export-ledger")
 async def runtime_export_ledger() -> dict[str, Any]:
-    """Return the export ledger for reviewer-facing handoff proof."""
+    """Return the export ledger for architecture-facing handoff proof."""
     record_route_hit("/api/fab-ops/runtime/export-ledger")
     return _build_export_ledger(
         runtime_brief_path="/api/fab-ops/runtime/brief",
-        review_pack_path="/api/fab-ops/review-pack",
+        architecture_pack_path="/api/fab-ops/architecture-pack",
     )
 
 
@@ -124,11 +124,11 @@ async def review_summary_schema() -> dict[str, Any]:
     return build_review_summary_schema()
 
 
-@router.get("/review-pack")
-async def review_pack() -> dict[str, Any]:
-    """Return the reviewer-facing fab review pack."""
-    record_route_hit("/api/fab-ops/review-pack")
-    return build_review_pack()
+@router.get("/architecture-pack")
+async def architecture_pack() -> dict[str, Any]:
+    """Return the architecture-facing fab architecture pack."""
+    record_route_hit("/api/fab-ops/architecture-pack")
+    return build_architecture_pack()
 
 
 @router.get("/recovery-board")

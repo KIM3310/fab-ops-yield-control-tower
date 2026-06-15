@@ -34,7 +34,7 @@ from app.domains.scanner.helpers import (
     build_handoff_verify,
     build_qualification_board,
     build_replay_summary,
-    build_review_pack,
+    build_architecture_pack,
     build_runtime_brief,
     build_runtime_scorecard,
     build_shift_handoff_payload,
@@ -75,10 +75,10 @@ def _build_export_ledger() -> dict[str, Any]:
             "last_event_at": runtime.get("last_event_at"),
         },
         "recent_exports": export_events[-6:],
-        "reviewer_fast_path": [
+        "architecture_fast_path": [
             "/api/scanner/runtime/brief",
             "/api/scanner/runtime/export-ledger",
-            "/api/scanner/review-pack",
+            "/api/scanner/architecture-pack",
         ],
     }
 
@@ -91,7 +91,7 @@ def meta() -> dict[str, Any]:
         "service": SERVICE_NAME,
         "runtime_contract": RUNTIME_BRIEF_CONTRACT,
         "runtime_scorecard_contract": RUNTIME_SCORECARD_CONTRACT,
-        "review_pack_contract": REVIEW_PACK_CONTRACT,
+        "architecture_pack_contract": REVIEW_PACK_CONTRACT,
         "field_incident_contract": {"schema": FIELD_INCIDENT_SCHEMA},
         "application_qualification_contract": {"schema": APPLICATION_QUALIFICATION_SCHEMA},
         "handoff_contract": {"schema": SHIFT_HANDOFF_SCHEMA},
@@ -105,7 +105,7 @@ def meta() -> dict[str, Any]:
             "/health",
             "/api/scanner/runtime/brief",
             "/api/scanner/runtime/scorecard",
-            "/api/scanner/review-pack",
+            "/api/scanner/architecture-pack",
             "/api/scanner/schema/field-incident",
             "/api/scanner/schema/application-qualification",
             "/api/scanner/scanners",
@@ -140,7 +140,7 @@ def runtime_scorecard() -> dict[str, Any]:
 
 @router.get("/runtime/export-ledger")
 def runtime_export_ledger() -> dict[str, Any]:
-    """Return the scanner export ledger for reviewer proof."""
+    """Return the scanner export ledger for architecture view."""
     record_route_hit("/api/scanner/runtime/export-ledger")
     return _build_export_ledger()
 
@@ -223,11 +223,11 @@ def customer_readiness(customer: str = Query(...)) -> dict[str, Any]:
     return build_customer_readiness(customer)
 
 
-@router.get("/review-pack")
-def review_pack() -> dict[str, Any]:
-    """Return the scanner reviewer pack."""
-    record_route_hit("/api/scanner/review-pack")
-    return build_review_pack()
+@router.get("/architecture-pack")
+def architecture_pack() -> dict[str, Any]:
+    """Return the scanner architecture pack."""
+    record_route_hit("/api/scanner/architecture-pack")
+    return build_architecture_pack()
 
 
 @router.get("/lot-risk")

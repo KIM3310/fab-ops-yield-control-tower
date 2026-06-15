@@ -19,13 +19,13 @@ def test_platform_health() -> None:
     assert payload["persistence"]["ready"] is True
     assert "fab_ops" in payload["domains"]
     assert "scanner" in payload["domains"]
-    assert payload["reviewer_fast_path"][0] == "/health"
-    assert payload["reviewer_fast_path"][1] == "/api/resource-pack"
-    assert payload["reviewer_fast_path"][2] == "/api/export-proof-board"
+    assert payload["architecture_fast_path"][0] == "/health"
+    assert payload["architecture_fast_path"][1] == "/api/resource-pack"
+    assert payload["architecture_fast_path"][2] == "/api/export-proof-board"
     assert payload["proof_routes"]["resource_pack"] == "/api/resource-pack"
     assert payload["proof_routes"]["export_proof_board"] == "/api/export-proof-board"
-    assert payload["proof_routes"]["fab_ops_review_pack"] == "/api/fab-ops/review-pack"
-    assert payload["proof_routes"]["scanner_review_pack"] == "/api/scanner/review-pack"
+    assert payload["proof_routes"]["fab_ops_architecture_pack"] == "/api/fab-ops/architecture-pack"
+    assert payload["proof_routes"]["scanner_architecture_pack"] == "/api/scanner/architecture-pack"
     assert payload["links"]["resource_pack"] == "/api/resource-pack"
     assert payload["links"]["export_proof_board"] == "/api/export-proof-board"
     assert resource_pack.status_code == 200
@@ -34,8 +34,8 @@ def test_platform_health() -> None:
     assert resource_payload["summary"]["fab_alarm_count"] >= 2
     assert "external_data" in resource_payload
     assert "preview_rows" in resource_payload["external_data"]
-    assert resource_payload["reviewer_fast_path"][1] == "/api/resource-pack"
-    assert resource_payload["reviewer_fast_path"][2] == "/api/export-proof-board"
+    assert resource_payload["architecture_fast_path"][1] == "/api/resource-pack"
+    assert resource_payload["architecture_fast_path"][2] == "/api/export-proof-board"
     assert export_proof_board.status_code == 200
     export_payload = export_proof_board.json()
     assert export_payload["contract_version"] == "semiconductor-ops-export-proof-board-v1"
@@ -61,7 +61,7 @@ def test_fab_ops_health_and_service_grade_surfaces() -> None:
     release_board = client.get("/api/fab-ops/release-board")
     recovery_what_if = client.get("/api/fab-ops/recovery-what-if?lot_id=lot-8812&yield_gain=0.25&maintenance_complete=true")
     recovery_board_schema = client.get("/api/fab-ops/recovery-board/schema")
-    review_pack = client.get("/api/fab-ops/review-pack")
+    architecture_pack = client.get("/api/fab-ops/architecture-pack")
     alarm_schema = client.get("/api/fab-ops/schema/alarm-report")
     handoff_schema = client.get("/api/fab-ops/schema/shift-handoff")
     audit_feed = client.get("/api/fab-ops/audit/feed")
@@ -69,7 +69,7 @@ def test_fab_ops_health_and_service_grade_surfaces() -> None:
     assert meta.status_code == 200
     meta_payload = meta.json()
     assert meta_payload["runtime_contract"] == "fab-ops-runtime-brief-v1"
-    assert meta_payload["review_pack_contract"] == "fab-ops-review-pack-v1"
+    assert meta_payload["architecture_pack_contract"] == "fab-ops-architecture-pack-v1"
     assert meta_payload["review_summary_contract"] == "fab-ops-review-summary-v1"
     assert meta_payload["report_contract"]["schema"] == "fab-ops-alarm-report-v1"
     assert meta_payload["handoff_contract"]["schema"] == "fab-ops-shift-handoff-v1"
@@ -159,9 +159,9 @@ def test_fab_ops_health_and_service_grade_surfaces() -> None:
     assert recovery_board_schema.status_code == 200
     assert recovery_board_schema.json()["schema"] == "fab-ops-recovery-board-v1"
 
-    assert review_pack.status_code == 200
-    review_payload = review_pack.json()
-    assert review_payload["readiness_contract"] == "fab-ops-review-pack-v1"
+    assert architecture_pack.status_code == 200
+    review_payload = architecture_pack.json()
+    assert review_payload["readiness_contract"] == "fab-ops-architecture-pack-v1"
     assert "/api/fab-ops/runtime/scorecard" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/fab-ops/review-summary" in review_payload["proof_bundle"]["review_routes"]
     assert "/api/fab-ops/recovery-board" in review_payload["proof_bundle"]["review_routes"]
@@ -172,7 +172,7 @@ def test_fab_ops_health_and_service_grade_surfaces() -> None:
     assert review_payload["proof_bundle"]["watch_count"] == 1
     assert review_payload["proof_bundle"]["ready_count"] == 1
     assert review_payload["proof_bundle"]["release_board_rows"] == 3
-    assert "/api/fab-ops/review-pack" in review_payload["proof_bundle"]["review_routes"]
+    assert "/api/fab-ops/architecture-pack" in review_payload["proof_bundle"]["review_routes"]
     assert review_payload["proof_bundle"]["latest_audit_events"] == 3
     assert review_payload["focus_lot"]["maintenance_owner"] == "maint-etch-cell-a"
     assert review_payload["focus_lot"]["review_path"][1] == "/api/fab-ops/recovery-board?mode=hold"
@@ -346,14 +346,14 @@ def test_scanner_health_runtime_and_review_surfaces() -> None:
     brief = client.get("/api/scanner/runtime/brief")
     scorecard = client.get("/api/scanner/runtime/scorecard")
     export_ledger = client.get("/api/scanner/runtime/export-ledger")
-    review_pack = client.get("/api/scanner/review-pack")
+    architecture_pack = client.get("/api/scanner/architecture-pack")
     field_schema = client.get("/api/scanner/schema/field-incident")
     app_schema = client.get("/api/scanner/schema/application-qualification")
 
     assert meta.status_code == 200
     meta_payload = meta.json()
     assert meta_payload["runtime_contract"] == "scanner-runtime-brief-v1"
-    assert meta_payload["review_pack_contract"] == "scanner-review-pack-v1"
+    assert meta_payload["architecture_pack_contract"] == "scanner-architecture-pack-v1"
     assert meta_payload["field_incident_contract"]["schema"] == "scanner-field-incident-v1"
     assert meta_payload["application_qualification_contract"]["schema"] == "scanner-qualification-record-v1"
     assert "/api/scanner/field-response-board" in meta_payload["routes"]
@@ -386,9 +386,9 @@ def test_scanner_health_runtime_and_review_surfaces() -> None:
     assert export_ledger_payload["schema"] == "scanner-export-ledger-v1"
     assert "aws" in export_ledger_payload
 
-    assert review_pack.status_code == 200
-    review_payload = review_pack.json()
-    assert review_payload["readiness_contract"] == "scanner-review-pack-v1"
+    assert architecture_pack.status_code == 200
+    review_payload = architecture_pack.json()
+    assert review_payload["readiness_contract"] == "scanner-architecture-pack-v1"
     assert review_payload["focus_story"]["incident_id"] == "inc-3407"
     assert review_payload["focus_story"]["lot_id"] == "lot-n2-118"
     assert "/api/scanner/field-response-board" in review_payload["proof_bundle"]["review_routes"]

@@ -7,33 +7,33 @@
 
 Unified manufacturing operations platform for semiconductor environments. Two production domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
 
-Technical review pack: [`docs/technical-review-pack.md`](docs/technical-review-pack.md)
+Architecture pack: [`docs/architecture-pack.md`](docs/architecture-pack.md)
 
-## Product and Review Surface
+## Product and System Surface
 
-A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one reviewable system.
+A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one inspectable system.
 
 | Lens | Definition |
 |---|---|
 | Audience | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
-| Review path | Validate the demo, README, architecture notes, and quality gate before deeper workflow review. |
-| Architecture signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review-pack material. |
+| Architecture path | Validate the demo, README, architecture notes, and quality gate before deeper workflow architecture. |
+| System signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and architecture-pack material. |
 | Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
-| Fast proof | Run the documented verification commands and inspect review-pack artifacts and staged process data. |
+| Fast path | Run the documented runtime commands and inspect architecture-pack artifacts and staged process data. |
 
-## Reviewer Fast Path
+## System Fast Path
 
 - **First minute:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
-- **Local demo:** Run `make install`, activate `.venv`, and start `uvicorn app.main:app --reload`; review `http://127.0.0.1:8000/docs`.
+- **Local demo:** Run `make install`, activate `.venv`, and start `uvicorn app.main:app --reload`; architecture `http://127.0.0.1:8000/docs`.
 - **Verification:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
 
 ## Service Launch Playbook
 
-- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to review audiences, proof gates, operating boundaries, and risk controls.
+- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to architecture audiences, operating gates, operating boundaries, and risk controls.
 
-## Review Notes
+## Architecture Notes
 
-- [Review guide](docs/reviewer-evidence-map.md) summarizes the project angle, first files to inspect, verification commands, and known boundaries.
+- [Architecture guide](docs/architecture-evidence-map.md) summarizes the project angle, first files to inspect, runtime commands, and known boundaries.
 - [Quality notes](docs/quality-gate.md) lists the local checks, CI surface, and release expectations for this repository.
 - [Enterprise readiness notes](docs/enterprise-readiness.md) outlines security, data, operations, integration, and handoff expectations.
 
@@ -41,7 +41,7 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
 
-**Scanner Field Response** (`/api/scanner/`) — field incident workflow, subsystem escalation, qualification review, and signed handoff from local triage through customer milestone readiness.
+**Scanner Field Response** (`/api/scanner/`) — field incident workflow, subsystem escalation, qualification architecture, and signed handoff from local triage through customer milestone readiness.
 
 Both domains share operator access, HMAC signature logic, and runtime storage from `app/shared/` — zero duplication, per-domain environment variable isolation.
 
@@ -91,7 +91,7 @@ make deploy  # applies infra/k8s/ manifests
 |----------|-------------|
 | `GET /health` | Platform health and domain navigation |
 | `GET /metrics` | Prometheus metrics |
-| `GET /api/resource-pack` | Built-in manufacturing review cases |
+| `GET /api/resource-pack` | Built-in manufacturing architecture cases |
 
 **Fab Ops** (`/api/fab-ops/`)
 
@@ -111,7 +111,7 @@ make deploy  # applies infra/k8s/ manifests
 | `GET /api/scanner/incidents` | Field incidents (filterable) |
 | `GET /api/scanner/field-response-board` | Field response board |
 | `GET /api/scanner/subsystem-escalation` | Subsystem escalation detail |
-| `GET /api/scanner/qualification-board` | Qualification review board |
+| `GET /api/scanner/qualification-board` | Qualification architecture board |
 | `GET /api/scanner/customer-readiness` | Customer milestone readiness |
 | `GET /api/scanner/shift-handoff/signature` | Signed handoff envelope (auth) |
 
@@ -145,7 +145,7 @@ This repository includes a neutral cloud and AI engineering blueprint that maps 
 
 ## Enterprise Productization
 
-- [Product operating model](docs/product-operating-model.md) defines the reviewer, trust boundary, trust boundary, operating checks, and service path for this repository.
+- [Product operating model](docs/product-operating-model.md) defines the technical reader, trust boundary, trust boundary, operating checks, and service path for this repository.
 
 ## System Architecture
 

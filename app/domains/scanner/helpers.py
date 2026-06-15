@@ -510,7 +510,7 @@ def build_runtime_brief() -> dict[str, Any]:
             {"label": "Shift Handoff Signature", "href": SHIFT_HANDOFF_SIGNATURE_ROUTE},
         ],
         "links": {
-            "review_pack": "/api/scanner/review-pack",
+            "architecture_pack": "/api/scanner/architecture-pack",
             "runtime_scorecard": "/api/scanner/runtime/scorecard",
             "field_response_board": field_response_path(),
             "subsystem_escalation": subsystem_escalation_path("scanner-euv-02"),
@@ -553,11 +553,11 @@ def build_runtime_scorecard() -> dict[str, Any]:
     }
 
 
-def build_review_pack() -> dict[str, Any]:
-    """Build the shift-ready review pack for the scanner domain.
+def build_architecture_pack() -> dict[str, Any]:
+    """Build the shift-ready architecture brief for the scanner domain.
 
     Returns:
-        Review pack payload with focus story and operator promises.
+        Architecture pack payload with focus story and operator promises.
     """
     focus = focus_incident()
     lot = focus_lot()

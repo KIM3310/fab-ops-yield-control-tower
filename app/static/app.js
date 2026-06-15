@@ -80,7 +80,7 @@ const RECORDED_FAB = {
     ],
   },
   reviewPack: {
-    headline: "Shift review pack for yield risk, recovery, and handoff status.",
+    headline: "Shift architecture brief for yield risk, recovery, and handoff status.",
     operator_promises: [
       "Alarms, lots, tools, and handoff stay in one operator view.",
       "Recovery what-if and release-gate decisions remain tied to the same lot context.",
@@ -214,11 +214,11 @@ const REVIEW_LENSES = {
     ],
     actions: ["Focus Severe Lot", "Copy Shift Snapshot", "Copy Focused Route"],
   },
-  reviewer: {
+  architecture: {
     headline: "Audit lens",
-    summary: "Keep review pack, trust boundary, and replay evidence together so the control tower stays auditable.",
+    summary: "Keep architecture pack, trust boundary, and replay evidence together so the control tower stays auditable.",
     cards: [
-      ["01 · Review pack", "Read operator promises and trust boundary before touching the severe lot."],
+      ["01 · Architecture pack", "Read operator promises and trust boundary before touching the severe lot."],
       ["02 · Focused route", "Connect recovery board, release gate, and signature in one path."],
       ["03 · Replay", "Use replay summary as the confidence layer after the route is clear."],
     ],
@@ -299,7 +299,7 @@ async function boot() {
   const lensSummary = document.getElementById("lens-summary");
   const lensGrid = document.getElementById("lens-grid");
   const lensOperatorBtn = document.getElementById("lens-operator-btn");
-  const lensReviewerBtn = document.getElementById("lens-reviewer-btn");
+  const lensArchitectureBtn = document.getElementById("lens-architecture-btn");
   const lensExecutiveBtn = document.getElementById("lens-executive-btn");
   const lensPrimaryBtn = document.getElementById("lens-primary-btn");
   const lensSecondaryBtn = document.getElementById("lens-secondary-btn");
@@ -374,9 +374,9 @@ async function boot() {
           </article>`,
       )
       .join("");
-    [lensOperatorBtn, lensReviewerBtn, lensExecutiveBtn].forEach((btn) => btn?.classList.remove("is-active"));
+    [lensOperatorBtn, lensArchitectureBtn, lensExecutiveBtn].forEach((btn) => btn?.classList.remove("is-active"));
     if (currentLens === "operator") lensOperatorBtn?.classList.add("is-active");
-    if (currentLens === "reviewer") lensReviewerBtn?.classList.add("is-active");
+    if (currentLens === "architecture") lensArchitectureBtn?.classList.add("is-active");
     if (currentLens === "executive") lensExecutiveBtn?.classList.add("is-active");
     lensPrimaryBtn.textContent = config.actions[0];
     lensSecondaryBtn.textContent = config.actions[1];
@@ -409,7 +409,7 @@ async function boot() {
         html: `<strong>Recovery what-if</strong> shifts the posture toward <strong>${simulatedDecision}</strong>${typeof etaGain === "number" ? ` with ${etaGain} minutes of ETA recovery` : ""}${typeof riskDelta === "number" ? ` and ${riskDelta} risk-score reduction` : ""}.`,
       },
       {
-        html: `<strong>Reviewer-proof handoff</strong> stays honest: maintenance is <strong>${maintenanceState}</strong>, gate evidence remains required, and the next shift should see signature <strong>${signatureId}</strong> before anyone talks about release confidence.`,
+        html: `<strong>Operator-proof handoff</strong> stays honest: maintenance is <strong>${maintenanceState}</strong>, gate evidence remains required, and the next shift should see signature <strong>${signatureId}</strong> before anyone talks about release confidence.`,
       },
     ], "Storyline details load after the focused lot is available.");
 
@@ -428,7 +428,7 @@ async function boot() {
       {
         html: `<strong>4.</strong> Shift handoff -> <code>/api/shift-handoff</code> plus <code>/api/shift-handoff/signature</code> closes the story with next-shift continuity, not a cosmetic dashboard ending.`,
       },
-    ], "Reviewer route details load after the focused lot is available.");
+    ], "Architecture route details load after the focused lot is available.");
   }
 
   async function copyTextValue(text) {
@@ -534,7 +534,7 @@ async function boot() {
 
     const results = await Promise.allSettled([
       fetchJson("/api/runtime/brief"),
-      fetchJson("/api/review-pack"),
+      fetchJson("/api/architecture-pack"),
       fetchJson("/api/alarms"),
       fetchJson("/api/lots/at-risk"),
       fetchJson("/api/tools"),
@@ -668,7 +668,7 @@ async function boot() {
         <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
       `);
       renderStoryline();
-        setRuntimeBanner("ok", "Recorded technical review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
+        setRuntimeBanner("ok", "Recorded architecture walkthrough loaded locally. Focus the severe lot first, then compare recovery and release posture.");
       setRefreshBusy(false);
       return;
     }
@@ -740,17 +740,17 @@ async function boot() {
         "Trust boundary details are not available yet."
       );
     } else {
-      degradedPanels.push("review pack");
-      reviewHeadline.textContent = "Review pack temporarily unavailable";
+      degradedPanels.push("architecture pack");
+      reviewHeadline.textContent = "Architecture pack temporarily unavailable";
       renderBulletList(
         reviewPromises,
         [],
-        "Review pack data could not be loaded right now."
+        "Architecture pack data could not be loaded right now."
       );
       renderBulletList(
         reviewBoundary,
         [],
-        "Trust boundary details are unavailable while the review pack is down."
+        "Trust boundary details are unavailable while the architecture pack is down."
       );
     }
 
@@ -1027,8 +1027,8 @@ async function boot() {
     currentLens = "operator";
     renderLensPanel();
   });
-  lensReviewerBtn.addEventListener("click", () => {
-    currentLens = "reviewer";
+  lensArchitectureBtn.addEventListener("click", () => {
+    currentLens = "architecture";
     renderLensPanel();
   });
   lensExecutiveBtn.addEventListener("click", () => {
