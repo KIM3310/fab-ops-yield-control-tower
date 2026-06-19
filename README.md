@@ -162,7 +162,7 @@ This repository includes a neutral cloud and AI engineering blueprint that maps 
 - Public entry: public synthetic fab demo and operating model
 - Paid boundary: paid factory pilot workspace with private connectors and shift report export
 - Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
-- Lead capture: mailto:ehdjs1351@gmail.com?subject=Fab%20Ops%20Yield%20Control%20Tower%20private%20workspace&body=I%20am%20interested%20in%20paid%20factory%20pilot%20workspace%20with%20private%20connectors%20and%20shift%20report%20export%20for%20Fab%20Ops%20Yield%20Control%20Tower.
+- Lead capture: https://github.com/KIM3310/fab-ops-yield-control-tower/issues/new?template=service-inquiry.yml&title=Private+workspace+inquiry%3A+Fab+Ops+Yield+Control+Tower
 - Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
 - Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)
 - Revenue architecture: [docs/revenue-architecture.md](docs/revenue-architecture.md)
