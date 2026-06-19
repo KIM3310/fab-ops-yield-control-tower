@@ -15,7 +15,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
         "status": "ok",
         "service": "semiconductor-ops-platform-resource-pack",
         "contract_version": "semiconductor-ops-resource-pack-v1",
-        "intended_use": "review-safe manufacturing scenarios and controls without plant telemetry",
+        "intended_use": "inspection-safe manufacturing scenarios and controls without plant telemetry",
         "summary": {
             "fab_alarm_count": len(ALARMS),
             "fab_lot_count": len(LOTS_AT_RISK),
@@ -30,11 +30,11 @@ def build_platform_resource_pack() -> dict[str, Any]:
             "row_count": _count_csv_rows(EXTERNAL_DIR / "uci-secom.csv"),
             "preview_rows": _preview_csv_rows(EXTERNAL_DIR / "uci-secom.csv"),
         },
-        "fab_review_cases": [
+        "fab_architecture_cases": [
             {
                 "case_id": "fab-critical-plasma-instability",
                 "focus_lot": "lot-8812",
-                "goal": "Explain why a severe lot remains blocked until maintenance and reroute review align.",
+                "goal": "Explain why a severe lot remains blocked until maintenance and reroute check align.",
                 "next_surface": "/api/fab-ops/release-board",
             },
             {
@@ -44,11 +44,11 @@ def build_platform_resource_pack() -> dict[str, Any]:
                 "next_surface": "/api/fab-ops/recovery-board?mode=watch",
             },
         ],
-        "scanner_review_cases": [
+        "scanner_architecture_cases": [
             {
                 "case_id": "scanner-euv-shift-brief",
                 "focus_tool": "scanner-euv-02",
-                "goal": "Keep field response, subsystem escalation, and qualification review tied together.",
+                "goal": "Keep field response, subsystem escalation, and qualification gate tied together.",
                 "next_surface": "/api/scanner/architecture-pack",
             },
             {
@@ -72,7 +72,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
             {
                 "check_id": "fab-architecture-pack",
                 "surface": "/api/fab-ops/architecture-pack",
-                "why_it_matters": "Fab posture should stay reviewable from alarm to signed handoff.",
+                "why_it_matters": "Fab posture should stay inspectable from alarm to signed handoff.",
             },
             {
                 "check_id": "scanner-architecture-pack",
@@ -88,7 +88,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
         "validation_cases": [
             {
                 "case_id": "fab-release-block",
-                "goal": "A critical lot should remain blocked until maintenance and review gates clear.",
+                "goal": "A critical lot should remain blocked until maintenance and operating gates clear.",
                 "proof_surface": "/api/fab-ops/release-gate?lot_id=lot-8812",
             },
             {

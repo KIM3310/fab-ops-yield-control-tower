@@ -32,7 +32,7 @@ def main() -> None:
 
         # Fab ops domain
         client.get("/api/fab-ops/runtime/brief").raise_for_status()
-        client.get("/api/fab-ops/review-summary?severity=critical").raise_for_status()
+        client.get("/api/fab-ops/architecture-summary?severity=critical").raise_for_status()
         recovery = client.get("/api/fab-ops/recovery-board?mode=hold")
         recovery.raise_for_status()
         release_gate = client.get("/api/fab-ops/release-gate?lot_id=lot-8812", headers=headers)

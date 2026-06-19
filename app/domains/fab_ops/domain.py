@@ -73,7 +73,7 @@ ALARMS = [
         "recommended_actions": [
             "pause affected lot progression",
             "verify chamber pressure calibration",
-            "route chamber A2 to maintenance review",
+            "route chamber A2 to maintenance check",
         ],
     },
     {
@@ -103,7 +103,7 @@ LOTS_AT_RISK = [
         "wafer_count": 25,
         "yield_risk_score": 0.94,
         "risk_bucket": "severe",
-        "next_action": "maintenance approval + reroute review",
+        "next_action": "maintenance approval + reroute check",
     },
     {
         "lot_id": "lot-8821",
@@ -137,7 +137,7 @@ TOOL_OWNERSHIP: dict[str, dict[str, Any]] = {
         "tool_id": "etch-14",
         "primary_operator": "ops-west-night",
         "maintenance_owner": "maint-etch-cell-a",
-        "escalation_lane": "plasma-stability-review",
+        "escalation_lane": "plasma-stability-check",
         "due_by": "2026-03-08T09:10:00Z",
         "ack_required": True,
     },

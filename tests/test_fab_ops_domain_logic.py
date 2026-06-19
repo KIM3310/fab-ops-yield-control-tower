@@ -21,12 +21,12 @@ from app.domains.fab_ops.helpers import (
     build_release_board,
     build_release_gate,
     build_replay_summary,
-    build_review_summary,
+    build_architecture_summary,
     build_shift_handoff,
     build_tool_ownership,
     get_lot_or_404,
     get_tool_or_404,
-    normalize_review_filter,
+    normalize_architecture_filter,
     utc_now_iso,
 )
 
@@ -70,21 +70,21 @@ class TestGetLotOr404:
         assert exc_info.value.status_code == 404
 
 
-class TestNormalizeReviewFilter:
-    """Tests for normalize_review_filter()."""
+class TestNormalizeArchitectureFilter:
+    """Tests for normalize_architecture_filter()."""
 
     def test_none_returns_none(self) -> None:
-        assert normalize_review_filter("sev", None, {"critical"}) is None
+        assert normalize_architecture_filter("sev", None, {"critical"}) is None
 
     def test_empty_string_returns_none(self) -> None:
-        assert normalize_review_filter("sev", "", {"critical"}) is None
+        assert normalize_architecture_filter("sev", "", {"critical"}) is None
 
     def test_valid_value_passes_through(self) -> None:
-        assert normalize_review_filter("sev", "critical", {"critical", "high"}) == "critical"
+        assert normalize_architecture_filter("sev", "critical", {"critical", "high"}) == "critical"
 
     def test_invalid_value_raises_400(self) -> None:
         with pytest.raises(HTTPException) as exc_info:
-            normalize_review_filter("severity", "urgent", {"critical", "high"})
+            normalize_architecture_filter("severity", "urgent", {"critical", "high"})
         assert exc_info.value.status_code == 400
         assert "Invalid severity filter" in str(exc_info.value.detail)
 
@@ -100,7 +100,7 @@ class TestBuildReleaseGate:
 
     def test_elevated_lot_reroute(self) -> None:
         gate = build_release_gate("lot-8821")
-        assert gate["decision"] == "reroute-review"
+        assert gate["decision"] == "reroute-check"
 
     def test_watch_lot_release_with_sampling(self) -> None:
         gate = build_release_gate("lot-8836")
@@ -165,7 +165,7 @@ class TestBuildRecoveryWhatIf:
             maintenance_complete=True,
         )
         assert result["baseline"]["decision"] == "hold-release"
-        assert result["simulated"]["decision"] in {"reroute-review", "release-with-sampling"}
+        assert result["simulated"]["decision"] in {"reroute-check", "release-with-sampling"}
         assert result["delta"]["maintenance_clearance"] is True
         assert result["delta"]["risk_score_reduction"] > 0
 
@@ -230,27 +230,27 @@ class TestBuildReleaseBoard:
         board = build_release_board()
         assert board["summary"]["visible_lots"] == 3
         assert board["summary"]["hold_release"] == 1
-        assert board["summary"]["reroute_review"] == 1
+        assert board["summary"]["reroute_check"] == 1
         assert board["summary"]["release_with_sampling"] == 1
         assert board["spotlight"]["lot_id"] == "lot-8812"
 
 
-class TestBuildReviewSummary:
-    """Tests for build_review_summary()."""
+class TestBuildArchitectureSummary:
+    """Tests for build_architecture_summary()."""
 
     def test_unfiltered_returns_all(self) -> None:
-        summary = build_review_summary()
+        summary = build_architecture_summary()
         assert summary["summary"]["alarm_count"] == 2
         assert summary["summary"]["lot_count"] == 3
 
     def test_critical_filter(self) -> None:
-        summary = build_review_summary(severity="critical")
+        summary = build_architecture_summary(severity="critical")
         assert summary["summary"]["alarm_count"] == 1
         assert summary["spotlight"]["alarm"]["severity"] == "critical"
 
     def test_invalid_severity_raises_400(self) -> None:
         with pytest.raises(HTTPException) as exc_info:
-            build_review_summary(severity="urgent")
+            build_architecture_summary(severity="urgent")
         assert exc_info.value.status_code == 400
 
 
@@ -262,7 +262,7 @@ class TestBuildFocusLot:
         assert focus["lot_id"] == "lot-8812"
         assert focus["severity"] == "critical"
         assert focus["release_decision"] == "hold-release"
-        assert len(focus["review_path"]) == 4
+        assert len(focus["architecture_path"]) == 4
 
 
 class TestBuildAuditFeed:

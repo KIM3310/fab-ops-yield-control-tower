@@ -124,7 +124,7 @@ def get_lot_or_404(lot_id: str) -> dict[str, Any]:
     raise HTTPException(status_code=404, detail=f"Unknown lot: {lot_id}")
 
 
-def normalize_review_filter(name: str, value: str | None, allowed: set[str]) -> str | None:
+def normalize_architecture_filter(name: str, value: str | None, allowed: set[str]) -> str | None:
     """Validate and normalise an optional filter parameter.
 
     Returns ``None`` when *value* is empty or ``None``.  Raises HTTP 400 if
@@ -200,7 +200,7 @@ def build_shift_handoff_schema() -> dict[str, Any]:
         "operator_rules": [
             "Critical alarms must be acknowledged in the handoff export.",
             "Lots at risk stay visible until reroute, release, or scrap decision is recorded.",
-            "The handoff pack is reviewable without live integrations.",
+            "The handoff pack is inspectable without live integrations.",
         ],
     }
 
@@ -240,7 +240,7 @@ def build_tool_ownership(tool_id: str) -> dict[str, Any]:
 def build_release_gate(lot_id: str) -> dict[str, Any]:
     """Evaluate the release gate decision for a lot.
 
-    The decision is one of ``"hold-release"``, ``"reroute-review"``, or
+    The decision is one of ``"hold-release"``, ``"reroute-check"``, or
     ``"release-with-sampling"`` based on yield risk score and tool status.
 
     Args:
@@ -256,7 +256,7 @@ def build_release_gate(lot_id: str) -> dict[str, Any]:
     if lot["yield_risk_score"] >= 0.85 and tool["status"] == "alarm":
         decision = "hold-release"
     elif lot["yield_risk_score"] >= 0.65:
-        decision = "reroute-review"
+        decision = "reroute-check"
     else:
         decision = "release-with-sampling"
 
@@ -320,7 +320,7 @@ def build_focus_lot() -> dict[str, Any]:
     a single navigable entry point.
 
     Returns:
-        Focus lot payload with review path links.
+        Focus lot payload with architecture path links.
     """
     spotlight_lot = get_lot_or_404("lot-8812")
     spotlight_alarm = next(
@@ -343,7 +343,7 @@ def build_focus_lot() -> dict[str, Any]:
         "next_action": spotlight_lot["next_action"],
         "maintenance_owner": ownership["maintenance_owner"],
         "handoff_headline": handoff["headline"],
-        "review_path": [
+        "architecture_path": [
             "/api/fab-ops/runtime/brief",
             "/api/fab-ops/recovery-board?mode=hold",
             f"/api/fab-ops/release-gate?lot_id={spotlight_lot['lot_id']}",
@@ -403,7 +403,7 @@ def build_recovery_what_if(
     if simulated_yield_risk >= 0.85 and simulated_tool_status == "alarm":
         simulated_decision = "hold-release"
     elif simulated_yield_risk >= 0.65:
-        simulated_decision = "reroute-review"
+        simulated_decision = "reroute-check"
     else:
         simulated_decision = "release-with-sampling"
 
@@ -417,8 +417,8 @@ def build_recovery_what_if(
     if simulated_decision == "release-with-sampling":
         simulated_failed_checks = []
 
-    baseline_eta = 240 if baseline["decision"] == "hold-release" else 90 if baseline["decision"] == "reroute-review" else 30
-    simulated_eta = 240 if simulated_decision == "hold-release" else 90 if simulated_decision == "reroute-review" else 30
+    baseline_eta = 240 if baseline["decision"] == "hold-release" else 90 if baseline["decision"] == "reroute-check" else 30
+    simulated_eta = 240 if simulated_decision == "hold-release" else 90 if simulated_decision == "reroute-check" else 30
 
     logger.info(
         "[fab_ops] what-if for %s: baseline=%s simulated=%s",
@@ -452,10 +452,10 @@ def build_recovery_what_if(
             "release_eta_minutes": max(0, baseline_eta - simulated_eta),
             "maintenance_clearance": maintenance_complete,
         },
-        "review_actions": [
+        "operator_actions": [
             "Run the what-if drill before claiming the lot is ready for release or reroute.",
             "Pair the simulated decision with tool ownership and handoff signature before shift change.",
-            "Use recovery board + release gate + what-if together during maintenance approval review.",
+            "Use recovery board + release gate + what-if together during maintenance approval check.",
         ],
         "route_bundle": {
             "recovery_board": "/api/fab-ops/recovery-board",
@@ -499,13 +499,13 @@ def build_release_board() -> dict[str, Any]:
         "summary": {
             "visible_lots": len(items),
             "hold_release": len([item for item in items if item["decision"] == "hold-release"]),
-            "reroute_review": len([item for item in items if item["decision"] == "reroute-review"]),
+            "reroute_check": len([item for item in items if item["decision"] == "reroute-check"]),
             "release_with_sampling": len([item for item in items if item["decision"] == "release-with-sampling"]),
         },
         "spotlight": items[0] if items else None,
         "items": items,
-        "review_actions": [
-            "Review the release board before discussing any single lot as release-ready.",
+        "operator_actions": [
+            "Check the release board before discussing any single lot as release-ready.",
             "Keep failed checks and maintenance ownership paired so a release decision always names the next operator.",
             "Use release board plus handoff signature as the final go/no-go set before shift change.",
         ],
@@ -631,18 +631,18 @@ def build_replay_summary() -> dict[str, Any]:
     }
 
 
-def build_review_summary(severity: str | None = None, risk_bucket: str | None = None) -> dict[str, Any]:
-    """Build a filtered review summary of alarms and lots.
+def build_architecture_summary(severity: str | None = None, risk_bucket: str | None = None) -> dict[str, Any]:
+    """Build a filtered architecture summary of alarms and lots.
 
     Args:
         severity: Optional alarm severity filter (e.g. ``"critical"``).
         risk_bucket: Optional lot risk bucket filter (e.g. ``"severe"``).
 
     Returns:
-        Review summary payload with filtered counts and spotlight items.
+        Architecture summary payload with filtered counts and spotlight items.
     """
-    severity_filter = normalize_review_filter("severity", severity, ALLOWED_SEVERITIES)
-    risk_bucket_filter = normalize_review_filter("risk_bucket", risk_bucket, ALLOWED_RISK_BUCKETS)
+    severity_filter = normalize_architecture_filter("severity", severity, ALLOWED_SEVERITIES)
+    risk_bucket_filter = normalize_architecture_filter("risk_bucket", risk_bucket, ALLOWED_RISK_BUCKETS)
     filtered_alarms = [item for item in ALARMS if severity_filter is None or item["severity"] == severity_filter]
     filtered_lots = [item for item in LOTS_AT_RISK if risk_bucket_filter is None or item["risk_bucket"] == risk_bucket_filter]
     spotlight_alarm = sorted(filtered_alarms, key=lambda item: (_alarm_rank(item), str(item["started_at"])))[0] if filtered_alarms else None
@@ -652,7 +652,7 @@ def build_review_summary(severity: str | None = None, risk_bucket: str | None = 
         "status": "ok",
         "service": SERVICE_NAME,
         "generated_at": utc_now_iso(),
-        "contract_version": "fab-ops-review-summary-v1",
+        "contract_version": "fab-ops-architecture-summary-v1",
         "filters": {"severity": severity_filter, "risk_bucket": risk_bucket_filter},
         "summary": {
             "alarm_count": len(filtered_alarms),
@@ -662,15 +662,15 @@ def build_review_summary(severity: str | None = None, risk_bucket: str | None = 
             "replay_score_pct": replay_summary["summary"]["score_pct"],
         },
         "spotlight": {"alarm": spotlight_alarm, "lot": spotlight_lot},
-        "fastest_review_path": [
+        "fastest_architecture_path": [
             "/health",
-            "/api/fab-ops/review-summary",
+            "/api/fab-ops/architecture-summary",
             "/api/fab-ops/tool-ownership",
             "/api/fab-ops/release-gate",
             "/api/fab-ops/shift-handoff",
         ],
         "route_bundle": {
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "architecture_pack": "/api/fab-ops/architecture-pack",
             "tool_ownership": "/api/fab-ops/tool-ownership?tool_id=etch-14",
             "release_gate": "/api/fab-ops/release-gate?lot_id=lot-8812",
@@ -686,9 +686,9 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
         mode: Optional filter -- ``"hold"``, ``"watch"``, ``"ready"``, or ``"all"``.
 
     Returns:
-        Recovery board payload with summary, items, and review actions.
+        Recovery board payload with summary, items, and operator actions.
     """
-    normalized_mode = normalize_review_filter("mode", mode, ALLOWED_RECOVERY_MODES) or "all"
+    normalized_mode = normalize_architecture_filter("mode", mode, ALLOWED_RECOVERY_MODES) or "all"
     items: list[dict[str, Any]] = []
     for lot in sorted(LOTS_AT_RISK, key=_yield_risk, reverse=True):
         gate = build_release_gate(_lot_id(lot))
@@ -696,7 +696,7 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
         ownership = build_tool_ownership(tool["tool_id"])
         if gate["decision"] == "hold-release":
             board_status = "hold"
-        elif gate["decision"] == "reroute-review":
+        elif gate["decision"] == "reroute-check":
             board_status = "watch"
         else:
             board_status = "ready"
@@ -733,15 +733,15 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
         },
         "spotlight": items[0] if items else None,
         "items": items,
-        "review_actions": [
+        "operator_actions": [
             "Start with hold lots before reviewing watch or ready lots.",
-            "Keep tool ownership, release gate, and handoff pack together during shift review.",
+            "Keep tool ownership, release gate, and handoff pack together during shift handoff.",
             "Treat the signed handoff as the final next-shift artifact after recovery decisions are made.",
         ],
         "route_bundle": {
             "recovery_board": "/api/fab-ops/recovery-board",
             "recovery_board_schema": "/api/fab-ops/recovery-board/schema",
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "tool_ownership": "/api/fab-ops/tool-ownership?tool_id=etch-14",
             "release_gate": "/api/fab-ops/release-gate?lot_id=lot-8812",
             "shift_handoff": "/api/fab-ops/shift-handoff",
@@ -762,31 +762,31 @@ def build_recovery_board_schema() -> dict[str, Any]:
             "recovery_board": "/api/fab-ops/recovery-board",
             "recovery_what_if": "/api/fab-ops/recovery-what-if",
             "recovery_board_schema": "/api/fab-ops/recovery-board/schema",
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "architecture_pack": "/api/fab-ops/architecture-pack",
             "runtime_scorecard": "/api/fab-ops/runtime/scorecard",
         },
     }
 
 
-def build_review_summary_schema() -> dict[str, Any]:
-    """Return the review summary JSON schema definition.
+def build_architecture_summary_schema() -> dict[str, Any]:
+    """Return the architecture summary JSON schema definition.
 
     Returns:
         Schema dictionary with required fields and navigation links.
     """
     return {
-        "schema": "fab-ops-review-summary-v1",
+        "schema": "fab-ops-architecture-summary-v1",
         "required_fields": [
             "service",
             "contract_version",
             "summary.alarm_count",
             "summary.replay_score_pct",
-            "fastest_review_path",
-            "route_bundle.review_summary",
+            "fastest_architecture_path",
+            "route_bundle.architecture_summary",
         ],
         "links": {
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "recovery_board": "/api/fab-ops/recovery-board",
             "architecture_pack": "/api/fab-ops/architecture-pack",
             "runtime_brief": "/api/fab-ops/runtime/brief",
@@ -815,7 +815,7 @@ def build_runtime_brief() -> dict[str, Any]:
         "service": SERVICE_NAME,
         "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-runtime-brief-v1",
-        "headline": "Fab control tower that keeps alarms, lot risk, tool health, and shift handoff in one reviewable operator flow.",
+        "headline": "Fab control tower that keeps alarms, lot risk, tool health, and shift handoff in one inspectable operator flow.",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
         "evidence_counts": {
@@ -832,7 +832,7 @@ def build_runtime_brief() -> dict[str, Any]:
         "operator_auth": operator_auth,
         "persistence": persistence,
         "ops_snapshot": summary,
-        "review_flow": [
+        "architecture_flow": [
             "Open /health to confirm the fab runtime posture and architecture routes.",
             "Read /api/fab-ops/runtime/brief for the control-tower contract and evidence counts.",
             "Use /api/fab-ops/recovery-board to separate hold lots from watch and release-ready lots.",
@@ -840,13 +840,13 @@ def build_runtime_brief() -> dict[str, Any]:
             "Inspect /api/fab-ops/tool-ownership and /api/fab-ops/release-gate before acting on a shift decision.",
             "Export /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before the next operator release.",
         ],
-        "two_minute_review": [
+        "two_minute_architecture": [
             "Open /health to confirm critical-alarm and replay surfaces are available.",
             "Read /api/fab-ops/runtime/brief for the control-tower contract and current ops snapshot.",
             "Inspect /api/fab-ops/recovery-board?mode=hold to find the lot that blocks release posture.",
             "Inspect /api/fab-ops/release-board before treating any downstream lot as release-ready.",
             "Inspect /api/fab-ops/tool-ownership?tool_id=etch-14 and /api/fab-ops/release-gate?lot_id=lot-8812 before trusting release posture.",
-            "Review /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
+            "Check /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
         ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
@@ -860,7 +860,7 @@ def build_runtime_brief() -> dict[str, Any]:
         ],
         "links": {
             "runtime_scorecard": "/api/fab-ops/runtime/scorecard",
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "recovery_board": "/api/fab-ops/recovery-board",
             "release_board": "/api/fab-ops/release-board",
             "recovery_what_if": "/api/fab-ops/recovery-what-if",
@@ -873,7 +873,7 @@ def build_architecture_pack() -> dict[str, Any]:
     """Build the shift-ready architecture brief for the fab-ops domain.
 
     Aggregates the runtime brief, audit feed, recovery board, release board,
-    and focus lot into one comprehensive review artifact.
+    and focus lot into one comprehensive architecture artifact.
 
     Returns:
         Architecture pack payload.
@@ -890,12 +890,12 @@ def build_architecture_pack() -> dict[str, Any]:
         "readiness_contract": "fab-ops-architecture-pack-v1",
         "headline": "Control tower summary tying alarms, yield risk, tool watchlist, and handoff export into one view.",
         "proof_bundle": {
-            "review_routes": [
+            "architecture_routes": [
                 "/health",
                 "/api/fab-ops/meta",
                 "/api/fab-ops/runtime/brief",
                 "/api/fab-ops/runtime/scorecard",
-                "/api/fab-ops/review-summary",
+                "/api/fab-ops/architecture-summary",
                 "/api/fab-ops/recovery-board",
                 "/api/fab-ops/release-board",
                 "/api/fab-ops/recovery-what-if",
@@ -922,17 +922,17 @@ def build_architecture_pack() -> dict[str, Any]:
         "trust_boundary": [
             "alarm board: operator triage starts from severity and lot impact",
             "lot risk board: yield exposure is visible before reroute or release",
-            "handoff pack: the next shift can review open alarms, watchlist items, and signature proof",
-            "replay suite: the surface stays reviewable without live fab telemetry",
+            "handoff pack: the next shift can inspect open alarms, watchlist items, and signature proof",
+            "replay suite: the surface stays inspectable without live fab telemetry",
         ],
-        "review_sequence": [
+        "architecture_sequence": [
             "Health -> Runtime Brief -> Recovery Board -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary"
         ],
-        "two_minute_review": runtime_brief["two_minute_review"],
+        "two_minute_architecture": runtime_brief["two_minute_architecture"],
         "proof_assets": runtime_brief["proof_assets"],
         "links": {
             "runtime_scorecard": "/api/fab-ops/runtime/scorecard",
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "recovery_board": "/api/fab-ops/recovery-board",
             "release_board": "/api/fab-ops/release-board",
             "recovery_what_if": "/api/fab-ops/recovery-what-if",
@@ -955,7 +955,7 @@ def build_meta() -> dict[str, Any]:
         "generated_at": utc_now_iso(),
         "runtime_contract": "fab-ops-runtime-brief-v1",
         "architecture_pack_contract": "fab-ops-architecture-pack-v1",
-        "review_summary_contract": "fab-ops-review-summary-v1",
+        "architecture_summary_contract": "fab-ops-architecture-summary-v1",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
         "routes": [
@@ -963,8 +963,8 @@ def build_meta() -> dict[str, Any]:
             "/api/fab-ops/meta",
             "/api/fab-ops/runtime/brief",
             "/api/fab-ops/runtime/scorecard",
-            "/api/fab-ops/review-summary",
-            "/api/fab-ops/review-summary/schema",
+            "/api/fab-ops/architecture-summary",
+            "/api/fab-ops/architecture-summary/schema",
             "/api/fab-ops/recovery-board",
             "/api/fab-ops/release-board",
             "/api/fab-ops/recovery-what-if",
@@ -1005,7 +1005,7 @@ def build_meta() -> dict[str, Any]:
             "replay_suite_ready": True,
             "operator_auth_enabled": operator_auth["enabled"],
             "runtime_store_path": persistence["path"],
-            "next_action": "Review critical alarms and severe lots before opening the shift handoff export.",
+            "next_action": "Check critical alarms and severe lots before opening the shift handoff export.",
         },
         "ops_contract": {"schema": "ops-envelope-v1", "version": 1, "required_fields": ["service", "status", "diagnostics.next_action"]},
     }
@@ -1033,11 +1033,11 @@ def build_runtime_scorecard() -> dict[str, Any]:
         "runtime": {
             "operator_auth": operator_auth,
             "persistence": persistence,
-            "review_routes": [
+            "architecture_routes": [
                 "/health",
                 "/api/fab-ops/runtime/brief",
                 "/api/fab-ops/runtime/scorecard",
-                "/api/fab-ops/review-summary",
+                "/api/fab-ops/architecture-summary",
                 "/api/fab-ops/recovery-board",
                 "/api/fab-ops/release-board",
                 "/api/fab-ops/architecture-pack",
@@ -1059,13 +1059,13 @@ def build_runtime_scorecard() -> dict[str, Any]:
         "recommendations": [
             "Triage the recovery board before trusting any release-ready lot.",
             "Verify tool ownership and release gate before exporting a shift handoff.",
-            "Treat the signed handoff surface plus verification as the final operator artifact for next-shift review.",
+            "Treat the signed handoff surface plus verification as the final operator artifact for next-shift handoff.",
             "Keep replay score and persisted runtime events paired during architecture walkthroughs.",
         ],
         "links": {
             "health": "/health",
             "runtime_brief": "/api/fab-ops/runtime/brief",
-            "review_summary": "/api/fab-ops/review-summary",
+            "architecture_summary": "/api/fab-ops/architecture-summary",
             "recovery_board": "/api/fab-ops/recovery-board",
             "release_board": "/api/fab-ops/release-board",
             "recovery_what_if": "/api/fab-ops/recovery-what-if",

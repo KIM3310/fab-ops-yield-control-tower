@@ -16,7 +16,7 @@ SHIFT_HANDOFF_SCHEMA = "scanner-shift-handoff-v1"
 HANDOFF_SIGNATURE_CONTRACT = "scanner-handoff-signature-v1"
 RUNTIME_BRIEF_CONTRACT = "scanner-runtime-brief-v1"
 RUNTIME_SCORECARD_CONTRACT = "scanner-runtime-scorecard-v1"
-REVIEW_PACK_CONTRACT = "scanner-architecture-pack-v1"
+ARCHITECTURE_PACK_CONTRACT = "scanner-architecture-pack-v1"
 FIELD_RESPONSE_BOARD_CONTRACT = "scanner-field-response-board-v1"
 SUBSYSTEM_ESCALATION_CONTRACT = "scanner-subsystem-escalation-v1"
 QUALIFICATION_BOARD_CONTRACT = "scanner-qualification-board-v1"
@@ -96,7 +96,7 @@ FIELD_INCIDENTS = [
         "status": "watch",
         "started_at": "2026-03-16T03:11:00Z",
         "symptom": "dose drift is still inside hard stop limits but trending outside the qualification comfort band",
-        "local_action": "tighten the local monitor window and prep the dose-control packet for remote review",
+        "local_action": "tighten the local monitor window and prep the dose-control packet for remote check",
         "field_owner": "field-hwaseong-a",
         "next_owner": "subsystem-dose-window",
         "sla_minutes": 55,

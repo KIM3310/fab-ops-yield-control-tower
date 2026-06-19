@@ -58,7 +58,7 @@ OPENAPI_TAGS: list[dict[str, str]] = [
     },
     {
         "name": "scanner",
-        "description": "Scanner Field Response -- field incidents, subsystem escalation, qualification review, and signed handoff.",
+        "description": "Scanner Field Response -- field incidents, subsystem escalation, qualification gate, and signed handoff.",
     },
     {
         "name": "monitoring",
@@ -73,7 +73,7 @@ app = FastAPI(
         "Combines **Fab Ops Yield Control Tower** (alarms, lot-risk prioritization, "
         "tool ownership, release gate, recovery board, shift handoff) and "
         "**Scanner Field Response** (field incidents, subsystem escalation, "
-        "qualification review, customer readiness, signed handoff) under a single "
+        "qualification gate, customer readiness, signed handoff) under a single "
         "API with shared infrastructure."
     ),
     version="1.0.0",

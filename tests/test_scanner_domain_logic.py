@@ -207,7 +207,7 @@ class TestScannerRuntimeBrief:
         assert brief["readiness_contract"] == "scanner-runtime-brief-v1"
         assert brief["evidence_counts"]["incidents"] == 3
         assert brief["focus_incident"]["incident_id"] == "inc-3407"
-        assert len(brief["review_lanes"]) == 3
+        assert len(brief["architecture_lanes"]) == 3
 
 
 class TestScannerRuntimeScorecard:

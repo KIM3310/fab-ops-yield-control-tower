@@ -8,7 +8,7 @@ def test_service_ui_focus_route_contract() -> None:
     html = INDEX_HTML.read_text(encoding="utf-8")
     required_tokens = [
         'id="focus-severe-lot-btn"',
-        'id="copy-review-route-btn"',
+        'id="copy-architecture-route-btn"',
         'id="copy-shift-snapshot-btn"',
         'id="continuity-checkpoint-panel"',
         'id="continuity-owner-lane"',

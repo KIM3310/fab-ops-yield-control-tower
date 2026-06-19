@@ -52,8 +52,8 @@ smoke: install
 	done; \
 	curl -fsS "http://127.0.0.1:$$PORT/health" >/dev/null; \
 	curl -fsS "http://127.0.0.1:$$PORT/api/resource-pack" >/dev/null; \
-	curl -fsS "http://127.0.0.1:$$PORT/api/fab-ops/review-pack" >/dev/null; \
-	curl -fsS "http://127.0.0.1:$$PORT/api/scanner/review-pack" >/dev/null; \
+	curl -fsS "http://127.0.0.1:$$PORT/api/fab-ops/architecture-pack" >/dev/null; \
+	curl -fsS "http://127.0.0.1:$$PORT/api/scanner/architecture-pack" >/dev/null; \
 	echo "smoke ok: http://127.0.0.1:$$PORT"
 
 verify: lint test smoke

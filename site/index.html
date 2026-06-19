@@ -78,13 +78,13 @@
         <div>
           <span class="chip">one-lot continuity</span>
           <h2>Lot-8812 stays visible from hold decision to signed handoff.</h2>
-          <p class="focus-note">Top-fold spotlight keeps the severe lot, owning tool, release decision, and next operator move on one line of review instead of scattering them across the walkthrough.</p>
+          <p class="focus-note">Top-fold spotlight keeps the severe lot, owning tool, release decision, and next operator move on one line of inspection instead of scattering them across the walkthrough.</p>
         </div>
         <div class="focus-grid">
           <article class="focus-card"><span class="chip">Alarm</span><strong>alm-2041 · critical</strong></article>
           <article class="focus-card"><span class="chip">Tool</span><strong>etch-14 · chamber A2</strong></article>
           <article class="focus-card"><span class="chip">Release gate</span><strong>hold-release</strong></article>
-          <article class="focus-card"><span class="chip">Next move</span><strong>maintenance approval + reroute review</strong></article>
+          <article class="focus-card"><span class="chip">Next move</span><strong>maintenance approval + reroute check</strong></article>
         </div>
         <div class="focus-actions">
           <button id="copyLotPathBtn" class="primary" type="button">Copy Lot Path</button>
@@ -107,7 +107,7 @@
       <article class="panel">
         <h2>Runtime posture</h2>
         <ul class="list">
-          <li>The public summary stays static for fast loading and review-safe inspection.</li>
+          <li>The public summary stays static for fast loading and inspection-safe inspection.</li>
           <li>The production-style FastAPI backend is now live on Cloud Run.</li>
           <li>API docs, health, shift handoff, and scanner export routes are externally reachable.</li>
         </ul>
@@ -161,7 +161,7 @@
     const focusLotStatus = document.getElementById('focusLotStatus');
     document.getElementById('copyLotPathBtn')?.addEventListener('click', async () => {
       const ok = await copyFabText([
-        'Fab Ops one-lot review path',
+        'Fab Ops one-lot architecture path',
         '- /api/runtime/brief',
         '- /api/recovery-board?mode=hold',
         '- /api/release-gate?lot_id=lot-8812',
@@ -175,7 +175,7 @@
         'Lot: lot-8812',
         'Release gate: hold-release',
         'Owner: maint-etch-cell-a',
-        'Next move: maintenance approval + reroute review',
+        'Next move: maintenance approval + reroute check',
       ].join('\n'));
       if (focusLotStatus) focusLotStatus.textContent = ok ? 'Shift handoff snapshot copied.' : 'Failed to copy shift handoff snapshot.';
     });

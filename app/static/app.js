@@ -79,13 +79,13 @@ const RECORDED_FAB = {
       { status: "pass", scenario: "Etch chamber hold-to-watch release", checks: 5 },
     ],
   },
-  reviewPack: {
+  architecturePack: {
     headline: "Shift architecture brief for yield risk, recovery, and handoff status.",
     operator_promises: [
       "Alarms, lots, tools, and handoff stay in one operator view.",
       "Recovery what-if and release-gate decisions remain tied to the same lot context.",
     ],
-    two_minute_review: [
+    two_minute_architecture: [
       "Focus the severe lot first.",
       "Compare recovery what-if against the release gate before discussing readiness.",
     ],
@@ -263,10 +263,10 @@ async function boot() {
   const criticalCount = document.getElementById("critical-count");
   const severeCount = document.getElementById("severe-count");
   const replayScore = document.getElementById("replay-score");
-  const reviewHeadline = document.getElementById("review-headline");
-  const reviewPromises = document.getElementById("review-promises");
-  const reviewBoundary = document.getElementById("review-boundary");
-  const reviewRoutePreview = document.getElementById("review-route-preview");
+  const reviewHeadline = document.getElementById("architecture-headline");
+  const reviewPromises = document.getElementById("architecture-promises");
+  const reviewBoundary = document.getElementById("architecture-boundary");
+  const reviewRoutePreview = document.getElementById("architecture-route-preview");
   const storylineSummary = document.getElementById("storyline-summary");
   const storylineRoute = document.getElementById("storyline-route");
   const alarmList = document.getElementById("alarm-list");
@@ -290,7 +290,7 @@ async function boot() {
   const toolSelect = document.getElementById("tool-select");
   const lotSelect = document.getElementById("lot-select");
   const focusSevereLotBtn = document.getElementById("focus-severe-lot-btn");
-  const copyReviewRouteBtn = document.getElementById("copy-review-route-btn");
+  const copyArchitectureRouteBtn = document.getElementById("copy-architecture-route-btn");
   const copySevereLotBtn = document.getElementById("copy-severe-lot-btn");
   const copyShiftSnapshotBtn = document.getElementById("copy-shift-snapshot-btn");
   const refreshBoardBtn = document.getElementById("refresh-board-btn");
@@ -386,7 +386,7 @@ async function boot() {
   function runLensAction(action) {
     if (action === "Focus Severe Lot") return focusSevereLotBtn.click();
     if (action === "Copy Shift Snapshot") return copyShiftSnapshotBtn.click();
-    if (action === "Copy Focused Route") return copyReviewRouteBtn.click();
+    if (action === "Copy Focused Route") return copyArchitectureRouteBtn.click();
     if (action === "Copy Severe Lot") return copySevereLotBtn.click();
     if (action === "Refresh Control Tower") return refreshBoardBtn.click();
   }
@@ -548,7 +548,7 @@ async function boot() {
 
     const [
       briefResult,
-      reviewPackResult,
+      architecturePackResult,
       alarmsResult,
       lotsResult,
       toolsResult,
@@ -566,20 +566,20 @@ async function boot() {
       criticalCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.critical_alarm_count);
       severeCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.severe_lot_count);
       replayScore.textContent = `${RECORDED_FAB.replay.summary.score_pct}%`;
-      reviewHeadline.textContent = RECORDED_FAB.reviewPack.headline;
+      reviewHeadline.textContent = RECORDED_FAB.architecturePack.headline;
       renderBulletList(
         reviewPromises,
         [
-          ...RECORDED_FAB.reviewPack.operator_promises,
-          ...RECORDED_FAB.reviewPack.two_minute_review.map((item) => `2-minute: ${item}`),
+          ...RECORDED_FAB.architecturePack.operator_promises,
+          ...RECORDED_FAB.architecturePack.two_minute_architecture.map((item) => `2-minute: ${item}`),
         ],
         "Operator promises are not available yet."
       );
       renderBulletList(
         reviewBoundary,
         [
-          ...RECORDED_FAB.reviewPack.trust_boundary,
-          ...RECORDED_FAB.reviewPack.proof_assets.map((item) => `proof: ${item.label} -> ${item.href}`),
+          ...RECORDED_FAB.architecturePack.trust_boundary,
+          ...RECORDED_FAB.architecturePack.proof_assets.map((item) => `proof: ${item.label} -> ${item.href}`),
         ],
         "Trust boundary details are not available yet."
       );
@@ -717,13 +717,13 @@ async function boot() {
       );
     }
 
-    if (reviewPackResult.status === "fulfilled") {
-      reviewHeadline.textContent = reviewPackResult.value.headline;
+    if (architecturePackResult.status === "fulfilled") {
+      reviewHeadline.textContent = architecturePackResult.value.headline;
       renderBulletList(
         reviewPromises,
         [
-          ...reviewPackResult.value.operator_promises,
-          ...(reviewPackResult.value.two_minute_review || []).map(
+          ...architecturePackResult.value.operator_promises,
+          ...(architecturePackResult.value.two_minute_architecture || []).map(
             (item) => `2-minute: ${item}`
           ),
         ],
@@ -732,8 +732,8 @@ async function boot() {
       renderBulletList(
         reviewBoundary,
         [
-          ...reviewPackResult.value.trust_boundary,
-          ...((reviewPackResult.value.proof_assets || []).map(
+          ...architecturePackResult.value.trust_boundary,
+          ...((architecturePackResult.value.proof_assets || []).map(
             (item) => `proof: ${item.label} -> ${item.href}`
           )),
         ],
@@ -1062,7 +1062,7 @@ async function boot() {
     loadBoard().catch(handleLoadError);
   });
 
-  copyReviewRouteBtn.addEventListener("click", async () => {
+  copyArchitectureRouteBtn.addEventListener("click", async () => {
     const payload = [
       `recovery board -> /api/recovery-board?mode=${selectedRecoveryMode}`,
       `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,

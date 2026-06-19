@@ -24,7 +24,7 @@ from app.domains.scanner.domain import (
     MODULE_ESCALATIONS,
     QUALIFICATION_BOARD_CONTRACT,
     REPLAY_SUITE,
-    REVIEW_PACK_CONTRACT,
+    ARCHITECTURE_PACK_CONTRACT,
     RUNTIME_BRIEF_CONTRACT,
     RUNTIME_SCORECARD_CONTRACT,
     SCANNERS,
@@ -366,7 +366,7 @@ def build_shift_handoff_payload() -> dict[str, Any]:
     """Build the scanner shift handoff payload.
 
     Returns:
-        Handoff payload with focus incident, acknowledgements, and review path.
+        Handoff payload with focus incident, acknowledgements, and architecture path.
     """
     focus = focus_incident()
     lot = focus_lot()
@@ -387,7 +387,7 @@ def build_shift_handoff_payload() -> dict[str, Any]:
             "rerun the qualification wafer after subsystem sign-off",
             "update the customer readiness lane before reopening the milestone",
         ],
-        "review_path": [
+        "architecture_path": [
             "/api/scanner/runtime/brief",
             field_response_path(),
             subsystem_escalation_path("scanner-euv-02"),
@@ -458,7 +458,7 @@ def build_runtime_brief() -> dict[str, Any]:
     readiness = build_customer_readiness("alpha-mobile")["payload"]
     return {
         "readiness_contract": RUNTIME_BRIEF_CONTRACT,
-        "headline": "One scanner issue stays visible from field response through subsystem escalation to qualification review.",
+        "headline": "One scanner issue stays visible from field response through subsystem escalation to qualification gate.",
         "evidence_counts": {
             "incidents": len(FIELD_INCIDENTS),
             "module_escalations": len(MODULE_ESCALATIONS),
@@ -478,9 +478,9 @@ def build_runtime_brief() -> dict[str, Any]:
             "lot_id": lot["lot_id"],
             "customer": lot["customer"],
             "qualification_status": lot["qualification_status"],
-            "review_path": build_shift_handoff_payload()["review_path"],
+            "architecture_path": build_shift_handoff_payload()["architecture_path"],
         },
-        "review_lanes": [
+        "architecture_lanes": [
             {"lane": "Field Response", "href": field_response_path(), "why": "first-line containment, packet capture, and local ownership"},
             {
                 "lane": "Subsystem Escalation",
@@ -488,12 +488,12 @@ def build_runtime_brief() -> dict[str, Any]:
                 "why": "subsystem diagnosis, evidence handoff, and restore criteria",
             },
             {
-                "lane": "Qualification Review",
+                "lane": "Qualification Gate",
                 "href": qualification_path("lot-n2-118"),
                 "why": "lot impact, process window, and milestone judgment",
             },
         ],
-        "two_minute_review": [
+        "two_minute_architecture": [
             "Open the runtime brief and focus incident first.",
             "Read the field-response board before talking about scanner internals.",
             "Use the subsystem lane to show restore criteria instead of vague troubleshooting.",
@@ -562,26 +562,26 @@ def build_architecture_pack() -> dict[str, Any]:
     focus = focus_incident()
     lot = focus_lot()
     return {
-        "readiness_contract": REVIEW_PACK_CONTRACT,
-        "headline": "Field response proof: local triage, subsystem escalation, and qualification review stay tied to the same incident.",
+        "readiness_contract": ARCHITECTURE_PACK_CONTRACT,
+        "headline": "Field response proof: local triage, subsystem escalation, and qualification gate stay tied to the same incident.",
         "operator_promises": [
             "The repo never treats scanner support like a generic chatbot problem.",
             "Local field ownership, subsystem escalation, and wafer/customer impact stay on one route.",
             "The walkthrough ends on a signed handoff instead of a screenshot.",
         ],
         "trust_boundary": [
-            "Synthetic scanner and wafer data are used so the workflow is public and reviewable.",
-            "The strongest signal is the operational contract between field response, subsystem escalation, and qualification review, not proprietary scanner internals.",
+            "Synthetic scanner and wafer data are used so the workflow is public and inspectable.",
+            "The strongest signal is the operational contract between field response, subsystem escalation, and qualification gate, not proprietary scanner internals.",
         ],
         "focus_story": {
             "incident_id": focus["incident_id"],
             "tool_id": focus["tool_id"],
             "lot_id": lot["lot_id"],
             "customer": lot["customer"],
-            "review_path": build_shift_handoff_payload()["review_path"],
+            "architecture_path": build_shift_handoff_payload()["architecture_path"],
         },
         "proof_bundle": {
-            "review_routes": [
+            "architecture_routes": [
                 "/health",
                 "/api/scanner/runtime/brief",
                 field_response_path(),
@@ -599,7 +599,7 @@ def build_architecture_pack() -> dict[str, Any]:
             "customer_program_count": len(CUSTOMER_READINESS),
             "latest_audit_events": len(AUDIT_EVENTS),
         },
-        "two_minute_review": build_runtime_brief()["two_minute_review"],
+        "two_minute_architecture": build_runtime_brief()["two_minute_architecture"],
         "proof_assets": build_runtime_brief()["proof_assets"],
     }
 

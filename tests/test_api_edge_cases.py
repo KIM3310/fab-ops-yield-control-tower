@@ -68,12 +68,12 @@ class TestFabOpsBadInputs:
         resp = client.get("/api/fab-ops/recovery-board?mode=panic")
         assert resp.status_code == 400
 
-    def test_invalid_review_severity(self, client: TestClient) -> None:
-        resp = client.get("/api/fab-ops/review-summary?severity=unknown")
+    def test_invalid_architecture_severity(self, client: TestClient) -> None:
+        resp = client.get("/api/fab-ops/architecture-summary?severity=unknown")
         assert resp.status_code == 400
 
-    def test_invalid_review_risk_bucket(self, client: TestClient) -> None:
-        resp = client.get("/api/fab-ops/review-summary?risk_bucket=invalid")
+    def test_invalid_architecture_risk_bucket(self, client: TestClient) -> None:
+        resp = client.get("/api/fab-ops/architecture-summary?risk_bucket=invalid")
         assert resp.status_code == 400
 
 

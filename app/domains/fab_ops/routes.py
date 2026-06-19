@@ -26,8 +26,8 @@ from app.domains.fab_ops.helpers import (
     build_release_gate,
     build_replay_summary,
     build_architecture_pack,
-    build_review_summary,
-    build_review_summary_schema,
+    build_architecture_summary,
+    build_architecture_summary_schema,
     build_runtime_brief,
     build_runtime_scorecard,
     build_shift_handoff,
@@ -108,20 +108,20 @@ async def runtime_export_ledger() -> dict[str, Any]:
     )
 
 
-@router.get("/review-summary")
-async def review_summary(
+@router.get("/architecture-summary")
+async def architecture_summary(
     severity: str | None = Query(default=None),
     risk_bucket: str | None = Query(default=None),
 ) -> dict[str, Any]:
-    """Return a filtered review summary of alarms and lots at risk."""
-    record_route_hit("/api/fab-ops/review-summary")
-    return build_review_summary(severity=severity, risk_bucket=risk_bucket)
+    """Return a filtered architecture summary of alarms and lots at risk."""
+    record_route_hit("/api/fab-ops/architecture-summary")
+    return build_architecture_summary(severity=severity, risk_bucket=risk_bucket)
 
 
-@router.get("/review-summary/schema")
-async def review_summary_schema() -> dict[str, Any]:
-    """Return the review summary JSON schema definition."""
-    return build_review_summary_schema()
+@router.get("/architecture-summary/schema")
+async def architecture_summary_schema() -> dict[str, Any]:
+    """Return the architecture summary JSON schema definition."""
+    return build_architecture_summary_schema()
 
 
 @router.get("/architecture-pack")
