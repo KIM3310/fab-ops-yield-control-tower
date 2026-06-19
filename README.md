@@ -154,3 +154,17 @@ This repository includes a neutral cloud and AI engineering blueprint that maps 
 ## Service Architecture
 
 - [Service architecture](docs/service-architecture.md) defines the cloud resources, account information, cost controls, and production guardrails needed to turn this repo into a scoped service without publishing public financial assumptions.
+
+<!-- search-growth-readme:start -->
+
+## Search And Service Surface
+
+- Public entry: public synthetic fab demo and operating model
+- Paid boundary: paid factory pilot workspace with private connectors and shift report export
+- Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
+- Lead capture: mailto:ehdjs1351@gmail.com?subject=Fab%20Ops%20Yield%20Control%20Tower%20private%20workspace&body=I%20am%20interested%20in%20paid%20factory%20pilot%20workspace%20with%20private%20connectors%20and%20shift%20report%20export%20for%20Fab%20Ops%20Yield%20Control%20Tower.
+- Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
+- Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)
+- Revenue architecture: [docs/revenue-architecture.md](docs/revenue-architecture.md)
+
+<!-- search-growth-readme:end -->

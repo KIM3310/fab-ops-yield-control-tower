@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fab-ops-yield-control-tower.pages.dev/sitemap.xml
