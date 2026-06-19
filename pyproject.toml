@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Unified semiconductor ops platform: fab control tower (alarms, lots, tools, recovery board) and scanner field response (field incidents, subsystem escalation, qualification review)."
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{name = "Doeon Kim", email = "ehdjs1351@gmail.com"}]
+authors = [{name = "Doeon Kim"}]
 license = "MIT"
 keywords = ["semiconductor", "fab-ops", "yield", "fastapi", "manufacturing"]
 dependencies = [
