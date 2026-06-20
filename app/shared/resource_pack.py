@@ -67,7 +67,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
             {
                 "check_id": "export-proof-board",
                 "surface": "/api/export-proof-board",
-                "why_it_matters": "Platform-level export proof should stay visible before a architecture trusts either domain handoff story.",
+                "why_it_matters": "Platform-level export proof should stay visible before architecture reviewers trust either domain handoff story.",
             },
             {
                 "check_id": "fab-architecture-pack",
