@@ -11,6 +11,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.domains.fab_ops.helpers import (
+    build_architecture_summary,
     build_audit_feed,
     build_fab_summary,
     build_focus_lot,
@@ -21,7 +22,6 @@ from app.domains.fab_ops.helpers import (
     build_release_board,
     build_release_gate,
     build_replay_summary,
-    build_architecture_summary,
     build_shift_handoff,
     build_tool_ownership,
     get_lot_or_404,

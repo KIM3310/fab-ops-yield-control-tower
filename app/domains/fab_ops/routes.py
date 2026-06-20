@@ -14,6 +14,9 @@ from fastapi import APIRouter, Query, Request
 from app.domains.fab_ops.domain import ALARMS, LOTS_AT_RISK, SERVICE_NAME, TOOLS
 from app.domains.fab_ops.helpers import (
     build_alarm_report_schema,
+    build_architecture_pack,
+    build_architecture_summary,
+    build_architecture_summary_schema,
     build_audit_feed,
     build_fab_summary,
     build_handoff_signature,
@@ -25,9 +28,6 @@ from app.domains.fab_ops.helpers import (
     build_release_board,
     build_release_gate,
     build_replay_summary,
-    build_architecture_pack,
-    build_architecture_summary,
-    build_architecture_summary_schema,
     build_runtime_brief,
     build_runtime_scorecard,
     build_shift_handoff,
