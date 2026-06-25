@@ -1,4 +1,4 @@
-.PHONY: install test lint typecheck smoke docker-build docker-run deploy clean coverage verify verify-strict
+.PHONY: check-python install run test lint typecheck smoke docker-build docker-run deploy clean coverage verify verify-strict
 
 PYTHON_BIN ?= python3
 VENV ?= .venv
@@ -11,9 +11,16 @@ TAG    ?= latest
 # Development
 # ---------------------------------------------------------------------------
 
+check-python:
+	@$(PYTHON_BIN) -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" >/dev/null 2>&1 || { \
+		echo "Python 3.11+ is required to create $(VENV)."; \
+		echo "Set PYTHON_BIN=/path/to/python3.11, for example: make PYTHON_BIN=/opt/homebrew/bin/python3.11 verify"; \
+		exit 1; \
+	}
+
 install: $(VENV_STAMP)
 
-$(VENV_STAMP): pyproject.toml requirements.txt
+$(VENV_STAMP): pyproject.toml requirements.txt | check-python
 	@if [ ! -x "$(PYTHON)" ] || ! $(PYTHON) -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" >/dev/null 2>&1; then \
 		rm -rf $(VENV); \
 		$(PYTHON_BIN) -m venv $(VENV); \
@@ -24,6 +31,9 @@ $(VENV_STAMP): pyproject.toml requirements.txt
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install -e ".[dev]"
 	touch $(VENV_STAMP)
+
+run: install
+	$(PYTHON) -m uvicorn app.main:app --reload
 
 test: install
 	PERSISTENCE_BACKEND=jsonl $(PYTHON) -m pytest -q
