@@ -12,7 +12,7 @@ authors = [{name = "Doeon Kim"}]
 license = "MIT"
 keywords = ["semiconductor", "fab-ops", "yield", "fastapi", "manufacturing"]
 dependencies = [
-  "fastapi==0.121.3",
+  "fastapi==0.138.0",
   "uvicorn==0.34.0",
   "sqlalchemy==2.0.36",
   "prometheus-client==0.21.1",
