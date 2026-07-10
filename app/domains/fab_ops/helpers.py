@@ -200,7 +200,7 @@ def build_shift_handoff_schema() -> dict[str, Any]:
         "operator_rules": [
             "Critical alarms must be acknowledged in the handoff export.",
             "Lots at risk stay visible until reroute, release, or scrap decision is recorded.",
-            "The handoff pack is inspectable without live integrations.",
+            "The handoff pack is reviewable without live integrations.",
         ],
     }
 
@@ -320,7 +320,7 @@ def build_focus_lot() -> dict[str, Any]:
     a single navigable entry point.
 
     Returns:
-        Focus lot payload with architecture path links.
+        Focus lot payload with review path links.
     """
     spotlight_lot = get_lot_or_404("lot-8812")
     spotlight_alarm = next(
@@ -455,7 +455,7 @@ def build_recovery_what_if(
         "operator_actions": [
             "Run the what-if drill before claiming the lot is ready for release or reroute.",
             "Pair the simulated decision with tool ownership and handoff signature before shift change.",
-            "Use recovery board + release gate + what-if together during maintenance approval check.",
+            "Use recovery board + release gate + what-if together during maintenance approval review.",
         ],
         "route_bundle": {
             "recovery_board": "/api/fab-ops/recovery-board",
@@ -505,7 +505,7 @@ def build_release_board() -> dict[str, Any]:
         "spotlight": items[0] if items else None,
         "items": items,
         "operator_actions": [
-            "Check the release board before discussing any single lot as release-ready.",
+            "Review the release board before discussing any single lot as release-ready.",
             "Keep failed checks and maintenance ownership paired so a release decision always names the next operator.",
             "Use release board plus handoff signature as the final go/no-go set before shift change.",
         ],
@@ -815,7 +815,7 @@ def build_runtime_brief() -> dict[str, Any]:
         "service": SERVICE_NAME,
         "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-runtime-brief-v1",
-        "headline": "Fab control tower that keeps alarms, lot risk, tool health, and shift handoff in one inspectable operator flow.",
+        "headline": "Fab control tower that keeps alarms, lot risk, tool health, and shift handoff in one reviewable operator flow.",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
         "evidence_counts": {
@@ -833,7 +833,7 @@ def build_runtime_brief() -> dict[str, Any]:
         "persistence": persistence,
         "ops_snapshot": summary,
         "architecture_flow": [
-            "Open /health to confirm the fab runtime posture and architecture routes.",
+            "Open /health to confirm the fab runtime posture and review routes.",
             "Read /api/fab-ops/runtime/brief for the control-tower contract and evidence counts.",
             "Use /api/fab-ops/recovery-board to separate hold lots from watch and release-ready lots.",
             "Use /api/fab-ops/release-board to confirm the whole queue before discussing any single lot release.",
@@ -846,12 +846,12 @@ def build_runtime_brief() -> dict[str, Any]:
             "Inspect /api/fab-ops/recovery-board?mode=hold to find the lot that blocks release posture.",
             "Inspect /api/fab-ops/release-board before treating any downstream lot as release-ready.",
             "Inspect /api/fab-ops/tool-ownership?tool_id=etch-14 and /api/fab-ops/release-gate?lot_id=lot-8812 before trusting release posture.",
-            "Check /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
+            "Review /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
         ],
         "watchouts": [
             "The demo uses synthetic fab telemetry and does not claim MES connectivity.",
             "Recommendations are grounded in alarm, lot, and SOP context only.",
-            "The queue is intentionally small so architecture paths stay easy to follow.",
+            "The queue is intentionally small so reviewer paths stay easy to follow.",
         ],
         "proof_assets": [
             {"label": "Health Surface", "href": "/health", "kind": "route"},
@@ -870,13 +870,13 @@ def build_runtime_brief() -> dict[str, Any]:
 
 
 def build_architecture_pack() -> dict[str, Any]:
-    """Build the shift-ready architecture brief for the fab-ops domain.
+    """Build the shift-ready review pack for the fab-ops domain.
 
     Aggregates the runtime brief, audit feed, recovery board, release board,
-    and focus lot into one comprehensive architecture artifact.
+    and focus lot into one comprehensive review artifact.
 
     Returns:
-        Architecture pack payload.
+        Review pack payload.
     """
     runtime_brief = build_runtime_brief()
     audit_feed = build_audit_feed()
@@ -922,8 +922,8 @@ def build_architecture_pack() -> dict[str, Any]:
         "trust_boundary": [
             "alarm board: operator triage starts from severity and lot impact",
             "lot risk board: yield exposure is visible before reroute or release",
-            "handoff pack: the next shift can inspect open alarms, watchlist items, and signature proof",
-            "replay suite: the surface stays inspectable without live fab telemetry",
+            "handoff pack: the next shift can review open alarms, watchlist items, and signature proof",
+            "replay suite: the surface stays reviewable without live fab telemetry",
         ],
         "architecture_sequence": [
             "Health -> Runtime Brief -> Recovery Board -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary"
@@ -1005,7 +1005,7 @@ def build_meta() -> dict[str, Any]:
             "replay_suite_ready": True,
             "operator_auth_enabled": operator_auth["enabled"],
             "runtime_store_path": persistence["path"],
-            "next_action": "Check critical alarms and severe lots before opening the shift handoff export.",
+            "next_action": "Review critical alarms and severe lots before opening the shift handoff export.",
         },
         "ops_contract": {"schema": "ops-envelope-v1", "version": 1, "required_fields": ["service", "status", "diagnostics.next_action"]},
     }
@@ -1060,7 +1060,7 @@ def build_runtime_scorecard() -> dict[str, Any]:
             "Triage the recovery board before trusting any release-ready lot.",
             "Verify tool ownership and release gate before exporting a shift handoff.",
             "Treat the signed handoff surface plus verification as the final operator artifact for next-shift handoff.",
-            "Keep replay score and persisted runtime events paired during architecture walkthroughs.",
+            "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
         ],
         "links": {
             "health": "/health",

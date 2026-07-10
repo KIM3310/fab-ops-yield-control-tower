@@ -17,7 +17,7 @@ Repository-local proof surface for operations control surfaces and reliability a
 
 ```mermaid
 flowchart LR
-    User["User or technical inspection"] --> Surface["Public demo, CLI, package, or README surface"]
+    User["User or reviewer"] --> Surface["Public demo, CLI, package, or README surface"]
     Surface --> Runtime["Runtime boundary: Python service or lab runtime, Terraform infrastructure modules, Container build surface, GitHub Actions validation"]
     Runtime --> Control["Control plane: configuration, policies, adapters, and jobs"]
     Control --> Data["Data and artifacts: fixtures, reports, logs, exports, or model outputs"]

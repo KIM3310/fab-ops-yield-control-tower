@@ -366,7 +366,7 @@ def build_shift_handoff_payload() -> dict[str, Any]:
     """Build the scanner shift handoff payload.
 
     Returns:
-        Handoff payload with focus incident, acknowledgements, and architecture path.
+        Handoff payload with focus incident, acknowledgements, and review path.
     """
     focus = focus_incident()
     lot = focus_lot()
@@ -458,7 +458,7 @@ def build_runtime_brief() -> dict[str, Any]:
     readiness = build_customer_readiness("alpha-mobile")["payload"]
     return {
         "readiness_contract": RUNTIME_BRIEF_CONTRACT,
-        "headline": "One scanner issue stays visible from field response through subsystem escalation to qualification gate.",
+        "headline": "One scanner issue stays visible from field response through subsystem escalation to qualification review.",
         "evidence_counts": {
             "incidents": len(FIELD_INCIDENTS),
             "module_escalations": len(MODULE_ESCALATIONS),
@@ -488,7 +488,7 @@ def build_runtime_brief() -> dict[str, Any]:
                 "why": "subsystem diagnosis, evidence handoff, and restore criteria",
             },
             {
-                "lane": "Qualification Gate",
+                "lane": "Qualification Review",
                 "href": qualification_path("lot-n2-118"),
                 "why": "lot impact, process window, and milestone judgment",
             },
@@ -554,24 +554,24 @@ def build_runtime_scorecard() -> dict[str, Any]:
 
 
 def build_architecture_pack() -> dict[str, Any]:
-    """Build the shift-ready architecture brief for the scanner domain.
+    """Build the shift-ready review pack for the scanner domain.
 
     Returns:
-        Architecture pack payload with focus story and operator promises.
+        Review pack payload with focus story and operator promises.
     """
     focus = focus_incident()
     lot = focus_lot()
     return {
         "readiness_contract": ARCHITECTURE_PACK_CONTRACT,
-        "headline": "Field response proof: local triage, subsystem escalation, and qualification gate stay tied to the same incident.",
+        "headline": "Field response proof: local triage, subsystem escalation, and qualification review stay tied to the same incident.",
         "operator_promises": [
             "The repo never treats scanner support like a generic chatbot problem.",
             "Local field ownership, subsystem escalation, and wafer/customer impact stay on one route.",
             "The walkthrough ends on a signed handoff instead of a screenshot.",
         ],
         "trust_boundary": [
-            "Synthetic scanner and wafer data are used so the workflow is public and inspectable.",
-            "The strongest signal is the operational contract between field response, subsystem escalation, and qualification gate, not proprietary scanner internals.",
+            "Synthetic scanner and wafer data are used so the workflow is public and reviewable.",
+            "The strongest signal is the operational contract between field response, subsystem escalation, and qualification review, not proprietary scanner internals.",
         ],
         "focus_story": {
             "incident_id": focus["incident_id"],

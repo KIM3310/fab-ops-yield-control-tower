@@ -371,7 +371,7 @@ def test_scanner_health_runtime_and_architecture_surfaces() -> None:
     assert brief_payload["focus_incident"]["lot_id"] == "lot-n2-118"
     assert brief_payload["architecture_lanes"][0]["lane"] == "Field Response"
     assert brief_payload["architecture_lanes"][1]["lane"] == "Subsystem Escalation"
-    assert brief_payload["architecture_lanes"][2]["lane"] == "Qualification Gate"
+    assert brief_payload["architecture_lanes"][2]["lane"] == "Qualification Review"
     assert brief_payload["proof_assets"][-1]["href"] == "/api/scanner/shift-handoff/signature"
 
     assert scorecard.status_code == 200

@@ -73,7 +73,7 @@ ALARMS = [
         "recommended_actions": [
             "pause affected lot progression",
             "verify chamber pressure calibration",
-            "route chamber A2 to maintenance check",
+            "route chamber A2 to maintenance review",
         ],
     },
     {
@@ -103,7 +103,7 @@ LOTS_AT_RISK = [
         "wafer_count": 25,
         "yield_risk_score": 0.94,
         "risk_bucket": "severe",
-        "next_action": "maintenance approval + reroute check",
+        "next_action": "maintenance approval + reroute review",
     },
     {
         "lot_id": "lot-8821",

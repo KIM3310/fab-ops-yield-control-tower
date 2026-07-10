@@ -80,7 +80,7 @@ const RECORDED_FAB = {
     ],
   },
   architecturePack: {
-    headline: "Shift architecture brief for yield risk, recovery, and handoff status.",
+    headline: "Shift review pack for yield risk, recovery, and handoff status.",
     operator_promises: [
       "Alarms, lots, tools, and handoff stay in one operator view.",
       "Recovery what-if and release-gate decisions remain tied to the same lot context.",
@@ -216,9 +216,9 @@ const REVIEW_LENSES = {
   },
   architecture: {
     headline: "Audit lens",
-    summary: "Keep architecture pack, trust boundary, and replay evidence together so the control tower stays auditable.",
+    summary: "Keep the review pack, trust boundary, and replay evidence together so the control tower stays auditable.",
     cards: [
-      ["01 · Architecture pack", "Read operator promises and trust boundary before touching the severe lot."],
+      ["01 · Review pack", "Read operator promises and trust boundary before touching the severe lot."],
       ["02 · Focused route", "Connect recovery board, release gate, and signature in one path."],
       ["03 · Replay", "Use replay summary as the confidence layer after the route is clear."],
     ],
@@ -428,7 +428,7 @@ async function boot() {
       {
         html: `<strong>4.</strong> Shift handoff -> <code>/api/shift-handoff</code> plus <code>/api/shift-handoff/signature</code> closes the story with next-shift continuity, not a cosmetic dashboard ending.`,
       },
-    ], "Architecture route details load after the focused lot is available.");
+    ], "Reviewer route details load after the focused lot is available.");
   }
 
   async function copyTextValue(text) {
@@ -668,7 +668,7 @@ async function boot() {
         <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
       `);
       renderStoryline();
-        setRuntimeBanner("ok", "Recorded architecture walkthrough loaded locally. Focus the severe lot first, then compare recovery and release posture.");
+        setRuntimeBanner("ok", "Recorded technical review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
       setRefreshBusy(false);
       return;
     }
@@ -740,17 +740,17 @@ async function boot() {
         "Trust boundary details are not available yet."
       );
     } else {
-      degradedPanels.push("architecture pack");
-      reviewHeadline.textContent = "Architecture pack temporarily unavailable";
+      degradedPanels.push("review pack");
+      reviewHeadline.textContent = "Review pack temporarily unavailable";
       renderBulletList(
         reviewPromises,
         [],
-        "Architecture pack data could not be loaded right now."
+        "Review pack data could not be loaded right now."
       );
       renderBulletList(
         reviewBoundary,
         [],
-        "Trust boundary details are unavailable while the architecture pack is down."
+        "Trust boundary details are unavailable while the review pack is down."
       );
     }
 

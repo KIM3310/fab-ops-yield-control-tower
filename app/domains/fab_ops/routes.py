@@ -100,7 +100,7 @@ async def runtime_scorecard() -> dict[str, Any]:
 
 @router.get("/runtime/export-ledger")
 async def runtime_export_ledger() -> dict[str, Any]:
-    """Return the export ledger for architecture-facing handoff proof."""
+    """Return the export ledger for reviewer-facing handoff proof."""
     record_route_hit("/api/fab-ops/runtime/export-ledger")
     return _build_export_ledger(
         runtime_brief_path="/api/fab-ops/runtime/brief",
@@ -126,7 +126,7 @@ async def architecture_summary_schema() -> dict[str, Any]:
 
 @router.get("/architecture-pack")
 async def architecture_pack() -> dict[str, Any]:
-    """Return the architecture-facing fab architecture pack."""
+    """Return the reviewer-facing fab review pack."""
     record_route_hit("/api/fab-ops/architecture-pack")
     return build_architecture_pack()
 

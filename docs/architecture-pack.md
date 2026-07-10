@@ -1,4 +1,4 @@
-# Architecture Pack
+# Technical Review Pack
 
 ## System Boundary
 
@@ -38,7 +38,7 @@ Useful entry points:
 
 - Tests cover API behavior, domain logic, shared modules, AWS export envelopes, and site contracts.
 - Runtime exercise script validates the service path.
-- Handoff outputs are signed for tamper-evident architecture.
+- Handoff outputs are signed for tamper-evident review.
 
 ## Threat Model
 

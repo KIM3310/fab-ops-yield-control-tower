@@ -140,7 +140,7 @@ def runtime_scorecard() -> dict[str, Any]:
 
 @router.get("/runtime/export-ledger")
 def runtime_export_ledger() -> dict[str, Any]:
-    """Return the scanner export ledger for architecture view."""
+    """Return the scanner export ledger for reviewer proof."""
     record_route_hit("/api/scanner/runtime/export-ledger")
     return _build_export_ledger()
 
@@ -225,7 +225,7 @@ def customer_readiness(customer: str = Query(...)) -> dict[str, Any]:
 
 @router.get("/architecture-pack")
 def architecture_pack() -> dict[str, Any]:
-    """Return the scanner architecture pack."""
+    """Return the scanner review pack."""
     record_route_hit("/api/scanner/architecture-pack")
     return build_architecture_pack()
 

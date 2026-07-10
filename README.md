@@ -2,38 +2,38 @@
 
 [![CI](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml/badge.svg)](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.138-009688.svg)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.133.0-009688.svg)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Unified manufacturing operations platform for semiconductor environments. Two production domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
 
-Architecture pack: [`docs/architecture-pack.md`](docs/architecture-pack.md)
+Technical review pack: [`docs/architecture-pack.md`](docs/architecture-pack.md)
 
-## Product and System Surface
+## System Overview
 
-A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one inspectable system.
+A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one reviewable system.
 
-| Lens | Definition |
+| Area | Details |
 |---|---|
-| Audience | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
-| Architecture path | Validate the demo, README, architecture notes, and quality gate before deeper workflow architecture. |
-| System signal | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and architecture-pack material. |
-| Safety boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
-| Fast path | Run the documented runtime commands and inspect architecture-pack artifacts and staged process data. |
+| Users | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
+| Technical path | Validate the demo, README, architecture notes, and quality gate before deeper workflow review. |
+| System scope | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review material. |
+| Operating boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
+| Evaluation path | Run the documented runtime commands and inspect review artifacts and staged process data. |
 
-## System Fast Path
+## Evaluation Path
 
-- **First minute:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
+- **Start here:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
 - **Local demo:** Run `make run`, then open `http://127.0.0.1:8000/docs`.
-- **Verification:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
+- **Checks:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
 
 ## Service Launch Playbook
 
-- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to architecture audiences, operating gates, operating boundaries, and risk controls.
+- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to its product scope, operating gates, operating boundaries, and risk controls.
 
 ## Architecture Notes
 
-- [Architecture guide](docs/architecture-evidence-map.md) summarizes the project angle, first files to inspect, runtime commands, and known boundaries.
+- [Review guide](docs/architecture-evidence-map.md) summarizes the system scope, first files to inspect, verification commands, and known boundaries.
 - [Quality notes](docs/quality-gate.md) lists the local checks, CI surface, and release expectations for this repository.
 - [Enterprise readiness notes](docs/enterprise-readiness.md) outlines security, data, operations, integration, and handoff expectations.
 
@@ -41,7 +41,7 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 
 **Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
 
-**Scanner Field Response** (`/api/scanner/`) — field incident workflow, subsystem escalation, qualification architecture, and signed handoff from local triage through customer milestone readiness.
+**Scanner Field Response** (`/api/scanner/`) — field incident workflow, subsystem escalation, qualification review, and signed handoff from local triage through customer milestone readiness.
 
 Both domains share operator access, HMAC signature logic, and runtime storage from `app/shared/` — zero duplication, per-domain environment variable isolation.
 
@@ -91,7 +91,7 @@ make deploy  # applies infra/k8s/ manifests
 |----------|-------------|
 | `GET /health` | Platform health and domain navigation |
 | `GET /metrics` | Prometheus metrics |
-| `GET /api/resource-pack` | Built-in manufacturing architecture cases |
+| `GET /api/resource-pack` | Built-in manufacturing review cases |
 
 **Fab Ops** (`/api/fab-ops/`)
 
@@ -111,7 +111,7 @@ make deploy  # applies infra/k8s/ manifests
 | `GET /api/scanner/incidents` | Field incidents (filterable) |
 | `GET /api/scanner/field-response-board` | Field response board |
 | `GET /api/scanner/subsystem-escalation` | Subsystem escalation detail |
-| `GET /api/scanner/qualification-board` | Qualification architecture board |
+| `GET /api/scanner/qualification-board` | Qualification review board |
 | `GET /api/scanner/customer-readiness` | Customer milestone readiness |
 | `GET /api/scanner/shift-handoff/signature` | Signed handoff envelope (auth) |
 
@@ -137,15 +137,13 @@ MIT
 
 ## Cloud + AI Architecture
 
-This repository includes a neutral cloud and AI engineering blueprint that maps the current proof surface to runtime boundaries, data contracts, model-risk controls, deployment posture, and validation hooks.
-
 - [Cloud + AI architecture blueprint](docs/cloud-ai-architecture.md)
 - [Machine-readable architecture manifest](docs/architecture/blueprint.json)
 - Validation command: `python3 scripts/validate_architecture_blueprint.py`
 
 ## Enterprise Productization
 
-- [Product operating model](docs/product-operating-model.md) defines the technical inspection, trust boundary, trust boundary, operating checks, and service path for this repository.
+- [Product operating model](docs/product-operating-model.md) defines the product scope, trust boundary, operating checks, and service path for this repository.
 
 ## System Architecture
 

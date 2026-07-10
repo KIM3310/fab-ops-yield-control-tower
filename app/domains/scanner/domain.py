@@ -96,7 +96,7 @@ FIELD_INCIDENTS = [
         "status": "watch",
         "started_at": "2026-03-16T03:11:00Z",
         "symptom": "dose drift is still inside hard stop limits but trending outside the qualification comfort band",
-        "local_action": "tighten the local monitor window and prep the dose-control packet for remote check",
+        "local_action": "tighten the local monitor window and prep the dose-control packet for remote review",
         "field_owner": "field-hwaseong-a",
         "next_owner": "subsystem-dose-window",
         "sla_minutes": 55,
