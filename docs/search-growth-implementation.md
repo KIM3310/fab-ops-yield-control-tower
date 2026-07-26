@@ -11,6 +11,7 @@ This repository now exposes a search-readable service surface in addition to the
 | System architecture | [docs/system-architecture.md](./system-architecture.md) |
 | Public canonical URL | https://fab-ops-yield-control-tower.pages.dev/ |
 | Lead capture URL | https://github.com/KIM3310/fab-ops-yield-control-tower/issues/new?template=service-inquiry.yml&title=Private+workspace+inquiry%3A+Fab+Ops+Yield+Control+Tower |
+| Commercial route | https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers |
 
 ## Search Positioning
 

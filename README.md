@@ -161,6 +161,7 @@ MIT
 - Paid boundary: paid factory pilot workspace with private connectors and shift report export
 - Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
 - Lead capture: https://github.com/KIM3310/fab-ops-yield-control-tower/issues/new?template=service-inquiry.yml&title=Private+workspace+inquiry%3A+Fab+Ops+Yield+Control+Tower
+- Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers
 - Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
 - Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)
 - Revenue architecture: [docs/revenue-architecture.md](docs/revenue-architecture.md)

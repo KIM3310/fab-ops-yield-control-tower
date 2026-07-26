@@ -69,5 +69,29 @@
     ],
     "isAccessibleForFree": true,
     "keywords": "fab-ops-yield-control-tower, Fab, Ops, Yield, Control, Tower, yield, control, tower, alarm, triage, lot, risk, release, gates, shift, handoff, factory, pilot, connectors, export, synthetic, fab"
+  },
+  "commerce": {
+    "gateway_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers",
+    "lane_id": "industrial-regulated-validation-pack",
+    "lane_name": "Industrial Regulated Validation Pack",
+    "billing_mode": "quote",
+    "price_unit": "scope-before-invoice for dataset, regulated review, and model-card work",
+    "fulfillment_kind": "synthetic control-tower review, model-card report, approval-gate map, and limitations note",
+    "risk_bucket": "industrial-high-trust",
+    "checkout": {
+      "provider": "lemon-squeezy",
+      "status": "account-onboarding-required",
+      "fallback_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers"
+    },
+    "sponsorship": {
+      "provider": "github-sponsors",
+      "eligible": true,
+      "status": "account-onboarding-required"
+    },
+    "advertising": {
+      "provider": null,
+      "eligible": false,
+      "status": "not-applicable"
+    }
   }
 }
