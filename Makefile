@@ -1,4 +1,4 @@
-.PHONY: check-python install run test lint typecheck smoke docker-build docker-run deploy clean coverage verify verify-strict
+.PHONY: check-python install run test lint typecheck smoke docker-build docker-run deploy pages-deploy clean coverage verify verify-strict
 
 PYTHON_BIN ?= python3
 VENV ?= .venv
@@ -92,6 +92,9 @@ deploy:
 	kubectl apply -f infra/k8s/deployment.yaml
 	kubectl apply -f infra/k8s/service.yaml
 	kubectl apply -f infra/k8s/hpa.yaml
+
+pages-deploy:
+	npx --yes wrangler@latest pages deploy site --project-name=fab-ops-yield-control-tower --branch=main
 
 # ---------------------------------------------------------------------------
 # Cleanup
