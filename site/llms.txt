@@ -8,6 +8,7 @@ Repository: https://github.com/KIM3310/fab-ops-yield-control-tower
 System architecture: https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/system-architecture.md
 Revenue architecture: https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/revenue-architecture.md
 Lead capture: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry
+Resource route: https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/
 Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers
 
 Use this project as a runnable or inspectable reference for Fab Ops Yield Control Tower demo, Fab Ops Yield Control Tower system architecture, Fab Ops Yield Control Tower business tool, yield control tower with alarm triage, lot risk, release gates, and shift handoff service.

@@ -161,9 +161,20 @@ MIT
 - Paid boundary: paid factory pilot workspace with private connectors and shift report export
 - Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
 - Lead capture: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry
+- Resource route: https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/
 - Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers
 - Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
 - Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)
 - Revenue architecture: [docs/revenue-architecture.md](docs/revenue-architecture.md)
 
 <!-- search-growth-readme:end -->
+
+<!-- KIM3310:AD-DATA-PIVOT:START -->
+## Free Resource, Advertising, and Aggregate Data
+
+- [Public utility and architecture checklist](https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/)
+- Revenue model: contextual advertising on the policy-eligible central resource page.
+- Aggregate value: anonymous aggregate manufacturing readiness topic interest and worksheet usage counts
+- Boundary: ads allowed only on public yield-readiness resources; control tower, defect queues, production data, and dashboards are ad-free
+- Consent defaults off, DNT/GPC fail closed, and personal or sensitive data is never sold.
+<!-- KIM3310:AD-DATA-PIVOT:END -->
