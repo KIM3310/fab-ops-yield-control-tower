@@ -1,6 +1,23 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.shared import aws_adapter
+
+
+def test_aws_activation_requires_access_key_and_secret(monkeypatch) -> None:
+    monkeypatch.setattr(aws_adapter, "_AWS_KEY", "")
+    monkeypatch.setattr(aws_adapter, "_AWS_SECRET", "")
+    assert aws_adapter.aws_enabled() is False
+
+    monkeypatch.setattr(aws_adapter, "_AWS_KEY", "access-key")
+    assert aws_adapter.aws_enabled() is False
+
+    monkeypatch.setattr(aws_adapter, "_AWS_KEY", "")
+    monkeypatch.setattr(aws_adapter, "_AWS_SECRET", "secret-key")
+    assert aws_adapter.aws_enabled() is False
+
+    monkeypatch.setattr(aws_adapter, "_AWS_KEY", "access-key")
+    assert aws_adapter.aws_enabled() is True
 
 
 def test_fab_ops_shift_handoff_exposes_aws_export_metadata(monkeypatch) -> None:

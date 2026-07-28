@@ -117,7 +117,7 @@ make deploy  # applies infra/k8s/ manifests
 
 ## Deployment
 
-**AWS** — set `AWS_ACCESS_KEY_ID` to activate: S3 handoff/audit export, DynamoDB metadata, SQS event publishing.
+**AWS** — set both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to enable AWS exports. S3 uses `AWS_S3_BUCKET` when supplied and otherwise uses the documented default. SQS additionally requires `AWS_SQS_QUEUE_URL`; DynamoDB additionally requires `AWS_DYNAMODB_TABLE`. `AWS_DEFAULT_REGION` is optional and defaults to `us-west-2`.
 
 **GCP Cloud Run** — Terraform config in `infra/terraform/`:
 ```bash
@@ -160,7 +160,7 @@ MIT
 - Public entry: public synthetic fab demo and operating model
 - Paid boundary: paid factory pilot workspace with private connectors and shift report export
 - Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
-- Lead capture: https://github.com/KIM3310/fab-ops-yield-control-tower/issues/new?template=service-inquiry.yml&title=Private+workspace+inquiry%3A+Fab+Ops+Yield+Control+Tower
+- Lead capture: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry
 - Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers
 - Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
 - Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)

@@ -1,10 +1,11 @@
 """
 AWS integration adapter for the semiconductor-ops-platform.
 
-All AWS functionality is **gated** by the presence of ``AWS_ACCESS_KEY_ID``
-in the environment.  When the key is absent every public function in this
-module is a safe no-op that returns ``None`` or an empty dict, so the
-platform runs identically without any AWS credentials.
+All AWS functionality is **gated** by the presence of both
+``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` in the environment.
+When either value is absent every public function in this module is a safe
+no-op that returns ``None`` or an empty dict, so the platform runs
+identically without AWS credentials.
 
 Capabilities:
 - **S3 export**: Upload handoff packs and audit bundles to an S3 bucket.

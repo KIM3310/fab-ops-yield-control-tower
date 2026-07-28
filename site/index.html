@@ -50,7 +50,7 @@
   <meta property="og:site_name" content="Fab Ops Yield Control Tower" />
   <link rel="alternate" type="application/json" title="Service offer" href="service-offer.json" />
 <!-- search-growth-jsonld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Fab Ops Yield Control Tower","applicationCategory":"BusinessApplication","operatingSystem":"Web, serverless, and local development environments","url":"https://fab-ops-yield-control-tower.pages.dev/","codeRepository":"https://github.com/KIM3310/fab-ops-yield-control-tower","description":"Fab Ops Yield Control Tower: yield control tower with alarm triage, lot risk, release gates, and shift handoff. Free entry point: public synthetic fab demo and operating model. Paid path: paid factory pilot workspace.","creator":{"@type":"Person","name":"KIM3310","url":"https://github.com/KIM3310"},"offers":[{"@type":"Offer","name":"public synthetic fab demo and operating model","price":"0","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://fab-ops-yield-control-tower.pages.dev/"},{"@type":"Offer","name":"paid factory pilot workspace with private connectors and shift report export","availability":"https://schema.org/LimitedAvailability","url":"https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/revenue-architecture.md"}],"isAccessibleForFree":true,"keywords":"fab-ops-yield-control-tower, Fab, Ops, Yield, Control, Tower, yield, control, tower, alarm, triage, lot, risk, release, gates, shift, handoff, factory, pilot, connectors, export, synthetic, fab"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Fab Ops Yield Control Tower","applicationCategory":"BusinessApplication","operatingSystem":"Web, serverless, and local development environments","url":"https://fab-ops-yield-control-tower.pages.dev/","codeRepository":"https://github.com/KIM3310/fab-ops-yield-control-tower","description":"Fab Ops Yield Control Tower: yield control tower with alarm triage, lot risk, release gates, and shift handoff. Free entry point: public synthetic fab demo and operating model. Paid path: paid factory pilot workspace.","creator":{"@type":"Person","name":"KIM3310","url":"https://github.com/KIM3310"},"offers":[{"@type":"Offer","name":"public synthetic fab demo and operating model","price":"0","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://fab-ops-yield-control-tower.pages.dev/"},{"@type":"Offer","name":"paid factory pilot workspace with private connectors and shift report export","availability":"https://schema.org/LimitedAvailability","url":"https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry"}],"isAccessibleForFree":true,"keywords":"fab-ops-yield-control-tower, Fab, Ops, Yield, Control, Tower, yield, control, tower, alarm, triage, lot, risk, release, gates, shift, handoff, factory, pilot, connectors, export, synthetic, fab"}</script>
 <!-- search-growth-jsonld:end -->
 <style id="search-growth-offer-style">
     .search-growth-offer {
@@ -217,7 +217,7 @@
     <div><span>Search intent</span><strong>Fab Ops Yield Control Tower demo / Fab Ops Yield Control Tower system architecture</strong></div>
   </div>
   <div class="offer-actions">
-    <a href="https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers">View paid options</a>
+    <a href="https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry">View paid options</a>
     <a href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/revenue-architecture.md" target="_blank" rel="noopener noreferrer">Revenue architecture</a>
     <a class="secondary" href="https://github.com/KIM3310/fab-ops-yield-control-tower" target="_blank" rel="noopener noreferrer">Repository</a>
   </div>
@@ -252,10 +252,10 @@
     document.getElementById('copyLotPathBtn')?.addEventListener('click', async () => {
       const ok = await copyFabText([
         'Fab Ops one-lot review path',
-        '- /api/runtime/brief',
-        '- /api/recovery-board?mode=hold',
-        '- /api/release-gate?lot_id=lot-8812',
-        '- /api/shift-handoff/signature',
+        '- /api/fab-ops/runtime/brief',
+        '- /api/fab-ops/recovery-board?mode=hold',
+        '- /api/fab-ops/release-gate?lot_id=lot-8812',
+        '- /api/fab-ops/shift-handoff/signature',
       ].join('\n'));
       if (focusLotStatus) focusLotStatus.textContent = ok ? 'Lot path copied.' : 'Failed to copy lot path.';
     });

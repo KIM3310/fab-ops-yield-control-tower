@@ -5,7 +5,7 @@
   "repository_url": "https://github.com/KIM3310/fab-ops-yield-control-tower",
   "architecture_url": "https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/system-architecture.md",
   "revenue_architecture_url": "https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/revenue-architecture.md",
-  "lead_capture_url": "https://github.com/KIM3310/fab-ops-yield-control-tower/issues/new?template=service-inquiry.yml&title=Private+workspace+inquiry%3A+Fab+Ops+Yield+Control+Tower",
+  "lead_capture_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry",
   "productized_offer": "yield control tower with alarm triage, lot risk, release gates, and shift handoff",
   "first_paid_sku": "paid factory pilot workspace with private connectors and shift report export",
   "free_lead_magnet": "public synthetic fab demo and operating model",
@@ -64,7 +64,7 @@
         "@type": "Offer",
         "name": "paid factory pilot workspace with private connectors and shift report export",
         "availability": "https://schema.org/LimitedAvailability",
-        "url": "https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/docs/revenue-architecture.md"
+        "url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry"
       }
     ],
     "isAccessibleForFree": true,
@@ -72,20 +72,20 @@
   },
   "commerce": {
     "gateway_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers",
-    "lane_id": "industrial-regulated-validation-pack",
-    "lane_name": "Industrial Regulated Validation Pack",
+    "lane_id": "industrial-validation-discovery",
+    "lane_name": "Industrial Validation Discovery",
     "billing_mode": "quote",
-    "price_unit": "scope-before-invoice for dataset, regulated review, and model-card work",
-    "fulfillment_kind": "synthetic control-tower review, model-card report, approval-gate map, and limitations note",
+    "price_unit": "discovery scope from USD 2,500",
+    "fulfillment_kind": "data suitability review, baseline evaluation, model-card draft, human-review boundary, and pilot acceptance criteria",
     "risk_bucket": "industrial-high-trust",
     "checkout": {
-      "provider": "lemon-squeezy",
-      "status": "account-onboarding-required",
-      "fallback_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers"
+      "provider": null,
+      "status": "not-configured",
+      "fallback_url": "https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry"
     },
     "sponsorship": {
       "provider": "github-sponsors",
-      "eligible": true,
+      "eligible": false,
       "status": "sponsors-listing-not-configured"
     },
     "advertising": {
