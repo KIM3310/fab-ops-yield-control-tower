@@ -8,7 +8,7 @@ Free manufacturing yield-control readiness worksheet for shift evidence and exce
 
 - Audience: manufacturing analytics and operations leaders
 - Central resource: https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/
-- Live system: https://fab-ops-yield-control-tower.pages.dev
+- Live system: https://fab-ops-yield-control-tower.pages.dev/
 - Advertising boundary: ads allowed only on public yield-readiness resources; control tower, defect queues, production data, and dashboards are ad-free
 - Current ad state: code-ready on the central resource; serving depends on Google AdSense site approval and consent policy.
 

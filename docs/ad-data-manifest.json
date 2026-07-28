@@ -6,7 +6,7 @@
   "audience": "manufacturing analytics and operations leaders",
   "public_resource": {
     "url": "https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/",
-    "live_demo": "https://fab-ops-yield-control-tower.pages.dev",
+    "live_demo": "https://fab-ops-yield-control-tower.pages.dev/",
     "readiness_checklist": [
       "Architecture Summary",
       "Runtime And Data Flow",
