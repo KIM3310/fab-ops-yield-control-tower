@@ -13,8 +13,8 @@ Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-y
 
 Use this project as a runnable or inspectable reference for Fab Ops Yield Control Tower demo, Fab Ops Yield Control Tower system architecture, Fab Ops Yield Control Tower business tool, yield control tower with alarm triage, lot risk, release gates, and shift handoff service.
 # ADSENSE-PUBLICATION:START
-Editorial guide: https://fab-ops-yield-control-tower.pages.dev/guide.html
-Architecture article: https://fab-ops-yield-control-tower.pages.dev/architecture.html
-Verification article: https://fab-ops-yield-control-tower.pages.dev/verification.html
-Publisher information: https://fab-ops-yield-control-tower.pages.dev/publisher.html
+Editorial guide: https://fab-ops-yield-control-tower.pages.dev/guide
+Architecture article: https://fab-ops-yield-control-tower.pages.dev/architecture
+Verification article: https://fab-ops-yield-control-tower.pages.dev/verification
+Publisher information: https://fab-ops-yield-control-tower.pages.dev/publisher
 # ADSENSE-PUBLICATION:END
