@@ -17,6 +17,9 @@ def test_focus_lot_static_surface_contract() -> None:
     for token in required_tokens:
         assert token in html, token
 
+    assert "run.app" not in html
+    assert "now live on Cloud Run" not in html
+
 
 def test_copy_lot_path_uses_mounted_fab_ops_routes() -> None:
     html = INDEX_HTML.read_text(encoding="utf-8")
