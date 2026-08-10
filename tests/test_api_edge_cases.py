@@ -132,6 +132,33 @@ class TestFabOpsAuthFlow:
         assert resp.status_code == 200
 
 
+class TestPlatformDiagnosticsSecurity:
+    """Tests for public platform diagnostics."""
+
+    def test_persistence_failures_do_not_expose_exception_details(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.shared import database
+
+        sensitive_detail = "database password exposed from /srv/private/config.py"
+
+        def fail_session() -> None:
+            raise RuntimeError(sensitive_detail)
+
+        monkeypatch.setattr(database, "PERSISTENCE_BACKEND", "sqlite")
+        monkeypatch.setattr(database, "get_session", fail_session)
+
+        for path in ("/health", "/api/export-proof-board"):
+            response = client.get(path)
+            assert response.status_code == 200
+            persistence = response.json()["persistence"]
+            assert persistence["ready"] is False
+            assert persistence["error"] == "Persistence backend unavailable"
+            assert sensitive_detail not in response.text
+
+
 class TestCrossDomainIntegration:
     """Tests verifying both domains coexist on the same app."""
 

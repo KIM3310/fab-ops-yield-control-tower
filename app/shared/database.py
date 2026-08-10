@@ -212,10 +212,10 @@ def persistence_readiness() -> dict[str, Any]:
     try:
         session = get_session()
         session.execute(text("SELECT 1"))
-    except Exception as exc:  # pragma: no cover - defensive readiness path
+    except Exception:  # pragma: no cover - defensive readiness path
         logger.exception("SQLite persistence readiness check failed")
         details["ready"] = False
-        details["error"] = str(exc)
+        details["error"] = "Persistence backend unavailable"
     finally:
         if session is not None:
             session.close()

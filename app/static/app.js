@@ -20,12 +20,24 @@ function renderBulletList(container, items, fallbackText) {
   });
 }
 
+const RICH_TEXT_TAGS = new Set(["strong", "code"]);
+
 function renderRichBulletList(container, items, fallbackText) {
-  container.innerHTML = "";
-  const listItems = items.length > 0 ? items : [{ html: fallbackText }];
-  listItems.forEach((item) => {
+  container.textContent = "";
+  const listItems = items.length > 0 ? items : [[fallbackText]];
+  listItems.forEach((segments) => {
     const li = document.createElement("li");
-    li.innerHTML = item.html || fallbackText;
+    segments.forEach((segment) => {
+      if (typeof segment === "string") {
+        li.appendChild(document.createTextNode(segment));
+        return;
+      }
+
+      const tagName = RICH_TEXT_TAGS.has(segment.tag) ? segment.tag : "span";
+      const node = document.createElement(tagName);
+      node.textContent = String(segment.text ?? "");
+      li.appendChild(node);
+    });
     container.appendChild(li);
   });
 }
@@ -401,34 +413,74 @@ async function boot() {
     const maintenanceState = latestRecoveryWhatIf?.delta?.maintenance_clearance ? "complete" : "still open";
     const signatureId = latestSignaturePayload?.signature_id || latestSignatureId || "pending-signature";
 
-    renderRichBulletList(storylineSummary, [
-      {
-        html: `<strong>${storyLotId}</strong> is the live lot-risk anchor, currently reading as <strong>${boardStatus}</strong> until the release gate changes.`,
-      },
-      {
-        html: `<strong>Recovery what-if</strong> shifts the posture toward <strong>${simulatedDecision}</strong>${typeof etaGain === "number" ? ` with ${etaGain} minutes of ETA recovery` : ""}${typeof riskDelta === "number" ? ` and ${riskDelta} risk-score reduction` : ""}.`,
-      },
-      {
-        html: `<strong>Operator-proof handoff</strong> stays honest: maintenance is <strong>${maintenanceState}</strong>, gate evidence remains required, and the next shift should see signature <strong>${signatureId}</strong> before anyone talks about release confidence.`,
-      },
-    ], "Storyline details load after the focused lot is available.");
+    renderRichBulletList(
+      storylineSummary,
+      [
+        [
+          { tag: "strong", text: storyLotId },
+          " is the live lot-risk anchor, currently reading as ",
+          { tag: "strong", text: boardStatus },
+          " until the release gate changes.",
+        ],
+        [
+          { tag: "strong", text: "Recovery what-if" },
+          " shifts the posture toward ",
+          { tag: "strong", text: simulatedDecision },
+          typeof etaGain === "number" ? ` with ${etaGain} minutes of ETA recovery` : "",
+          typeof riskDelta === "number" ? ` and ${riskDelta} risk-score reduction` : "",
+          ".",
+        ],
+        [
+          { tag: "strong", text: "Operator-proof handoff" },
+          " stays honest: maintenance is ",
+          { tag: "strong", text: maintenanceState },
+          ", gate evidence remains required, and the next shift should see signature ",
+          { tag: "strong", text: signatureId },
+          " before anyone talks about release confidence.",
+        ],
+      ],
+      "Storyline details load after the focused lot is available."
+    );
 
     renderContinuityCheckpoint();
 
-    renderRichBulletList(storylineRoute, [
-      {
-        html: `<strong>1.</strong> Recovery board -> <code>/api/recovery-board?mode=${selectedRecoveryMode}</code> keeps the blocker visible first.`,
-      },
-      {
-        html: `<strong>2.</strong> Recovery what-if -> <code>/api/recovery-what-if?lot_id=${storyLotId}&yield_gain=0.25&maintenance_complete=true</code> shows the bounded improvement claim instead of implying recovery.`,
-      },
-      {
-        html: `<strong>3.</strong> Release gate + ownership -> <code>/api/release-gate?lot_id=${storyLotId}</code> and <code>/api/tool-ownership?tool_id=${selectedToolId || "pending-tool"}</code> prove who owns the next move.`,
-      },
-      {
-        html: `<strong>4.</strong> Shift handoff -> <code>/api/shift-handoff</code> plus <code>/api/shift-handoff/signature</code> closes the story with next-shift continuity, not a cosmetic dashboard ending.`,
-      },
-    ], "Reviewer route details load after the focused lot is available.");
+    renderRichBulletList(
+      storylineRoute,
+      [
+        [
+          { tag: "strong", text: "1." },
+          " Recovery board -> ",
+          { tag: "code", text: `/api/recovery-board?mode=${selectedRecoveryMode}` },
+          " keeps the blocker visible first.",
+        ],
+        [
+          { tag: "strong", text: "2." },
+          " Recovery what-if -> ",
+          {
+            tag: "code",
+            text: `/api/recovery-what-if?lot_id=${storyLotId}&yield_gain=0.25&maintenance_complete=true`,
+          },
+          " shows the bounded improvement claim instead of implying recovery.",
+        ],
+        [
+          { tag: "strong", text: "3." },
+          " Release gate + ownership -> ",
+          { tag: "code", text: `/api/release-gate?lot_id=${storyLotId}` },
+          " and ",
+          { tag: "code", text: `/api/tool-ownership?tool_id=${selectedToolId || "pending-tool"}` },
+          " prove who owns the next move.",
+        ],
+        [
+          { tag: "strong", text: "4." },
+          " Shift handoff -> ",
+          { tag: "code", text: "/api/shift-handoff" },
+          " plus ",
+          { tag: "code", text: "/api/shift-handoff/signature" },
+          " closes the story with next-shift continuity, not a cosmetic dashboard ending.",
+        ],
+      ],
+      "Reviewer route details load after the focused lot is available."
+    );
   }
 
   async function copyTextValue(text) {
