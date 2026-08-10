@@ -4,8 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "09:00"
+      day: "friday"
+      time: "08:50"
       timezone: "Asia/Seoul"
     open-pull-requests-limit: 5
     groups:
@@ -42,7 +42,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "tuesday"
       time: "09:00"
       timezone: "Asia/Seoul"
     open-pull-requests-limit: 5
@@ -62,7 +62,7 @@ updates:
     directory: "/infra/terraform"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "wednesday"
       time: "09:00"
       timezone: "Asia/Seoul"
     open-pull-requests-limit: 5
