@@ -2,10 +2,10 @@
 
 [![CI](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml/badge.svg)](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.133.0-009688.svg)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688.svg)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Unified manufacturing operations platform for semiconductor environments. Two production domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
+Unified manufacturing operations platform for semiconductor environments. Two operational domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
 
 Technical review pack: [`docs/architecture-pack.md`](docs/architecture-pack.md)
 
@@ -16,7 +16,6 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 | Area | Details |
 |---|---|
 | Users | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
-| Technical path | Validate the demo, README, architecture notes, and quality gate before deeper workflow review. |
 | System scope | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review material. |
 | Operating boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
 | Evaluation path | Run the documented runtime commands and inspect review artifacts and staged process data. |
@@ -25,7 +24,7 @@ A semiconductor operations control tower that connects fab monitoring, qualifica
 
 - **Start here:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
 - **Local demo:** Run `make run`, then open `http://127.0.0.1:8000/docs`.
-- **Checks:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as production-quality evidence.
+- **Checks:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as strict repository evidence.
 
 ## Service Launch Playbook
 
