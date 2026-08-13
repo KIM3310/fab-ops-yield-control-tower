@@ -6,6 +6,7 @@ metadata:
     app: semiconductor-ops-platform
 data:
   NODE_ENV: "production"
+  SEMICONDUCTOR_OPS_MODE: "production"
   PORT: "8000"
   LOG_LEVEL: "info"
   LOG_FORMAT: "json"
@@ -13,7 +14,9 @@ data:
   DATABASE_URL: "sqlite:///./data/semiconductor_ops.db"
   ENABLE_METRICS: "true"
   METRICS_PATH: "/metrics"
-  # Domain-specific tokens should be set via Secrets, not ConfigMap.
-  # These are safe non-secret defaults:
+  # Tokens and signing keys are required through semiconductor-ops-secrets;
+  # only non-secret policy/key identifiers belong in this ConfigMap.
+  FAB_OPS_OPERATOR_ALLOWED_ROLES: "shift-lead,release-supervisor"
+  SCANNER_OPERATOR_ALLOWED_ROLES: "field-lead,qualification-reviewer"
   FAB_OPS_HANDOFF_SIGNING_KEY_ID: "fab-ops-prod-v1"
   SCANNER_RESPONSE_SIGNING_KEY_ID: "scanner-prod-v1"

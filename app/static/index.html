@@ -13,7 +13,8 @@
       <div>
         <p class="eyebrow">Manufacturing Ops</p>
         <h1>Fab Ops Yield Control Tower</h1>
-        <p class="lede">Alarm triage, lot-at-risk ranking, tool watchlist, and shift handoff in one reviewable surface.</p>
+        <p class="lede">Synthetic SPC excursion detection, advisory lot disposition, flow indicators, and shift evidence in one reviewable surface.</p>
+        <p id="synthetic-data-banner" class="evidence-banner"><strong>Synthetic fixture only:</strong> no MES/FDC connection, measured yield, or autonomous material movement. Human process and release authorities retain every disposition decision.</p>
       </div>
       <p id="runtime-banner" class="runtime-banner is-loading" role="status" aria-live="polite">
         Refreshing control tower data…
@@ -43,7 +44,7 @@
           <strong id="critical-count">Loading</strong>
         </div>
         <div class="metric-card">
-          <span class="metric-label">Severe Lots</span>
+          <span class="metric-label">Synthetic Severe-Risk Lots</span>
           <strong id="severe-count">Loading</strong>
         </div>
         <div class="metric-card">
@@ -139,7 +140,7 @@
         <div>
           <p class="eyebrow">Lot Storyline</p>
           <h2>Recovery What-If to Handoff Continuity</h2>
-          <p class="stack-meta">Keep one lot in view from hold pressure through release evidence and the signed next-shift packet.</p>
+          <p class="stack-meta">Keep one lot in view from hold pressure through release evidence and the integrity-bound next-shift packet.</p>
         </div>
       </div>
       <div class="grid grid-2 storyline-grid">
@@ -154,11 +155,35 @@
       </div>
     </section>
 
+    <section class="panel" id="spc-evidence-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Versioned SPC Evidence · Synthetic</p>
+          <h2>Control Plan → Disposition → Executed Assertions</h2>
+          <p class="stack-meta">Western Electric rules use configured fixture references. Q-time, TAT, and routing indicators are synthetic workflow context; recommendations never release material.</p>
+        </div>
+      </div>
+      <div class="grid grid-3">
+        <article class="info-card">
+          <h3>Control Plan v1</h3>
+          <div id="spc-control-plan" class="stack-list"></div>
+        </article>
+        <article class="info-card">
+          <h3>Focused Lot Disposition</h3>
+          <div id="spc-disposition" class="stack-list"></div>
+        </article>
+        <article class="info-card">
+          <h3>Flow & Authority Boundary</h3>
+          <div id="spc-flow-authority" class="stack-list"></div>
+        </article>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="section-head">
         <div>
           <p class="eyebrow">Recovery Board</p>
-          <h2>Hold, Watch, and Release-Ready Lots</h2>
+          <h2>Hold, Watch, and Human-Review Candidates</h2>
         </div>
         <div class="panel-controls">
           <label for="recovery-mode-select" class="metric-label">Mode</label>
@@ -187,8 +212,8 @@
       <article class="panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Yield Risk</p>
-            <h2>Lots At Risk</h2>
+            <p class="eyebrow">Synthetic Risk Fixture</p>
+            <h2>Simulated Workflow Risk</h2>
           </div>
         </div>
         <div id="lot-list" class="stack-list"></div>
@@ -235,8 +260,8 @@
       <article class="panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Release Gate</p>
-            <h2>Top Lot Decision</h2>
+            <p class="eyebrow">Advisory Gate</p>
+            <h2>Human-Reviewed Recommendation</h2>
           </div>
           <div class="panel-controls">
             <label for="lot-select" class="metric-label">Lot</label>
@@ -271,8 +296,8 @@
       <article class="panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Signed Proof</p>
-            <h2>Handoff Signature</h2>
+            <p class="eyebrow">Integrity Proof</p>
+            <h2>HMAC Envelope (Not Approval)</h2>
           </div>
         </div>
         <div id="handoff-signature" class="stack-list"></div>
@@ -281,7 +306,7 @@
       <article class="panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Replay Evals</p>
+            <p class="eyebrow">Executed Replay Evals</p>
             <h2>Scenario Summary</h2>
           </div>
         </div>

@@ -13,6 +13,8 @@ import logging
 import os
 from typing import Any
 
+from app.shared.operator_access import demo_mode_enabled, runtime_mode
+
 logger = logging.getLogger("shared.signatures")
 
 _SIGNING_KEY_DEFAULTS: dict[str, str] = {
@@ -36,11 +38,32 @@ _SIGNING_KEY_ID_ENVS: dict[str, str] = {
 }
 
 
+class SigningConfigurationError(RuntimeError):
+    """Raised when signing is requested without credentials outside demo mode."""
+
+
+def signing_status(domain: str = "fab_ops") -> dict[str, Any]:
+    """Return a secret-free summary of HMAC credential posture."""
+    key_env = _SIGNING_KEY_ENVS.get(domain, "FAB_OPS_HANDOFF_SIGNING_KEY")
+    key_id_env = _SIGNING_KEY_ID_ENVS.get(domain, "FAB_OPS_HANDOFF_SIGNING_KEY_ID")
+    key_configured = bool(os.getenv(key_env, "").strip())
+    key_id_configured = bool(os.getenv(key_id_env, "").strip())
+    is_demo = demo_mode_enabled()
+    return {
+        "runtime_mode": runtime_mode(),
+        "available": (key_configured and key_id_configured) or is_demo,
+        "key_configured": key_configured,
+        "key_id_configured": key_id_configured,
+        "using_demo_credential": is_demo and not key_configured,
+        "purpose": "HMAC payload integrity/authenticity; not human approval",
+    }
+
+
 def signing_key(domain: str = "fab_ops") -> str:
     """Return the HMAC signing key for the given domain.
 
-    Reads from the environment variable ``{PREFIX}_HANDOFF_SIGNING_KEY``
-    and falls back to a built-in demo key when the variable is unset.
+    Reads the domain environment variable. A built-in credential is available
+    only in the explicit local demo profile; other profiles fail closed.
 
     Args:
         domain: Domain identifier (``"fab_ops"`` or ``"scanner"``).
@@ -49,8 +72,12 @@ def signing_key(domain: str = "fab_ops") -> str:
         The signing key string.
     """
     env_name = _SIGNING_KEY_ENVS.get(domain, "FAB_OPS_HANDOFF_SIGNING_KEY")
-    default = _SIGNING_KEY_DEFAULTS.get(domain, "demo-signing-key")
-    return str(os.getenv(env_name, default)).strip() or default
+    configured = os.getenv(env_name, "").strip()
+    if configured:
+        return configured
+    if demo_mode_enabled():
+        return _SIGNING_KEY_DEFAULTS.get(domain, "demo-signing-key")
+    raise SigningConfigurationError(f"HMAC signing key is not configured for {domain}")
 
 
 def signing_key_id(domain: str = "fab_ops") -> str:
@@ -63,8 +90,12 @@ def signing_key_id(domain: str = "fab_ops") -> str:
         Key identifier string used in signature envelopes.
     """
     env_name = _SIGNING_KEY_ID_ENVS.get(domain, "FAB_OPS_HANDOFF_SIGNING_KEY_ID")
-    default = _SIGNING_KEY_ID_DEFAULTS.get(domain, "demo-v1")
-    return str(os.getenv(env_name, default)).strip() or default
+    configured = os.getenv(env_name, "").strip()
+    if configured:
+        return configured
+    if demo_mode_enabled():
+        return _SIGNING_KEY_ID_DEFAULTS.get(domain, "demo-v1")
+    raise SigningConfigurationError(f"HMAC signing key id is not configured for {domain}")
 
 
 def stable_json(value: Any) -> str:
@@ -140,9 +171,8 @@ def verify_signature(
 ) -> dict[str, Any]:
     """Verify a manifest signature and return check results.
 
-    Each of the four *provided_** parameters is compared against the
-    freshly-computed value.  When a parameter is ``None`` the current
-    (correct) value is substituted so the check passes by default.
+    Each caller-provided field is compared against the freshly computed value.
+    Missing fields fail their checks; verification never supplies its own proof.
 
     Args:
         manifest: The payload to verify.
@@ -159,16 +189,20 @@ def verify_signature(
     current_algorithm = "hmac-sha256"
     current_key_id = signing_key_id(domain)
 
-    algo = str(provided_algorithm or current_algorithm).strip()
-    kid = str(provided_key_id or current_key_id).strip()
-    sha = str(provided_sha256 or current["sha256"]).strip()
-    sig = str(provided_signature or current["signature"]).strip()
+    algo = "" if provided_algorithm is None else str(provided_algorithm).strip()
+    kid = "" if provided_key_id is None else str(provided_key_id).strip()
+    sha = "" if provided_sha256 is None else str(provided_sha256).strip()
+    sig = "" if provided_signature is None else str(provided_signature).strip()
 
     checks: dict[str, bool] = {
-        "algorithm_match": _hmac.compare_digest(algo, current_algorithm),
-        "key_id_match": _hmac.compare_digest(kid, current_key_id),
-        "sha256_match": _hmac.compare_digest(sha, current["sha256"]),
-        "signature_match": _hmac.compare_digest(sig, current["signature"]),
+        "algorithm_present": bool(algo),
+        "key_id_present": bool(kid),
+        "sha256_present": bool(sha),
+        "signature_present": bool(sig),
+        "algorithm_match": bool(algo) and _hmac.compare_digest(algo, current_algorithm),
+        "key_id_match": bool(kid) and _hmac.compare_digest(kid, current_key_id),
+        "sha256_match": bool(sha) and _hmac.compare_digest(sha, current["sha256"]),
+        "signature_match": bool(sig) and _hmac.compare_digest(sig, current["signature"]),
     }
     overall_valid = all(checks.values())
     if not overall_valid:

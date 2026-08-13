@@ -6,7 +6,11 @@ metadata:
     app: semiconductor-ops-platform
     component: api
 spec:
-  replicas: 2
+  # SQLite is a single-writer deployment. Migrate to a shared external database
+  # before increasing replicas or enabling rolling multi-pod updates.
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: semiconductor-ops-platform
@@ -25,6 +29,29 @@ spec:
           envFrom:
             - configMapRef:
                 name: semiconductor-ops-config
+          env:
+            # Required production credentials are created out-of-band. The
+            # repository intentionally contains references, never Secret data.
+            - name: FAB_OPS_OPERATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: semiconductor-ops-secrets
+                  key: FAB_OPS_OPERATOR_TOKEN
+            - name: FAB_OPS_HANDOFF_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: semiconductor-ops-secrets
+                  key: FAB_OPS_HANDOFF_SIGNING_KEY
+            - name: SCANNER_OPERATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: semiconductor-ops-secrets
+                  key: SCANNER_OPERATOR_TOKEN
+            - name: SCANNER_RESPONSE_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: semiconductor-ops-secrets
+                  key: SCANNER_RESPONSE_SIGNING_KEY
           resources:
             requests:
               cpu: 250m
@@ -42,7 +69,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -53,4 +80,5 @@ spec:
               mountPath: /app/data
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: semiconductor-ops-data

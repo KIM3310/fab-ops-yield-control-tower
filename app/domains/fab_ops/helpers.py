@@ -21,21 +21,47 @@ from app.domains.fab_ops.domain import (
     ALLOWED_SEVERITIES,
     AUDIT_EVENTS,
     FABS,
+    HANDOFF_ARTIFACT_CHANNEL,
+    HANDOFF_GENERATED_BY,
+    HANDOFF_SIGNATURE_ALGORITHM,
     HANDOFF_SIGNATURE_CONTRACT,
+    HANDOFF_SIGNATURE_PURPOSE,
+    HANDOFF_VERIFICATION_METHOD,
+    HANDOFF_VERIFICATION_ROUTE,
+    HANDOFF_VERIFICATION_STEPS,
     LOTS_AT_RISK,
-    REPLAY_SUITE,
     SERVICE_NAME,
     SHIFT_HANDOFF_SCHEMA,
     TOOL_OWNERSHIP,
     TOOLS,
 )
+from app.domains.fab_ops.spc import (
+    CONTROL_PLAN_CONTRACT,
+    DISPOSITION_CONTRACT,
+    build_control_plan,
+    build_fixture_excursion_review,
+    execute_replay_suite,
+    scenario_sha256,
+)
 from app.shared.operator_access import build_operator_auth_status
 from app.shared.runtime_store import record_runtime_event, summarize_runtime_events
-from app.shared.signatures import sign_manifest, signing_key_id, verify_signature
+from app.shared.signatures import sign_manifest, signing_key_id, signing_status, verify_signature
 
 logger = logging.getLogger("fab_ops.helpers")
 
 DOMAIN: str = "fab_ops"
+
+
+def build_synthetic_evidence_boundary() -> dict[str, Any]:
+    """Return the common truth-in-labeling boundary for fab demo outputs."""
+    return {
+        "data_classification": "synthetic_fixture",
+        "measured_yield": False,
+        "yield_forecast": False,
+        "production_telemetry": False,
+        "human_release_authority_required": True,
+        "material_state_changes_supported": False,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +88,7 @@ def record_route_hit(route: str) -> None:
 
 
 def _yield_risk(item: dict[str, Any]) -> float:
-    return float(cast(float | str, item["yield_risk_score"]))
+    return float(cast(float | str, item["simulated_yield_risk_score"]))
 
 
 def _lot_id(item: dict[str, Any]) -> str:
@@ -75,10 +101,6 @@ def _tool_id(item: dict[str, Any]) -> str:
 
 def _alarm_rank(item: dict[str, Any]) -> int:
     return ALARM_SEVERITY_RANK.get(str(item["severity"]), 99)
-
-
-def _replay_checks(item: dict[str, Any]) -> int:
-    return int(cast(int | str, item["checks"]))
 
 
 # ---------------------------------------------------------------------------
@@ -196,10 +218,11 @@ def build_shift_handoff_schema() -> dict[str, Any]:
             "lots_at_risk",
             "tool_watchlist",
             "must_acknowledge",
+            "spc_evidence_binding",
         ],
         "operator_rules": [
             "Critical alarms must be acknowledged in the handoff export.",
-            "Lots at risk stay visible until reroute, release, or scrap decision is recorded.",
+            "Synthetic fixture-risk lots stay visible until an authorized human review is recorded.",
             "The handoff pack is reviewable without live integrations.",
         ],
     }
@@ -240,8 +263,9 @@ def build_tool_ownership(tool_id: str) -> dict[str, Any]:
 def build_release_gate(lot_id: str) -> dict[str, Any]:
     """Evaluate the release gate decision for a lot.
 
-    The decision is one of ``"hold-release"``, ``"reroute-check"``, or
-    ``"release-with-sampling"`` based on yield risk score and tool status.
+    The advisory result is ``"hold-release"``, ``"reroute-check"``, or
+    ``"release-with-sampling"`` based on simulated fixture risk, tool state,
+    and acknowledgement evidence. It never changes material state.
 
     Args:
         lot_id: Lot identifier to evaluate.
@@ -253,9 +277,10 @@ def build_release_gate(lot_id: str) -> dict[str, Any]:
     tool = get_tool_or_404(lot["tool_id"])
     assignment = build_tool_ownership(tool["tool_id"])
 
-    if lot["yield_risk_score"] >= 0.85 and tool["status"] == "alarm":
+    simulated_risk = float(lot["simulated_yield_risk_score"])
+    if tool["status"] == "alarm" or simulated_risk >= 0.85:
         decision = "hold-release"
-    elif lot["yield_risk_score"] >= 0.65:
+    elif tool["status"] == "warning" or simulated_risk >= 0.65 or assignment["ack_required"]:
         decision = "reroute-check"
     else:
         decision = "release-with-sampling"
@@ -263,32 +288,70 @@ def build_release_gate(lot_id: str) -> dict[str, Any]:
     failed_checks: list[str] = []
     if tool["status"] == "alarm":
         failed_checks.append("critical tool alarm still open")
-    if lot["yield_risk_score"] >= 0.85:
-        failed_checks.append("yield risk score exceeds severe threshold")
+    elif tool["status"] == "warning":
+        failed_checks.append("fixture tool warning still open")
+    if simulated_risk >= 0.85:
+        failed_checks.append("simulated fixture risk score exceeds severe threshold")
     if assignment["ack_required"]:
         failed_checks.append("maintenance owner acknowledgement still required")
-
-    if decision == "release-with-sampling":
-        failed_checks = []
 
     logger.info("[fab_ops] release gate for %s: decision=%s", lot_id, decision)
     return {
         "lot_id": lot_id,
         "tool_id": tool["tool_id"],
         "decision": decision,
-        "yield_risk_score": lot["yield_risk_score"],
+        "decision_type": "advisory_fixture_recommendation",
+        "simulated_yield_risk_score": lot["simulated_yield_risk_score"],
         "tool_status": tool["status"],
         "next_action": lot["next_action"],
         "primary_operator": assignment["primary_operator"],
         "maintenance_owner": assignment["maintenance_owner"],
         "failed_checks": failed_checks,
+        "data_classification": "synthetic_fixture",
+        "risk_basis": "hand-authored simulated workflow score; not measured yield",
+        "human_release_authority_required": True,
+        "human_approval_status": "not_recorded",
+        "material_state_changed": False,
     }
 
 
-def build_shift_handoff() -> dict[str, Any]:
+def _build_spc_handoff_binding(lot_id: str = "lot-8812") -> dict[str, Any]:
+    """Bind the signed handoff to the executed synthetic SPC evidence chain."""
+    disposition = build_fixture_excursion_review(lot_id)
+    control_plan = build_control_plan()
+    flow = disposition["flow_indicators"]
+    return {
+        "binding_contract": "fab-ops-handoff-spc-evidence-binding-v1",
+        "data_classification": "synthetic_fixture",
+        "dataset_id": disposition["lineage"]["dataset_id"],
+        "fixture_sha256": disposition["lineage"]["fixture_sha256"],
+        "control_plan_contract": CONTROL_PLAN_CONTRACT,
+        "control_plan_policy_id": control_plan["control_plan"]["policy_id"],
+        "control_plan_revision": control_plan["control_plan"]["revision"],
+        "disposition_contract": DISPOSITION_CONTRACT,
+        "disposition_evaluated_at": disposition["evaluated_at"],
+        "lot_id": disposition["lot"]["lot_id"],
+        "recommendation": disposition["gate"]["recommendation"],
+        "data_quality_status": disposition["spc"]["data_quality"]["status"],
+        "unique_rule_ids": disposition["spc"]["unique_rule_ids"],
+        "q_time_status": flow["q_time"]["status"],
+        "tat_status": flow["tat"]["status"],
+        "route_state": flow["routing"]["route_state"],
+        "human_release_authority_required": True,
+        "human_approval_status": "not_recorded",
+        "material_state_changed": False,
+        "proof_routes": {
+            "control_plan": "/api/fab-ops/v1/control-plan",
+            "disposition": f"/api/fab-ops/v1/lots/{lot_id}/disposition",
+            "replays": "/api/fab-ops/v1/evals/replays",
+        },
+    }
+
+
+def build_shift_handoff(*, generated_at: str | None = None) -> dict[str, Any]:
     """Build the night-shift handoff pack for fab-west-1.
 
-    Sorts lots by yield risk (descending) and identifies tools on the
+    Sorts lots by simulated fixture risk (descending) and identifies tools on the
     watchlist (non-healthy status).
 
     Returns:
@@ -299,9 +362,14 @@ def build_shift_handoff() -> dict[str, Any]:
     return {
         "fab_id": "fab-west-1",
         "shift": "night",
-        "generated_at": utc_now_iso(),
+        "generated_at": generated_at or utc_now_iso(),
         "schema": SHIFT_HANDOFF_SCHEMA,
-        "headline": "One severe lot needs maintenance approval before morning release.",
+        "data_classification": "synthetic_fixture",
+        "measured_yield": False,
+        "human_release_authority_required": True,
+        "human_approval_status": "not_recorded",
+        "material_state_changed": False,
+        "headline": "One synthetic severe-risk lot needs human review before any release decision.",
         "open_critical_alarms": [alarm["alarm_id"] for alarm in ALARMS if alarm["severity"] == "critical"],
         "lots_at_risk": sorted_lots,
         "tool_watchlist": watchlist,
@@ -310,6 +378,7 @@ def build_shift_handoff() -> dict[str, Any]:
             "lot-8812 reroute decision",
             "depo-03 drift inspection assignment",
         ],
+        "spc_evidence_binding": _build_spc_handoff_binding(),
     }
 
 
@@ -340,6 +409,8 @@ def build_focus_lot() -> dict[str, Any]:
         "severity": spotlight_alarm["severity"],
         "risk_bucket": spotlight_lot["risk_bucket"],
         "release_decision": release_gate["decision"],
+        "decision_type": "advisory_fixture_recommendation",
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "next_action": spotlight_lot["next_action"],
         "maintenance_owner": ownership["maintenance_owner"],
         "handoff_headline": handoff["headline"],
@@ -347,6 +418,7 @@ def build_focus_lot() -> dict[str, Any]:
             "/api/fab-ops/runtime/brief",
             "/api/fab-ops/recovery-board?mode=hold",
             f"/api/fab-ops/release-gate?lot_id={spotlight_lot['lot_id']}",
+            f"/api/fab-ops/v1/lots/{spotlight_lot['lot_id']}/disposition",
             "/api/fab-ops/shift-handoff/signature",
         ],
     }
@@ -362,7 +434,8 @@ def build_fab_summary() -> dict[str, Any]:
     severe_lots = [lot for lot in LOTS_AT_RISK if _yield_risk(lot) >= 0.8]
     return {
         "fab_id": "fab-west-1",
-        "headline": "Night shift is stable but etch-bay-a is blocking one severe lot.",
+        "evidence_boundary": build_synthetic_evidence_boundary(),
+        "headline": "Synthetic night-shift fixture: etch-bay-a blocks one severe-risk scenario lot.",
         "tool_count": len(TOOLS),
         "alarm_count": len(ALARMS),
         "critical_alarm_count": len(critical_alarms),
@@ -380,12 +453,12 @@ def build_recovery_what_if(
 ) -> dict[str, Any]:
     """Run a what-if simulation for a recovery scenario.
 
-    Simulates the effect of a yield improvement and/or maintenance completion
-    on the lot's release gate decision.
+    Simulates the effect of a simulated risk reduction and/or maintenance completion
+    on the lot's advisory gate recommendation.
 
     Args:
         lot_id: Lot identifier to simulate.
-        yield_gain: Simulated yield risk score reduction (clamped to 0.0--0.5).
+        yield_gain: Simulated fixture risk-score reduction (clamped to 0.0--0.5).
         maintenance_complete: Whether to simulate the tool becoming healthy.
 
     Returns:
@@ -396,13 +469,13 @@ def build_recovery_what_if(
     tool = get_tool_or_404(lot["tool_id"])
     assignment = build_tool_ownership(tool["tool_id"])
 
-    simulated_yield_risk = round(max(0.0, float(lot["yield_risk_score"]) - max(0.0, min(0.5, yield_gain))), 2)
+    simulated_yield_risk = round(max(0.0, float(lot["simulated_yield_risk_score"]) - max(0.0, min(0.5, yield_gain))), 2)
     simulated_tool_status = "healthy" if maintenance_complete else tool["status"]
     simulated_ack_required = False if maintenance_complete else assignment["ack_required"]
 
-    if simulated_yield_risk >= 0.85 and simulated_tool_status == "alarm":
+    if simulated_tool_status == "alarm" or simulated_yield_risk >= 0.85:
         simulated_decision = "hold-release"
-    elif simulated_yield_risk >= 0.65:
+    elif simulated_tool_status == "warning" or simulated_yield_risk >= 0.65 or simulated_ack_required:
         simulated_decision = "reroute-check"
     else:
         simulated_decision = "release-with-sampling"
@@ -410,12 +483,12 @@ def build_recovery_what_if(
     simulated_failed_checks: list[str] = []
     if simulated_tool_status == "alarm":
         simulated_failed_checks.append("critical tool alarm still open")
+    elif simulated_tool_status == "warning":
+        simulated_failed_checks.append("fixture tool warning still open")
     if simulated_yield_risk >= 0.85:
-        simulated_failed_checks.append("yield risk score exceeds severe threshold")
+        simulated_failed_checks.append("simulated fixture risk score exceeds severe threshold")
     if simulated_ack_required:
         simulated_failed_checks.append("maintenance owner acknowledgement still required")
-    if simulated_decision == "release-with-sampling":
-        simulated_failed_checks = []
 
     baseline_eta = 240 if baseline["decision"] == "hold-release" else 90 if baseline["decision"] == "reroute-check" else 30
     simulated_eta = 240 if simulated_decision == "hold-release" else 90 if simulated_decision == "reroute-check" else 30
@@ -429,6 +502,7 @@ def build_recovery_what_if(
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "contract_version": "fab-ops-recovery-what-if-v1",
         "lot_id": lot_id,
@@ -437,7 +511,7 @@ def build_recovery_what_if(
             "lot_id": lot_id,
             "tool_id": tool["tool_id"],
             "decision": simulated_decision,
-            "yield_risk_score": simulated_yield_risk,
+            "simulated_yield_risk_score": simulated_yield_risk,
             "tool_status": simulated_tool_status,
             "next_action": "Promote recovery path to release board if simulated posture holds through the next shift."
             if simulated_decision != "hold-release"
@@ -446,9 +520,13 @@ def build_recovery_what_if(
             "maintenance_owner": assignment["maintenance_owner"],
             "failed_checks": simulated_failed_checks,
             "release_eta_minutes": simulated_eta,
+            "risk_basis": "hand-authored simulated workflow score; not measured yield",
+            "human_release_authority_required": True,
+            "human_approval_status": "not_recorded",
+            "material_state_changed": False,
         },
         "delta": {
-            "risk_score_reduction": round(float(baseline["yield_risk_score"]) - simulated_yield_risk, 2),
+            "risk_score_reduction": round(float(baseline["simulated_yield_risk_score"]) - simulated_yield_risk, 2),
             "release_eta_minutes": max(0, baseline_eta - simulated_eta),
             "maintenance_clearance": maintenance_complete,
         },
@@ -467,7 +545,7 @@ def build_recovery_what_if(
 
 
 def build_release_board() -> dict[str, Any]:
-    """Build the release board showing all lots sorted by yield risk.
+    """Build the advisory board sorted by simulated fixture risk.
 
     Each lot is enriched with its release gate decision and ownership info.
 
@@ -483,17 +561,22 @@ def build_release_board() -> dict[str, Any]:
                 "lot_id": lot["lot_id"],
                 "tool_id": lot["tool_id"],
                 "decision": gate["decision"],
-                "yield_risk_score": lot["yield_risk_score"],
+                "simulated_yield_risk_score": lot["simulated_yield_risk_score"],
                 "risk_bucket": lot["risk_bucket"],
                 "failed_checks": gate["failed_checks"],
                 "maintenance_owner": ownership["maintenance_owner"],
                 "ack_required": ownership["ack_required"],
                 "next_action": gate["next_action"],
+                "risk_basis": "hand-authored synthetic fixture; not measured yield",
+                "human_release_authority_required": True,
+                "human_approval_status": "not_recorded",
+                "material_state_changed": False,
             }
         )
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "contract_version": "fab-ops-release-board-v1",
         "summary": {
@@ -505,9 +588,9 @@ def build_release_board() -> dict[str, Any]:
         "spotlight": items[0] if items else None,
         "items": items,
         "operator_actions": [
-            "Review the release board before discussing any single lot as release-ready.",
-            "Keep failed checks and maintenance ownership paired so a release decision always names the next operator.",
-            "Use release board plus handoff signature as the final go/no-go set before shift change.",
+            "Review the release board before discussing any lot as a candidate for human release review.",
+            "Keep failed checks and maintenance ownership paired so every advisory recommendation names the next reviewer.",
+            "Use the board and HMAC integrity envelope as review evidence; only authorized humans make the go/no-go decision.",
         ],
         "route_bundle": {
             "release_board": "/api/fab-ops/release-board",
@@ -518,7 +601,7 @@ def build_release_board() -> dict[str, Any]:
     }
 
 
-def build_handoff_signature() -> dict[str, Any]:
+def build_handoff_signature(*, generated_at: str | None = None) -> dict[str, Any]:
     """Build and sign the shift handoff manifest.
 
     Produces an HMAC-SHA256 signature over the canonical JSON of the handoff
@@ -527,69 +610,182 @@ def build_handoff_signature() -> dict[str, Any]:
     Returns:
         Signature envelope with digest, HMAC, key ID, and the manifest.
     """
-    handoff = build_shift_handoff()
+    handoff = build_shift_handoff(generated_at=generated_at)
     sigs = sign_manifest(handoff, DOMAIN)
     logger.info("[fab_ops] handoff signature generated for %s/%s", handoff["fab_id"], handoff["shift"])
     return {
         "fab_id": handoff["fab_id"],
         "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
         "signature_id": f"handoff-{handoff['fab_id']}-{handoff['shift']}",
-        "algorithm": "hmac-sha256",
+        "algorithm": HANDOFF_SIGNATURE_ALGORITHM,
         "key_id": signing_key_id(DOMAIN),
         "sha256": sigs["sha256"],
         "signature": sigs["signature"],
         "digest_preview": sigs["sha256"][:16],
-        "signed_by": "ops-west-night",
+        "generated_by": HANDOFF_GENERATED_BY,
         "signed_at": handoff["generated_at"],
-        "release_channel": "morning-shift-briefing-pack",
+        "artifact_channel": HANDOFF_ARTIFACT_CHANNEL,
+        "signature_purpose": HANDOFF_SIGNATURE_PURPOSE,
+        "human_approval_status": "not_recorded",
+        "human_release_authority_required": True,
         "manifest": handoff,
-        "verification_route": "/api/fab-ops/shift-handoff/verify",
-        "verification_steps": [
-            "Confirm open critical alarms are still listed in the handoff pack.",
-            "Recompute SHA-256 over the handoff manifest before release or reroute.",
-            "Check must-acknowledge items and verify the HMAC signature against the current key id.",
-        ],
+        "verification_method": HANDOFF_VERIFICATION_METHOD,
+        "verification_route": HANDOFF_VERIFICATION_ROUTE,
+        "verification_steps": list(HANDOFF_VERIFICATION_STEPS),
     }
 
 
 def build_handoff_signature_verification(
     *,
+    manifest: dict[str, Any] | None = None,
+    fab_id: str | None = None,
+    signature_contract: str | None = None,
+    signature_id: str | None = None,
+    signed_at: str | None = None,
     algorithm: str | None = None,
     key_id: str | None = None,
     sha256: str | None = None,
     signature: str | None = None,
+    digest_preview: str | None = None,
+    generated_by: str | None = None,
+    artifact_channel: str | None = None,
+    signature_purpose: str | None = None,
+    human_approval_status: str | None = None,
+    human_release_authority_required: bool | None = None,
+    verification_method: str | None = None,
+    verification_route: str | None = None,
+    verification_steps: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
-    """Verify the current handoff signature against provided values.
+    """Verify the exact caller-presented manifest and integrity envelope.
 
-    When parameters are ``None`` the current (correct) values are used,
-    causing those checks to pass by default.
-
-    Args:
-        algorithm: Algorithm string to verify.
-        key_id: Key identifier to verify.
-        sha256: Content digest to verify.
-        signature: HMAC signature to verify.
-
-    Returns:
-        Verification result with ``overall_valid`` and individual check flags.
+    Nothing is rebuilt from ``signed_at``. This distinction is security
+    critical: changing a manifest field while reusing its original digest/HMAC
+    must fail, including changes to the embedded SPC lineage binding.
     """
-    current = build_handoff_signature()
-    verification = verify_signature(
-        current["manifest"],
+    presented_manifest = manifest if isinstance(manifest, dict) else {}
+    input_complete = bool(
+        isinstance(manifest, dict)
+        and manifest
+        and all(
+            value is not None and str(value).strip()
+            for value in (
+                fab_id,
+                signature_contract,
+                signature_id,
+                signed_at,
+                algorithm,
+                key_id,
+                sha256,
+                signature,
+                digest_preview,
+                generated_by,
+                artifact_channel,
+                signature_purpose,
+                human_approval_status,
+                human_release_authority_required,
+                verification_method,
+                verification_route,
+                verification_steps,
+            )
+        )
+    )
+    cryptographic = verify_signature(
+        presented_manifest,
         provided_algorithm=algorithm,
         provided_key_id=key_id,
         provided_sha256=sha256,
         provided_signature=signature,
         domain=DOMAIN,
     )
+
+    manifest_fab_id = str(presented_manifest.get("fab_id", ""))
+    manifest_shift = str(presented_manifest.get("shift", ""))
+    expected_signature_id = f"handoff-{manifest_fab_id}-{manifest_shift}"
+    binding = presented_manifest.get("spc_evidence_binding")
+    binding_payload = binding if isinstance(binding, dict) else {}
+    envelope_checks = {
+        "manifest_present": bool(presented_manifest),
+        "manifest_schema_match": presented_manifest.get("schema") == SHIFT_HANDOFF_SCHEMA,
+        "fab_id_matches_manifest": bool(fab_id) and str(fab_id) == manifest_fab_id,
+        "signature_contract_match": signature_contract == HANDOFF_SIGNATURE_CONTRACT,
+        "signature_id_matches_manifest": bool(signature_id) and str(signature_id) == expected_signature_id,
+        "signed_at_matches_manifest": bool(signed_at) and str(signed_at) == str(presented_manifest.get("generated_at", "")),
+        "digest_preview_matches_sha256": bool(sha256) and digest_preview == str(sha256)[:16],
+        "generated_by_match": generated_by == HANDOFF_GENERATED_BY,
+        "artifact_channel_match": artifact_channel == HANDOFF_ARTIFACT_CHANNEL,
+        "signature_purpose_match": signature_purpose == HANDOFF_SIGNATURE_PURPOSE,
+        "outer_human_approval_status_match": (
+            human_approval_status == "not_recorded"
+            and human_approval_status == presented_manifest.get("human_approval_status")
+        ),
+        "outer_human_release_authority_match": (
+            human_release_authority_required is True
+            and human_release_authority_required
+            == presented_manifest.get("human_release_authority_required")
+        ),
+        "verification_method_match": verification_method == HANDOFF_VERIFICATION_METHOD,
+        "verification_route_match": verification_route == HANDOFF_VERIFICATION_ROUTE,
+        "verification_steps_match": (
+            isinstance(verification_steps, (list, tuple))
+            and tuple(verification_steps) == HANDOFF_VERIFICATION_STEPS
+        ),
+        "spc_evidence_binding_present": bool(binding_payload),
+        "spc_binding_contract_match": (
+            binding_payload.get("binding_contract") == "fab-ops-handoff-spc-evidence-binding-v1"
+        ),
+        "spc_control_plan_contract_match": binding_payload.get("control_plan_contract") == CONTROL_PLAN_CONTRACT,
+        "spc_disposition_contract_match": binding_payload.get("disposition_contract") == DISPOSITION_CONTRACT,
+        "spc_fixture_sha256_present": (
+            isinstance(binding_payload.get("fixture_sha256"), str)
+            and len(str(binding_payload.get("fixture_sha256"))) == 64
+            and all(character in "0123456789abcdef" for character in str(binding_payload.get("fixture_sha256")))
+        ),
+        "spc_fixture_sha256_matches_packaged_fixture": binding_payload.get("fixture_sha256") == scenario_sha256(),
+        "spc_policy_identity_present": bool(
+            str(binding_payload.get("control_plan_policy_id", "")).strip()
+            and str(binding_payload.get("control_plan_revision", "")).strip()
+        ),
+        "spc_disposition_evidence_complete": (
+            bool(str(binding_payload.get("dataset_id", "")).strip())
+            and bool(str(binding_payload.get("lot_id", "")).strip())
+            and binding_payload.get("recommendation")
+            in {"HOLD_FOR_CONTAINMENT", "ENGINEERING_REVIEW", "RELEASE_WITH_SAMPLING"}
+            and binding_payload.get("data_quality_status") in {"pass", "fail"}
+            and isinstance(binding_payload.get("unique_rule_ids"), list)
+            and binding_payload.get("q_time_status") in {"within_window", "at_risk", "breached"}
+            and binding_payload.get("tat_status") in {"within_target", "over_target"}
+            and binding_payload.get("route_state")
+            in {
+                "in_queue",
+                "hold",
+                "awaiting_engineering_review",
+                "ready_for_reviewed_dispatch",
+                "in_process",
+                "complete",
+            }
+        ),
+        "spc_human_authority_preserved": (
+            binding_payload.get("human_release_authority_required") is True
+            and binding_payload.get("human_approval_status") == "not_recorded"
+            and binding_payload.get("material_state_changed") is False
+        ),
+    }
+    checks = {**cryptographic["checks"], **envelope_checks}
+    overall_valid = bool(input_complete and all(checks.values()))
     return {
-        "fab_id": current["fab_id"],
+        "fab_id": manifest_fab_id or (str(fab_id) if fab_id else None),
         "verification_contract": "fab-ops-handoff-signature-verify-v1",
-        "signature_contract": HANDOFF_SIGNATURE_CONTRACT,
-        "signature_id": current["signature_id"],
-        "overall_valid": verification["overall_valid"],
-        "checks": verification["checks"],
-        "verification_route": "/api/fab-ops/shift-handoff/verify",
+        "signature_contract": signature_contract,
+        "signature_id": signature_id,
+        "verification_mode": "caller_supplied_manifest_and_envelope",
+        "input_complete": input_complete,
+        "overall_valid": overall_valid,
+        "external_proof_verified": overall_valid,
+        "checks": checks,
+        "verified_manifest_sha256": sha256 if overall_valid else None,
+        "human_approval_verified": False,
+        "verification_method": HANDOFF_VERIFICATION_METHOD,
+        "verification_route": HANDOFF_VERIFICATION_ROUTE,
     }
 
 
@@ -600,6 +796,9 @@ def build_audit_feed() -> dict[str, Any]:
         Dictionary with summary counts and the raw audit event list.
     """
     return {
+        "status": "ok",
+        "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "summary": {
             "events": len(AUDIT_EVENTS),
             "critical_alarm_count": len([alarm for alarm in ALARMS if alarm["severity"] == "critical"]),
@@ -610,25 +809,9 @@ def build_audit_feed() -> dict[str, Any]:
 
 
 def build_replay_summary() -> dict[str, Any]:
-    """Build the replay suite summary for the fab-ops domain.
-
-    Returns:
-        Replay summary with scenario count, check totals, and pass percentage.
-    """
-    total_checks = sum(_replay_checks(case) for case in REPLAY_SUITE)
-    passed_checks = sum(_replay_checks(case) for case in REPLAY_SUITE if case["status"] == "pass")
-    return {
-        "status": "ok",
-        "service": SERVICE_NAME,
-        "generated_at": utc_now_iso(),
-        "summary": {
-            "scenarios": len(REPLAY_SUITE),
-            "total_checks": total_checks,
-            "passed_checks": passed_checks,
-            "score_pct": round((passed_checks / total_checks) * 100, 1) if total_checks else 0.0,
-        },
-        "runs": REPLAY_SUITE,
-    }
+    """Execute the packaged disposition and SPC replay assertions."""
+    result = execute_replay_suite()
+    return {**result, "service": SERVICE_NAME, "evidence_boundary": build_synthetic_evidence_boundary()}
 
 
 def build_architecture_summary(severity: str | None = None, risk_bucket: str | None = None) -> dict[str, Any]:
@@ -651,6 +834,7 @@ def build_architecture_summary(severity: str | None = None, risk_bucket: str | N
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "contract_version": "fab-ops-architecture-summary-v1",
         "filters": {"severity": severity_filter, "risk_bucket": risk_bucket_filter},
@@ -707,7 +891,7 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
                 "lot_id": lot["lot_id"],
                 "tool_id": lot["tool_id"],
                 "product_family": lot["product_family"],
-                "yield_risk_score": lot["yield_risk_score"],
+                "simulated_yield_risk_score": lot["simulated_yield_risk_score"],
                 "risk_bucket": lot["risk_bucket"],
                 "board_status": board_status,
                 "release_decision": gate["decision"],
@@ -717,11 +901,16 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
                 "escalation_lane": ownership["escalation_lane"],
                 "failed_checks": gate["failed_checks"],
                 "next_action": gate["next_action"],
+                "risk_basis": "hand-authored synthetic fixture; not measured yield",
+                "human_release_authority_required": True,
+                "human_approval_status": "not_recorded",
+                "material_state_changed": False,
             }
         )
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "contract_version": "fab-ops-recovery-board-v1",
         "filters": {"mode": normalized_mode},
@@ -736,7 +925,7 @@ def build_recovery_board(mode: str | None = None) -> dict[str, Any]:
         "operator_actions": [
             "Start with hold lots before reviewing watch or ready lots.",
             "Keep tool ownership, release gate, and handoff pack together during shift handoff.",
-            "Treat the signed handoff as the final next-shift artifact after recovery decisions are made.",
+            "Treat the HMAC envelope as integrity evidence, not human release approval.",
         ],
         "route_bundle": {
             "recovery_board": "/api/fab-ops/recovery-board",
@@ -798,7 +987,7 @@ def build_runtime_brief() -> dict[str, Any]:
     """Build the comprehensive runtime brief for the fab-ops control tower.
 
     This is the primary entry-point payload that ties together alarm counts,
-    lot risk, recovery board, release board, operator auth, and persistence
+    simulated fixture risk, recovery board, release board, operator auth, and persistence
     into one surface.
 
     Returns:
@@ -813,9 +1002,10 @@ def build_runtime_brief() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-runtime-brief-v1",
-        "headline": "Fab control tower that keeps alarms, lot risk, tool health, and shift handoff in one reviewable operator flow.",
+        "headline": "Fab demo that keeps alarms, synthetic fixture risk, tool health, and shift evidence in one reviewable operator flow.",
         "report_contract": build_alarm_report_schema(),
         "handoff_contract": build_shift_handoff_schema(),
         "evidence_counts": {
@@ -823,7 +1013,7 @@ def build_runtime_brief() -> dict[str, Any]:
             "tools": len(TOOLS),
             "alarms": len(ALARMS),
             "lots_at_risk": len(LOTS_AT_RISK),
-            "replay_scenarios": len(REPLAY_SUITE),
+            "replay_scenarios": build_replay_summary()["summary"]["scenarios"],
             "recovery_routes": len(recovery_board["items"]),
             "release_board_rows": release_board["summary"]["visible_lots"],
         },
@@ -835,16 +1025,16 @@ def build_runtime_brief() -> dict[str, Any]:
         "architecture_flow": [
             "Open /health to confirm the fab runtime posture and review routes.",
             "Read /api/fab-ops/runtime/brief for the control-tower contract and evidence counts.",
-            "Use /api/fab-ops/recovery-board to separate hold lots from watch and release-ready lots.",
+            "Use /api/fab-ops/recovery-board to separate hold lots from watch and human-review candidates.",
             "Use /api/fab-ops/release-board to confirm the whole queue before discussing any single lot release.",
             "Inspect /api/fab-ops/tool-ownership and /api/fab-ops/release-gate before acting on a shift decision.",
-            "Export /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before the next operator release.",
+            "Export the handoff and HMAC envelope as integrity evidence; a separate authorized human decision is required for release.",
         ],
         "two_minute_architecture": [
             "Open /health to confirm critical-alarm and replay surfaces are available.",
             "Read /api/fab-ops/runtime/brief for the control-tower contract and current ops snapshot.",
             "Inspect /api/fab-ops/recovery-board?mode=hold to find the lot that blocks release posture.",
-            "Inspect /api/fab-ops/release-board before treating any downstream lot as release-ready.",
+            "Inspect /api/fab-ops/release-board before treating any downstream lot as eligible for human release review.",
             "Inspect /api/fab-ops/tool-ownership?tool_id=etch-14 and /api/fab-ops/release-gate?lot_id=lot-8812 before trusting release posture.",
             "Review /api/fab-ops/shift-handoff, /api/fab-ops/shift-handoff/signature, and /api/fab-ops/shift-handoff/verify before handing the queue to the next shift.",
         ],
@@ -855,6 +1045,9 @@ def build_runtime_brief() -> dict[str, Any]:
         ],
         "proof_assets": [
             {"label": "Health Surface", "href": "/health", "kind": "route"},
+            {"label": "SPC Control Plan", "href": "/api/fab-ops/v1/control-plan", "kind": "route"},
+            {"label": "Executed Disposition", "href": "/api/fab-ops/v1/lots/lot-8812/disposition", "kind": "route"},
+            {"label": "Executed Replays", "href": "/api/fab-ops/v1/evals/replays", "kind": "route"},
             {"label": "Recovery Board", "href": "/api/fab-ops/recovery-board?mode=hold", "kind": "route"},
             {"label": "Release Board", "href": "/api/fab-ops/release-board", "kind": "route"},
         ],
@@ -865,6 +1058,9 @@ def build_runtime_brief() -> dict[str, Any]:
             "release_board": "/api/fab-ops/release-board",
             "recovery_what_if": "/api/fab-ops/recovery-what-if",
             "architecture_pack": "/api/fab-ops/architecture-pack",
+            "spc_control_plan": "/api/fab-ops/v1/control-plan",
+            "fixture_disposition": "/api/fab-ops/v1/lots/lot-8812/disposition",
+            "executed_replays": "/api/fab-ops/v1/evals/replays",
         },
     }
 
@@ -886,9 +1082,10 @@ def build_architecture_pack() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-architecture-pack-v1",
-        "headline": "Control tower summary tying alarms, yield risk, tool watchlist, and handoff export into one view.",
+        "headline": "Control tower summary tying alarms, simulated fixture risk, tool watchlist, and handoff export into one view.",
         "proof_bundle": {
             "architecture_routes": [
                 "/health",
@@ -899,12 +1096,15 @@ def build_architecture_pack() -> dict[str, Any]:
                 "/api/fab-ops/recovery-board",
                 "/api/fab-ops/release-board",
                 "/api/fab-ops/recovery-what-if",
+                "/api/fab-ops/v1/control-plan",
+                "/api/fab-ops/v1/lots/lot-8812/disposition",
+                "/api/fab-ops/v1/evals/replays",
                 "/api/fab-ops/recovery-board/schema",
                 "/api/fab-ops/architecture-pack",
             ],
             "critical_alarm_count": runtime_brief["ops_snapshot"]["critical_alarm_count"],
             "severe_lot_count": runtime_brief["ops_snapshot"]["severe_lot_count"],
-            "replay_pass_count": len([case for case in REPLAY_SUITE if case["status"] == "pass"]),
+            "replay_pass_count": len([case for case in build_replay_summary()["runs"] if case["status"] == "pass"]),
             "latest_audit_events": audit_feed["summary"]["events"],
             "hold_count": recovery_board["summary"]["hold_count"],
             "watch_count": recovery_board["summary"]["watch_count"],
@@ -915,18 +1115,18 @@ def build_architecture_pack() -> dict[str, Any]:
         },
         "focus_lot": focus_lot,
         "operator_promises": [
-            "Critical lots stay visible before a release decision is made.",
+            "Synthetic critical-risk lots stay visible before an authorized human decision is made.",
             "Tool alarms remain linked to chambers, lots, and SOP references.",
             "Shift handoff can be reviewed and signed without external infrastructure.",
         ],
         "trust_boundary": [
             "alarm board: operator triage starts from severity and lot impact",
-            "lot risk board: yield exposure is visible before reroute or release",
+            "lot risk board: synthetic risk posture is visible before reroute or release",
             "handoff pack: the next shift can review open alarms, watchlist items, and signature proof",
             "replay suite: the surface stays reviewable without live fab telemetry",
         ],
         "architecture_sequence": [
-            "Health -> Runtime Brief -> Recovery Board -> Tool Ownership -> Release Gate -> Shift Handoff -> Audit Feed -> Replay Summary"
+            "Health -> SPC Control Plan -> Executed Lot Disposition -> Replay Assertions -> Legacy Workflow Boards -> HMAC Handoff Integrity"
         ],
         "two_minute_architecture": runtime_brief["two_minute_architecture"],
         "proof_assets": runtime_brief["proof_assets"],
@@ -949,9 +1149,12 @@ def build_meta() -> dict[str, Any]:
     """
     operator_auth = build_operator_auth_status(DOMAIN)
     persistence = summarize_runtime_events(DOMAIN)
+    signature_security = signing_status(DOMAIN)
+    operator_routes_ready = bool(operator_auth["token_configured"] or operator_auth["demo_mode"])
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "runtime_contract": "fab-ops-runtime-brief-v1",
         "architecture_pack_contract": "fab-ops-architecture-pack-v1",
@@ -970,6 +1173,10 @@ def build_meta() -> dict[str, Any]:
             "/api/fab-ops/recovery-what-if",
             "/api/fab-ops/recovery-board/schema",
             "/api/fab-ops/architecture-pack",
+            "/api/fab-ops/v1/control-plan",
+            "/api/fab-ops/v1/lots/{lot_id}/disposition",
+            "/api/fab-ops/v1/disposition/evaluate",
+            "/api/fab-ops/v1/evals/replays",
             "/api/fab-ops/schema/alarm-report",
             "/api/fab-ops/schema/shift-handoff",
             "/api/fab-ops/fabs/summary",
@@ -991,21 +1198,31 @@ def build_meta() -> dict[str, Any]:
             "release-gate-surface",
             "release-board-surface",
             "recovery-board-surface",
-            "lot-risk-prioritization",
+            "synthetic-lot-risk-prioritization",
             "shift-handoff-surface",
             "audit-feed-surface",
             "architecture-pack-surface",
             "replay-suite-surface",
+            "western-electric-spc-evaluator",
+            "synthetic-lot-disposition-gate",
+            "q-time-tat-routing-indicators",
+            "executed-replay-assertions",
         ],
         "diagnostics": {
-            "demo_mode": "synthetic-fab-telemetry",
-            "shift_handoff_ready": True,
+            "runtime_mode": operator_auth["runtime_mode"],
+            "synthetic_fixture_mode": True,
+            "shift_handoff_ready": operator_routes_ready and bool(signature_security["available"]),
             "recovery_board_ready": True,
-            "audit_feed_ready": True,
+            "audit_feed_ready": operator_routes_ready,
             "replay_suite_ready": True,
+            "spc_control_plan_ready": True,
+            "data_classification": "synthetic_fixture",
+            "measured_yield": False,
             "operator_auth_enabled": operator_auth["enabled"],
+            "operator_auth": operator_auth,
+            "signature_security": signature_security,
             "runtime_store_path": persistence["path"],
-            "next_action": "Review critical alarms and severe lots before opening the shift handoff export.",
+            "next_action": "Review synthetic critical-alarm and severe-risk scenarios before opening the shift evidence export.",
         },
         "ops_contract": {"schema": "ops-envelope-v1", "version": 1, "required_fields": ["service", "status", "diagnostics.next_action"]},
     }
@@ -1027,6 +1244,7 @@ def build_runtime_scorecard() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         "readiness_contract": "fab-ops-runtime-scorecard-v1",
         "headline": "Runtime scorecard for fab handoff posture, release pressure, and persisted operator evidence.",
@@ -1057,9 +1275,9 @@ def build_runtime_scorecard() -> dict[str, Any]:
             "persisted_events": persistence["event_count"],
         },
         "recommendations": [
-            "Triage the recovery board before trusting any release-ready lot.",
+            "Triage the recovery board before reviewing any apparent release candidate.",
             "Verify tool ownership and release gate before exporting a shift handoff.",
-            "Treat the signed handoff surface plus verification as the final operator artifact for next-shift handoff.",
+            "Treat the HMAC envelope as payload-integrity evidence only; human approval remains a separate governed record.",
             "Keep replay score and persisted runtime events paired during reviewer walkthroughs.",
         ],
         "links": {

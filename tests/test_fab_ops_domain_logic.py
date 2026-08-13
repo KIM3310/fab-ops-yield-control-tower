@@ -7,6 +7,8 @@ simulations, shift handoff signing/verification, and edge cases.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi import HTTPException
 
@@ -62,7 +64,7 @@ class TestGetLotOr404:
     def test_valid_lot_returns_dict(self) -> None:
         lot = get_lot_or_404("lot-8812")
         assert lot["lot_id"] == "lot-8812"
-        assert lot["yield_risk_score"] == 0.94
+        assert lot["simulated_yield_risk_score"] == 0.94
 
     def test_unknown_lot_raises_404(self) -> None:
         with pytest.raises(HTTPException) as exc_info:
@@ -171,12 +173,14 @@ class TestBuildRecoveryWhatIf:
 
     def test_zero_yield_gain_preserves_risk(self) -> None:
         result = build_recovery_what_if("lot-8812", yield_gain=0.0)
-        assert result["simulated"]["yield_risk_score"] == 0.94
+        assert result["simulated"]["simulated_yield_risk_score"] == 0.94
 
     def test_yield_gain_clamped_to_half(self) -> None:
         result = build_recovery_what_if("lot-8812", yield_gain=1.0)
         # yield_gain clamped to 0.5, so 0.94 - 0.50 = 0.44
-        assert result["simulated"]["yield_risk_score"] == 0.44
+        assert result["simulated"]["simulated_yield_risk_score"] == 0.44
+        assert result["simulated"]["decision"] == "hold-release"
+        assert "critical tool alarm still open" in result["simulated"]["failed_checks"]
 
 
 class TestBuildShiftHandoff:
@@ -188,7 +192,7 @@ class TestBuildShiftHandoff:
         assert handoff["shift"] == "night"
         assert handoff["schema"] == "fab-ops-shift-handoff-v1"
         assert len(handoff["must_acknowledge"]) == 3
-        assert handoff["lots_at_risk"][0]["yield_risk_score"] >= handoff["lots_at_risk"][-1]["yield_risk_score"]
+        assert handoff["lots_at_risk"][0]["simulated_yield_risk_score"] >= handoff["lots_at_risk"][-1]["simulated_yield_risk_score"]
 
 
 class TestBuildHandoffSignature:
@@ -201,15 +205,69 @@ class TestBuildHandoffSignature:
         assert len(sig["signature"]) == 64
         assert sig["signature_contract"] == "fab-ops-handoff-signature-v1"
 
-    def test_self_verification_passes(self) -> None:
+    def test_missing_proof_fails_verification(self) -> None:
         verification = build_handoff_signature_verification()
+        assert verification["overall_valid"] is False
+        assert verification["input_complete"] is False
+        assert verification["checks"]["signature_present"] is False
+        assert verification["checks"]["manifest_present"] is False
+
+    @staticmethod
+    def verify(envelope: dict[str, Any]) -> dict[str, Any]:
+        return build_handoff_signature_verification(
+            manifest=envelope["manifest"],
+            fab_id=envelope["fab_id"],
+            signature_contract=envelope["signature_contract"],
+            signature_id=envelope["signature_id"],
+            signed_at=envelope["signed_at"],
+            algorithm=envelope["algorithm"],
+            key_id=envelope["key_id"],
+            sha256=envelope["sha256"],
+            signature=envelope["signature"],
+            digest_preview=envelope["digest_preview"],
+            generated_by=envelope["generated_by"],
+            artifact_channel=envelope["artifact_channel"],
+            signature_purpose=envelope["signature_purpose"],
+            human_approval_status=envelope["human_approval_status"],
+            human_release_authority_required=envelope["human_release_authority_required"],
+            verification_method=envelope["verification_method"],
+            verification_route=envelope["verification_route"],
+            verification_steps=envelope["verification_steps"],
+        )
+
+    def test_presented_envelope_verifies(self) -> None:
+        envelope = build_handoff_signature()
+        verification = self.verify(envelope)
         assert verification["overall_valid"] is True
+        assert verification["external_proof_verified"] is True
         assert all(verification["checks"].values())
+        binding = envelope["manifest"]["spc_evidence_binding"]
+        assert binding["fixture_sha256"]
+        assert binding["recommendation"] == "HOLD_FOR_CONTAINMENT"
+        assert binding["unique_rule_ids"] == ["WECO-1", "WECO-2", "WECO-3"]
+        assert binding["q_time_status"] == "breached"
+        assert binding["human_approval_status"] == "not_recorded"
 
     def test_wrong_sha_fails_verification(self) -> None:
-        verification = build_handoff_signature_verification(sha256="0" * 64)
+        envelope = build_handoff_signature()
+        envelope["sha256"] = "0" * 64
+        verification = self.verify(envelope)
         assert verification["overall_valid"] is False
         assert verification["checks"]["sha256_match"] is False
+
+    def test_caller_manifest_and_spc_lineage_tamper_fail_verification(self) -> None:
+        envelope = build_handoff_signature()
+        envelope["manifest"]["headline"] = "tampered headline"
+        verification = self.verify(envelope)
+        assert verification["overall_valid"] is False
+        assert verification["checks"]["sha256_match"] is False
+        assert verification["checks"]["signature_match"] is False
+
+        envelope = build_handoff_signature()
+        envelope["manifest"]["spc_evidence_binding"]["fixture_sha256"] = "0" * 64
+        lineage_verification = self.verify(envelope)
+        assert lineage_verification["overall_valid"] is False
+        assert lineage_verification["checks"]["signature_match"] is False
 
 
 class TestBuildFabSummary:
@@ -262,7 +320,8 @@ class TestBuildFocusLot:
         assert focus["lot_id"] == "lot-8812"
         assert focus["severity"] == "critical"
         assert focus["release_decision"] == "hold-release"
-        assert len(focus["architecture_path"]) == 4
+        assert len(focus["architecture_path"]) == 5
+        assert "/api/fab-ops/v1/lots/lot-8812/disposition" in focus["architecture_path"]
 
 
 class TestBuildAuditFeed:
@@ -280,6 +339,7 @@ class TestBuildReplaySummary:
 
     def test_perfect_score(self) -> None:
         summary = build_replay_summary()
-        assert summary["summary"]["scenarios"] == 4
+        assert summary["summary"]["scenarios"] == 9
         assert summary["summary"]["score_pct"] == 100.0
-        assert summary["summary"]["passed_checks"] == summary["summary"]["total_checks"]
+        assert summary["summary"]["passed_assertions"] == summary["summary"]["total_assertions"]
+        assert all(run["assertions"] for run in summary["runs"])

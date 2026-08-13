@@ -2,6 +2,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX_HTML = ROOT / "site" / "index.html"
+GUIDE_HTML = ROOT / "site" / "guide.html"
 README = ROOT / "README.md"
 
 
@@ -10,8 +11,8 @@ def test_focus_lot_static_surface_contract() -> None:
     required_tokens = [
         'id="focus-lot-panel"',
         'id="copyLotPathBtn"',
-        "Lot-8812 stays visible from hold decision to signed handoff.",
-        "Fast path: runtime brief → recovery board → release gate → shift handoff signature.",
+        "Lot-8812 stays visible from synthetic SPC containment to HMAC integrity evidence.",
+        "Fast path: control plan → executed disposition → replay assertions → HMAC integrity envelope.",
     ]
 
     for token in required_tokens:
@@ -27,6 +28,7 @@ def test_copy_lot_path_uses_mounted_fab_ops_routes() -> None:
         "- /api/fab-ops/runtime/brief",
         "- /api/fab-ops/recovery-board?mode=hold",
         "- /api/fab-ops/release-gate?lot_id=lot-8812",
+        "- /api/fab-ops/v1/lots/lot-8812/disposition",
         "- /api/fab-ops/shift-handoff/signature",
     ]
 
@@ -52,3 +54,33 @@ def test_readme_aws_activation_matches_runtime_gate() -> None:
     assert "AWS_SECRET_ACCESS_KEY" in aws_section
     assert "AWS_SQS_QUEUE_URL" in aws_section
     assert "AWS_DYNAMODB_TABLE" in aws_section
+
+
+def test_linked_guide_matches_synthetic_advisory_evidence_boundary() -> None:
+    html = GUIDE_HTML.read_text(encoding="utf-8")
+    required = (
+        "Synthetic advisory demo",
+        "hand-authored synthetic fixtures",
+        "human_approval_status",
+        "material_state_changed: false",
+        "GET /api/fab-ops/v1/control-plan",
+        "GET /api/fab-ops/v1/lots/lot-8812/disposition",
+        "GET /api/fab-ops/v1/evals/replays",
+        "POST /api/fab-ops/shift-handoff/verify",
+        "If this API is unavailable, there is no replay-pass evidence.",
+        "integrity and shared-key authenticity only",
+        "not a signed human approval",
+        "ENGINEERING_REVIEW",
+        "simulated risk, never measured yield",
+    )
+    for token in required:
+        assert token in html, token
+
+    stale_claims = (
+        "multi-cloud deployment",
+        "Lots at risk by yield score",
+        "Release gate decision (auth)",
+        "Signed shift handoff envelope",
+    )
+    for claim in stale_claims:
+        assert claim not in html, claim

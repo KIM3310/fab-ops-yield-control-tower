@@ -15,13 +15,18 @@ def build_platform_resource_pack() -> dict[str, Any]:
         "status": "ok",
         "service": "semiconductor-ops-platform-resource-pack",
         "contract_version": "semiconductor-ops-resource-pack-v1",
-        "intended_use": "review-safe manufacturing scenarios and controls without plant telemetry",
+        "intended_use": "review-safe synthetic manufacturing scenarios and controls without plant telemetry",
+        "evidence_boundary": {
+            "fab_data_classification": "synthetic_fixture",
+            "measured_yield": False,
+            "human_release_authority_required": True,
+        },
         "summary": {
             "fab_alarm_count": len(ALARMS),
             "fab_lot_count": len(LOTS_AT_RISK),
             "scanner_incident_count": len(FIELD_INCIDENTS),
-            "operator_check_count": 4,
-            "validation_case_count": 4,
+            "operator_check_count": 6,
+            "validation_case_count": 5,
             "external_dataset_count": 1 if (EXTERNAL_DIR / "uci-secom.csv").exists() else 0,
         },
         "external_data": {
@@ -35,7 +40,7 @@ def build_platform_resource_pack() -> dict[str, Any]:
                 "case_id": "fab-critical-plasma-instability",
                 "focus_lot": "lot-8812",
                 "goal": "Explain why a severe lot remains blocked until maintenance and reroute review align.",
-                "next_surface": "/api/fab-ops/release-board",
+                "next_surface": "/api/fab-ops/v1/lots/lot-8812/disposition",
             },
             {
                 "case_id": "fab-temperature-drift-watch",
@@ -72,7 +77,12 @@ def build_platform_resource_pack() -> dict[str, Any]:
             {
                 "check_id": "fab-architecture-pack",
                 "surface": "/api/fab-ops/architecture-pack",
-                "why_it_matters": "Fab posture should stay reviewable from alarm to signed handoff.",
+                "why_it_matters": "Fab posture should stay reviewable from synthetic SPC evidence to an HMAC integrity envelope.",
+            },
+            {
+                "check_id": "fab-spc-executed-evidence",
+                "surface": "/api/fab-ops/v1/evals/replays",
+                "why_it_matters": "Expected and actual SPC/disposition assertions should execute rather than appear as static pass labels.",
             },
             {
                 "check_id": "scanner-architecture-pack",
@@ -92,8 +102,13 @@ def build_platform_resource_pack() -> dict[str, Any]:
                 "proof_surface": "/api/fab-ops/release-gate?lot_id=lot-8812",
             },
             {
+                "case_id": "fab-spc-boundaries",
+                "goal": "Western Electric boundaries and the centerline negative case should execute against the packaged fixture.",
+                "proof_surface": "/api/fab-ops/v1/evals/replays",
+            },
+            {
                 "case_id": "fab-handoff-signature",
-                "goal": "Shift handoff signatures should expose digest, algorithm, and verification details together.",
+                "goal": "HMAC envelopes should expose digest, algorithm, and verification details without claiming human approval.",
                 "proof_surface": "/api/fab-ops/shift-handoff/signature",
             },
             {
@@ -112,6 +127,9 @@ def build_platform_resource_pack() -> dict[str, Any]:
             "/api/resource-pack",
             "/api/export-proof-board",
             "/api/fab-ops/runtime/brief",
+            "/api/fab-ops/v1/control-plan",
+            "/api/fab-ops/v1/lots/lot-8812/disposition",
+            "/api/fab-ops/v1/evals/replays",
             "/api/fab-ops/architecture-pack",
             "/api/scanner/runtime/brief",
             "/api/scanner/architecture-pack",

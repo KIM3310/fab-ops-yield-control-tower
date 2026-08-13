@@ -85,14 +85,11 @@ const RECORDED_FAB = {
     },
   },
   replay: {
-    summary: { score_pct: 100 },
-    runs: [
-      { status: "pass", scenario: "Plasma drift recovery", checks: 6 },
-      { status: "pass", scenario: "Etch chamber hold-to-watch release", checks: 5 },
-    ],
+    status: "unavailable",
+    message: "Live replay API unavailable; no executed replay result is available as evidence.",
   },
   architecturePack: {
-    headline: "Shift review pack for yield risk, recovery, and handoff status.",
+    headline: "Shift review pack for synthetic risk, recovery, and handoff status.",
     operator_promises: [
       "Alarms, lots, tools, and handoff stay in one operator view.",
       "Recovery what-if and release-gate decisions remain tied to the same lot context.",
@@ -105,8 +102,8 @@ const RECORDED_FAB = {
       "Recorded mode shows workflow proof, not live fab telemetry freshness.",
     ],
     proof_assets: [
-      { label: "Recovery Board", href: "/api/recovery-board?mode=hold" },
-      { label: "Release Gate", href: "/api/release-gate?lot_id=LOT-8812" },
+      { label: "Recovery Board", href: "/api/fab-ops/recovery-board?mode=hold" },
+      { label: "Release Gate", href: "/api/fab-ops/release-gate?lot_id=LOT-8812" },
     ],
   },
   recoveryBoard: {
@@ -116,7 +113,7 @@ const RECORDED_FAB = {
         tool_id: "ETCH-04",
         lot_id: "LOT-8812",
         next_action: "Finish chamber maintenance, then rerun the release gate.",
-        yield_risk_score: 87,
+        simulated_yield_risk_score: 87,
         maintenance_owner: "team-park",
         failed_checks: ["maintenance-open", "signature-pending"],
       },
@@ -125,7 +122,7 @@ const RECORDED_FAB = {
         tool_id: "CMP-08",
         lot_id: "LOT-7741",
         next_action: "Keep on watch until the next replay checkpoint clears.",
-        yield_risk_score: 54,
+        simulated_yield_risk_score: 54,
         maintenance_owner: "team-choi",
         failed_checks: ["watch-window-open"],
       },
@@ -133,7 +130,7 @@ const RECORDED_FAB = {
     spotlight: {
       lot_id: "LOT-8812",
       tool_id: "ETCH-04",
-      yield_risk_score: 87,
+      simulated_yield_risk_score: 87,
       risk_bucket: "hold",
       board_status: "hold",
       maintenance_owner: "team-park",
@@ -152,13 +149,13 @@ const RECORDED_FAB = {
   },
   alarms: {
     items: [
-      { severity: "critical", tool_id: "ETCH-04", category: "RF drift", symptom: "Yield excursion on chamber 2", lot_id: "LOT-8812", sop_ref: "ETCH-RF-12" },
+      { severity: "critical", tool_id: "ETCH-04", category: "RF drift", symptom: "Synthetic drift scenario on chamber 2", lot_id: "LOT-8812", sop_ref: "ETCH-RF-12" },
     ],
   },
   lots: {
     items: [
-      { risk_bucket: "hold", tool_id: "ETCH-04", lot_id: "LOT-8812", product_family: "14nm logic", yield_risk_score: 87, next_action: "Complete maintenance then rerun gate" },
-      { risk_bucket: "watch", tool_id: "CMP-08", lot_id: "LOT-7741", product_family: "memory", yield_risk_score: 54, next_action: "Watch next replay checkpoint" },
+      { risk_bucket: "hold", tool_id: "ETCH-04", lot_id: "LOT-8812", product_family: "FICTIONAL_DRAM_ALPHA", simulated_yield_risk_score: 87, next_action: "Complete maintenance then rerun gate" },
+      { risk_bucket: "watch", tool_id: "CMP-08", lot_id: "LOT-7741", product_family: "FICTIONAL_NAND_BETA", simulated_yield_risk_score: 54, next_action: "Watch next replay checkpoint" },
     ],
   },
   tools: {
@@ -170,7 +167,7 @@ const RECORDED_FAB = {
   audit: {
     items: [
       { event: "maintenance-opened", tool_id: "ETCH-04", actor: "team-park", lot_id: "LOT-8812", at: "2026-03-12T05:22:00Z" },
-      { event: "replay-passed", tool_id: "CMP-08", actor: "ops-shift-b", lot_id: "LOT-7741", at: "2026-03-12T04:58:00Z" },
+      { event: "review-checkpoint-recorded", tool_id: "CMP-08", actor: "ops-shift-b", lot_id: "LOT-7741", at: "2026-03-12T04:58:00Z" },
     ],
   },
   handoff: {
@@ -178,7 +175,7 @@ const RECORDED_FAB = {
       headline: "Finish ETCH-04 maintenance, then recheck LOT-8812 before the next shift handoff.",
       must_acknowledge: [
         "ETCH-04 is still the top blocker for the next release window.",
-        "LOT-8812 moves from hold to watch only if maintenance closes and the replay stays green.",
+        "LOT-8812 stays on hold until maintenance closes and live executed replay evidence is reviewed.",
       ],
     },
   },
@@ -186,8 +183,10 @@ const RECORDED_FAB = {
     payload: {
       signature_contract: "fab-handoff-v1",
       signature_id: "sig-fab-8812",
-      signed_by: "shift-lead-lee",
-      release_channel: "shift-handoff",
+      generated_by: "fab-ops-demo-hmac-service",
+      artifact_channel: "shift-review",
+      signature_purpose: "Integrity evidence only; human approval not recorded.",
+      human_approval_status: "not_recorded",
       digest_preview: "sha256:fab8812",
     },
   },
@@ -208,7 +207,7 @@ const RECORDED_FAB = {
         tool_id: "ETCH-04",
         decision: "hold",
         next_action: "Finish maintenance and rerun the replay bundle before release.",
-        yield_risk_score: 87,
+        simulated_yield_risk_score: 87,
         failed_checks: ["maintenance-open", "signature-pending"],
       },
     },
@@ -299,6 +298,9 @@ async function boot() {
   const continuityGuard = document.getElementById("continuity-guard");
   const continuityBlockers = document.getElementById("continuity-blockers");
   const replayList = document.getElementById("replay-list");
+  const spcControlPlan = document.getElementById("spc-control-plan");
+  const spcDisposition = document.getElementById("spc-disposition");
+  const spcFlowAuthority = document.getElementById("spc-flow-authority");
   const toolSelect = document.getElementById("tool-select");
   const lotSelect = document.getElementById("lot-select");
   const focusSevereLotBtn = document.getElementById("focus-severe-lot-btn");
@@ -349,14 +351,14 @@ async function boot() {
     const ackCount = Array.isArray(latestHandoff?.must_acknowledge) ? latestHandoff.must_acknowledge.length : 0;
 
     if (continuityOwnerLane) continuityOwnerLane.textContent = `${owner} owns ${escalationLane} while ${blocker}.`;
-    if (continuityProofFreshness) continuityProofFreshness.textContent = `Signed ${formatIsoStamp(signedAt)} · gate ${gateDecision} · ${ackCount} ack items.`;
-    if (continuitySignature) continuitySignature.textContent = `Signature ${signatureId} stays attached before any next-shift release claim.`;
+    if (continuityProofFreshness) continuityProofFreshness.textContent = `Integrity envelope ${formatIsoStamp(signedAt)} · gate ${gateDecision} · ${ackCount} ack items.`;
+    if (continuitySignature) continuitySignature.textContent = `Signature ${signatureId} is integrity evidence only; human release approval remains separate.`;
     if (continuityGuard) continuityGuard.textContent = gateDecision === 'release'
-      ? 'Shift continuity is aligned. Keep the signed handoff attached when forwarding the release decision.'
+      ? 'Integrity evidence is aligned. Human release approval remains a separate governed decision.'
       : 'Shift continuity stays blocked until owner, release gate, and signature line up.';
     if (continuityBlockers) continuityBlockers.textContent = failedChecks.length
       ? `${failedChecks.length} gate blockers stay attached to the focused lot: ${failedChecks.join(', ')}.`
-      : 'Gate blockers cleared. Keep the focused lot attached to the signed handoff before copying the shift summary.';
+      : 'Gate blockers cleared in the fixture. Keep the focused evidence attached; no human approval is recorded.';
   }
 
   function setRuntimeBanner(state, message) {
@@ -450,7 +452,7 @@ async function boot() {
         [
           { tag: "strong", text: "1." },
           " Recovery board -> ",
-          { tag: "code", text: `/api/recovery-board?mode=${selectedRecoveryMode}` },
+          { tag: "code", text: `/api/fab-ops/recovery-board?mode=${selectedRecoveryMode}` },
           " keeps the blocker visible first.",
         ],
         [
@@ -458,24 +460,24 @@ async function boot() {
           " Recovery what-if -> ",
           {
             tag: "code",
-            text: `/api/recovery-what-if?lot_id=${storyLotId}&yield_gain=0.25&maintenance_complete=true`,
+            text: `/api/fab-ops/recovery-what-if?lot_id=${storyLotId}&yield_gain=0.25&maintenance_complete=true`,
           },
           " shows the bounded improvement claim instead of implying recovery.",
         ],
         [
           { tag: "strong", text: "3." },
           " Release gate + ownership -> ",
-          { tag: "code", text: `/api/release-gate?lot_id=${storyLotId}` },
+          { tag: "code", text: `/api/fab-ops/release-gate?lot_id=${storyLotId}` },
           " and ",
-          { tag: "code", text: `/api/tool-ownership?tool_id=${selectedToolId || "pending-tool"}` },
+          { tag: "code", text: `/api/fab-ops/tool-ownership?tool_id=${selectedToolId || "pending-tool"}` },
           " prove who owns the next move.",
         ],
         [
           { tag: "strong", text: "4." },
           " Shift handoff -> ",
-          { tag: "code", text: "/api/shift-handoff" },
+          { tag: "code", text: "/api/fab-ops/shift-handoff" },
           " plus ",
-          { tag: "code", text: "/api/shift-handoff/signature" },
+          { tag: "code", text: "/api/fab-ops/shift-handoff/signature" },
           " closes the story with next-shift continuity, not a cosmetic dashboard ending.",
         ],
       ],
@@ -512,9 +514,9 @@ async function boot() {
 
   async function loadFocusedPanels() {
     const [ownershipResult, gateResult, signatureResult] = await Promise.allSettled([
-      fetchJson(`/api/tool-ownership?tool_id=${encodeURIComponent(selectedToolId)}`),
-      fetchJson(`/api/release-gate?lot_id=${encodeURIComponent(selectedLotId)}`),
-      fetchJson("/api/shift-handoff/signature"),
+      fetchJson(`/api/fab-ops/tool-ownership?tool_id=${encodeURIComponent(selectedToolId)}`),
+      fetchJson(`/api/fab-ops/release-gate?lot_id=${encodeURIComponent(selectedLotId)}`),
+      fetchJson("/api/fab-ops/shift-handoff/signature"),
     ]);
     const focusedFailures = [];
 
@@ -543,7 +545,7 @@ async function boot() {
         <p class="stack-kicker">${item.decision.toUpperCase()} · ${item.tool_id}</p>
         <h3>${item.lot_id}</h3>
         <p>${item.next_action}</p>
-        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
+        <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
       `);
     } else {
       latestGate = null;
@@ -566,8 +568,8 @@ async function boot() {
 
     reviewRoutePreview.innerHTML = "";
     [
-      `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
-      `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
+      `tool ownership -> /api/fab-ops/tool-ownership?tool_id=${selectedToolId}`,
+      `release gate -> /api/fab-ops/release-gate?lot_id=${selectedLotId}`,
       `handoff signature -> ${latestSignaturePayload?.signature_id || "pending-signature"}`,
       `next action -> ${latestGate?.next_action || "pending"}`,
     ].forEach((item) => {
@@ -585,17 +587,19 @@ async function boot() {
     setRuntimeBanner("loading", "Refreshing control tower data…");
 
     const results = await Promise.allSettled([
-      fetchJson("/api/runtime/brief"),
-      fetchJson("/api/architecture-pack"),
-      fetchJson("/api/alarms"),
-      fetchJson("/api/lots/at-risk"),
-      fetchJson("/api/tools"),
-      fetchJson("/api/audit/feed"),
-      fetchJson("/api/shift-handoff"),
-      fetchJson("/api/shift-handoff/signature"),
-      fetchJson("/api/evals/replays"),
-      fetchJson(`/api/recovery-board?mode=${encodeURIComponent(selectedRecoveryMode)}`),
-      fetchJson(`/api/recovery-what-if?lot_id=${encodeURIComponent(selectedLotId || "lot-8812")}&yield_gain=0.25&maintenance_complete=true`),
+      fetchJson("/api/fab-ops/runtime/brief"),
+      fetchJson("/api/fab-ops/architecture-pack"),
+      fetchJson("/api/fab-ops/alarms"),
+      fetchJson("/api/fab-ops/lots/at-risk"),
+      fetchJson("/api/fab-ops/tools"),
+      fetchJson("/api/fab-ops/audit/feed"),
+      fetchJson("/api/fab-ops/shift-handoff"),
+      fetchJson("/api/fab-ops/shift-handoff/signature"),
+      fetchJson("/api/fab-ops/v1/evals/replays"),
+      fetchJson("/api/fab-ops/v1/control-plan"),
+      fetchJson(`/api/fab-ops/v1/lots/${encodeURIComponent(selectedLotId || "lot-8812")}/disposition`),
+      fetchJson(`/api/fab-ops/recovery-board?mode=${encodeURIComponent(selectedRecoveryMode)}`),
+      fetchJson(`/api/fab-ops/recovery-what-if?lot_id=${encodeURIComponent(selectedLotId || "lot-8812")}&yield_gain=0.25&maintenance_complete=true`),
     ]);
 
     const [
@@ -608,6 +612,8 @@ async function boot() {
       handoffResult,
       signatureResult,
       replayResult,
+      controlPlanResult,
+      dispositionResult,
       recoveryResult,
       recoveryWhatIfResult,
     ] = results;
@@ -617,7 +623,7 @@ async function boot() {
       briefStatus.textContent = RECORDED_FAB.brief.status.toUpperCase();
       criticalCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.critical_alarm_count);
       severeCount.textContent = String(RECORDED_FAB.brief.ops_snapshot.severe_lot_count);
-      replayScore.textContent = `${RECORDED_FAB.replay.summary.score_pct}%`;
+      replayScore.textContent = "--";
       reviewHeadline.textContent = RECORDED_FAB.architecturePack.headline;
       renderBulletList(
         reviewPromises,
@@ -635,11 +641,12 @@ async function boot() {
         ],
         "Trust boundary details are not available yet."
       );
-      renderList(replayList, RECORDED_FAB.replay.runs, (item) => `
-        <p class="stack-kicker">${item.status.toUpperCase()}</p>
-        <h3>${item.scenario}</h3>
-        <p class="stack-meta">${item.checks} checks</p>
-      `);
+      renderStatusCard(
+        replayList,
+        "Executed replay evidence unavailable",
+        RECORDED_FAB.replay.message,
+        "error"
+      );
       latestRecoveryBoard = RECORDED_FAB.recoveryBoard;
       latestRecoveryWhatIf = RECORDED_FAB.recoveryWhatIf;
       latestLots = RECORDED_FAB.lots.items;
@@ -651,18 +658,18 @@ async function boot() {
       selectedToolId = RECORDED_FAB.focused.ownership.payload.tool_id;
       selectedLotId = RECORDED_FAB.focused.gate.payload.lot_id;
       populateSelect(toolSelect, RECORDED_FAB.tools.items, "tool_id", (item) => `${item.tool_id} · ${item.status}`, selectedToolId);
-      populateSelect(lotSelect, RECORDED_FAB.lots.items, "lot_id", (item) => `${item.lot_id} · risk ${item.yield_risk_score}`, selectedLotId);
+      populateSelect(lotSelect, RECORDED_FAB.lots.items, "lot_id", (item) => `${item.lot_id} · simulated fixture risk ${item.simulated_yield_risk_score}`, selectedLotId);
       renderList(recoveryBoard, RECORDED_FAB.recoveryBoard.items, (item) => `
         <p class="stack-kicker">${item.board_status.toUpperCase()} · ${item.tool_id}</p>
         <h3>${item.lot_id}</h3>
         <p>${item.next_action}</p>
-        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ")}</p>
+        <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ")}</p>
       `);
       renderList(recoveryWhatIf, [RECORDED_FAB.recoveryWhatIf], (item) => `
         <p class="stack-kicker">${item.simulated.decision.toUpperCase()} · eta gain ${item.delta.release_eta_minutes}m</p>
         <h3>${item.lot_id}</h3>
         <p>Baseline ${item.baseline.decision} -> Simulated ${item.simulated.decision}</p>
-        <p class="stack-meta">Risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
+        <p class="stack-meta">Simulated risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
       `);
       renderList(alarmList, RECORDED_FAB.alarms.items, (item) => `
         <p class="stack-kicker">${item.severity.toUpperCase()} · ${item.tool_id}</p>
@@ -674,7 +681,7 @@ async function boot() {
         <p class="stack-kicker">${item.risk_bucket.toUpperCase()} · ${item.tool_id}</p>
         <h3>${item.lot_id}</h3>
         <p>${item.product_family}</p>
-        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.next_action}</p>
+        <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.next_action}</p>
       `);
       renderList(toolList, RECORDED_FAB.tools.items, (item) => `
         <p class="stack-kicker">${item.status.toUpperCase()} · ${item.line}</p>
@@ -693,14 +700,32 @@ async function boot() {
       renderList(handoffSignature, [RECORDED_FAB.signature.payload], (item) => `
         <p class="stack-kicker">${item.signature_contract.toUpperCase()}</p>
         <h3>${item.signature_id}</h3>
-        <p>${item.signed_by} · ${item.release_channel}</p>
+        <p>${item.generated_by} · ${item.artifact_channel}</p>
         <p class="stack-meta">Digest ${item.digest_preview}</p>
       `);
+      renderStatusCard(
+        spcControlPlan,
+        "Recorded synthetic control plan",
+        "Live API unavailable; packaged recorded mode does not claim an executed SPC result.",
+        "empty"
+      );
+      renderStatusCard(
+        spcDisposition,
+        "Recorded advisory posture",
+        "No live disposition was executed. Human approval remains not recorded.",
+        "empty"
+      );
+      renderStatusCard(
+        spcFlowAuthority,
+        "Synthetic flow context",
+        "Q-time, TAT, and routing require the live packaged fixture endpoint.",
+        "empty"
+      );
       reviewRoutePreview.innerHTML = "";
       [
-        `recovery board -> /api/recovery-board?mode=hold`,
-        `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
-        `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
+        `recovery board -> /api/fab-ops/recovery-board?mode=hold`,
+        `tool ownership -> /api/fab-ops/tool-ownership?tool_id=${selectedToolId}`,
+        `release gate -> /api/fab-ops/release-gate?lot_id=${selectedLotId}`,
         `handoff signature -> ${latestSignatureId}`,
       ].forEach((item) => {
         const li = document.createElement("li");
@@ -717,7 +742,7 @@ async function boot() {
         <p class="stack-kicker">${item.decision.toUpperCase()} · ${item.tool_id}</p>
         <h3>${item.lot_id}</h3>
         <p>${item.next_action}</p>
-        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
+        <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.failed_checks.join(" / ")}</p>
       `);
       renderStoryline();
         setRuntimeBanner("ok", "Recorded technical review loaded locally. Focus the severe lot first, then compare recovery and release posture.");
@@ -749,8 +774,9 @@ async function boot() {
         replayResult.value.runs,
         (item) => `
           <p class="stack-kicker">${item.status.toUpperCase()}</p>
-          <h3>${item.scenario}</h3>
-          <p class="stack-meta">${item.checks} checks</p>
+          <h3>${item.case_id || item.scenario}</h3>
+          <p>${item.description || `Actual: ${item.actual?.recommendation || item.actual?.unique_rule_ids?.join(", ") || "no rule signal"}`}</p>
+          <p class="stack-meta">${item.assertions ? `${item.assertions.filter((assertion) => assertion.passed).length}/${item.assertions.length} assertions passed` : `${item.checks} recorded checks`}</p>
         `,
         {
           emptyTitle: "No replay runs yet",
@@ -767,6 +793,40 @@ async function boot() {
         describeError(replayResult.reason),
         "error"
       );
+    }
+
+    if (controlPlanResult.status === "fulfilled") {
+      const plan = controlPlanResult.value;
+      renderList(spcControlPlan, [plan], (item) => `
+        <p class="stack-kicker">${item.api_version.toUpperCase()} · ${item.dataset.data_classification.toUpperCase()}</p>
+        <h3>${item.control_plan.policy_id} · ${item.control_plan.revision}</h3>
+        <p>${item.control_plan.chart}</p>
+        <p class="stack-meta">${item.control_plan.rules.length} rules · fixture ${item.dataset.fixture_sha256.slice(0, 12)}… · measured yield: no</p>
+      `);
+    } else {
+      degradedPanels.push("SPC control plan");
+      renderStatusCard(spcControlPlan, "Control plan unavailable", describeError(controlPlanResult.reason), "error");
+    }
+
+    if (dispositionResult.status === "fulfilled") {
+      const disposition = dispositionResult.value;
+      const flow = disposition.flow_indicators;
+      renderList(spcDisposition, [disposition], (item) => `
+        <p class="stack-kicker">${item.gate.recommendation} · ADVISORY ONLY</p>
+        <h3>${item.lot.lot_id} · ${item.lot.tool_id}</h3>
+        <p>Rules ${item.spc.unique_rule_ids.join(", ") || "none"} · ${item.gate.hard_blockers.length} containment blocker(s)</p>
+        <p class="stack-meta">${item.lineage.data_classification} · measured yield: no · material moved: ${item.gate.material_state_changed ? "yes" : "no"}</p>
+      `);
+      renderList(spcFlowAuthority, [disposition], () => `
+        <p class="stack-kicker">HUMAN APPROVAL ${disposition.gate.human_approval_status.toUpperCase()}</p>
+        <h3>Q-time ${flow.q_time.status} · TAT ${flow.tat.status}</h3>
+        <p>${flow.routing.route_id}: step ${flow.routing.current_step} → ${flow.routing.next_step} (${flow.routing.route_state})</p>
+        <p class="stack-meta">${flow.q_time.elapsed_minutes} / ${flow.q_time.limit_minutes} min q-time · route changed: no</p>
+      `);
+    } else {
+      degradedPanels.push("fixture disposition");
+      renderStatusCard(spcDisposition, "Disposition unavailable", describeError(dispositionResult.reason), "error");
+      renderStatusCard(spcFlowAuthority, "Flow indicators unavailable", "Disposition evidence did not load.", "error");
     }
 
     if (architecturePackResult.status === "fulfilled") {
@@ -815,7 +875,7 @@ async function boot() {
           <p class="stack-kicker">${item.board_status.toUpperCase()} · ${item.tool_id}</p>
           <h3>${item.lot_id}</h3>
           <p>${item.next_action}</p>
-          <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
+          <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.maintenance_owner} · ${item.failed_checks.join(" / ") || "no failed checks"}</p>
         `,
         {
           emptyTitle: "Recovery board is clear",
@@ -843,7 +903,7 @@ async function boot() {
           <p class="stack-kicker">${item.simulated.decision.toUpperCase()} · eta gain ${item.delta.release_eta_minutes}m</p>
           <h3>${item.lot_id}</h3>
           <p>Baseline ${item.baseline.decision} -> Simulated ${item.simulated.decision}</p>
-          <p class="stack-meta">Risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
+          <p class="stack-meta">Simulated risk delta ${item.delta.risk_score_reduction} · maintenance ${item.delta.maintenance_clearance ? "complete" : "pending"}</p>
         `,
         {
           emptyTitle: "Recovery what-if unavailable",
@@ -891,7 +951,7 @@ async function boot() {
     }
 
     populateSelect(toolSelect, toolItems, "tool_id", (item) => `${item.tool_id} · ${item.status}`, selectedToolId);
-    populateSelect(lotSelect, lotItems, "lot_id", (item) => `${item.lot_id} · risk ${item.yield_risk_score}`, selectedLotId);
+    populateSelect(lotSelect, lotItems, "lot_id", (item) => `${item.lot_id} · simulated fixture risk ${item.simulated_yield_risk_score}`, selectedLotId);
 
     if (alarmsResult.status === "fulfilled") {
       renderList(alarmList, alarmsResult.value.items, (item) => `
@@ -918,7 +978,7 @@ async function boot() {
         <p class="stack-kicker">${item.risk_bucket.toUpperCase()} · ${item.tool_id}</p>
         <h3>${item.lot_id}</h3>
         <p>${item.product_family}</p>
-        <p class="stack-meta">Risk ${item.yield_risk_score} · ${item.next_action}</p>
+        <p class="stack-meta">Simulated fixture risk ${item.simulated_yield_risk_score} · ${item.next_action}</p>
       `, {
         emptyTitle: "No lots at risk",
         emptyMessage: "No lots currently match the selected risk conditions.",
@@ -982,7 +1042,7 @@ async function boot() {
       renderList(handoffSignature, [signatureResult.value.payload], (item) => `
         <p class="stack-kicker">${item.signature_contract.toUpperCase()}</p>
         <h3>${item.signature_id}</h3>
-        <p>${item.signed_by} · ${item.release_channel}</p>
+        <p>${item.generated_by} · ${item.artifact_channel}</p>
         <p class="stack-meta">Digest ${item.digest_preview}</p>
       `);
     } else {
@@ -1103,7 +1163,7 @@ async function boot() {
       return;
     }
     const severeLot = latestLots.reduce((best, item) =>
-      item.yield_risk_score > best.yield_risk_score ? item : best
+      item.simulated_yield_risk_score > best.simulated_yield_risk_score ? item : best
     );
     selectedRecoveryMode = "hold";
     recoveryModeSelect.value = selectedRecoveryMode;
@@ -1116,9 +1176,9 @@ async function boot() {
 
   copyArchitectureRouteBtn.addEventListener("click", async () => {
     const payload = [
-      `recovery board -> /api/recovery-board?mode=${selectedRecoveryMode}`,
-      `tool ownership -> /api/tool-ownership?tool_id=${selectedToolId}`,
-      `release gate -> /api/release-gate?lot_id=${selectedLotId}`,
+      `recovery board -> /api/fab-ops/recovery-board?mode=${selectedRecoveryMode}`,
+      `tool ownership -> /api/fab-ops/tool-ownership?tool_id=${selectedToolId}`,
+      `release gate -> /api/fab-ops/release-gate?lot_id=${selectedLotId}`,
       `handoff signature -> ${latestSignatureId || "pending-signature"}`,
     ].join("\n");
     await copyTextValue(payload);
@@ -1127,20 +1187,20 @@ async function boot() {
   copySevereLotBtn.addEventListener("click", async () => {
     const severeLot = latestRecoveryBoard?.spotlight || (latestLots.length > 0
       ? latestLots.reduce((best, item) =>
-          item.yield_risk_score > best.yield_risk_score ? item : best
+          item.simulated_yield_risk_score > best.simulated_yield_risk_score ? item : best
         )
       : null);
     const payload = severeLot
       ? [
           `lot_id: ${severeLot.lot_id}`,
           `tool_id: ${severeLot.tool_id}`,
-          `yield_risk_score: ${severeLot.yield_risk_score}`,
+          `simulated_yield_risk_score: ${severeLot.simulated_yield_risk_score}`,
           `risk_bucket: ${severeLot.risk_bucket}`,
           `board_status: ${severeLot.board_status || "unknown"}`,
           `maintenance_owner: ${severeLot.maintenance_owner || "unknown"}`,
           `next_action: ${severeLot.next_action}`,
-          `route: /api/recovery-board?mode=${selectedRecoveryMode}`,
-          `route: /api/release-gate?lot_id=${severeLot.lot_id}`,
+          `route: /api/fab-ops/recovery-board?mode=${selectedRecoveryMode}`,
+          `route: /api/fab-ops/release-gate?lot_id=${severeLot.lot_id}`,
         ].join("\n")
       : "No severe lot is loaded yet.";
     await copyTextValue(payload);
@@ -1155,19 +1215,20 @@ async function boot() {
       `Primary operator: ${latestOwnership?.primary_operator || "unknown"}`,
       `Decision: ${latestGate?.decision || "pending"}`,
       `Next action: ${latestGate?.next_action || "pending"}`,
-      `Yield risk: ${latestGate?.yield_risk_score ?? "unknown"}`,
+      `Simulated fixture risk: ${latestGate?.simulated_yield_risk_score ?? "unknown"}`,
       `Recovery lane: ${latestRecoveryBoard?.spotlight?.board_status || selectedRecoveryMode}`,
-      `Recovery route: /api/recovery-board?mode=${selectedRecoveryMode}`,
+      `Recovery route: /api/fab-ops/recovery-board?mode=${selectedRecoveryMode}`,
       `Failed checks: ${latestGate?.failed_checks?.join(", ") || "none"}`,
       `Handoff: ${latestHandoff?.headline || "pending-handoff"}`,
       `Signature: ${latestSignaturePayload?.signature_id || latestSignatureId || "pending-signature"}`,
-      `Signed by: ${latestSignaturePayload?.signed_by || "unknown"}`,
+      `Integrity envelope generated by: ${latestSignaturePayload?.generated_by || "unknown"}`,
+      `Human approval: ${latestSignaturePayload?.human_approval_status || "not_recorded"}`,
       "",
       "Focused routes",
-      `/api/tool-ownership?tool_id=${selectedToolId}`,
-      `/api/release-gate?lot_id=${selectedLotId}`,
-      "/api/shift-handoff",
-      "/api/shift-handoff/signature",
+      `/api/fab-ops/tool-ownership?tool_id=${selectedToolId}`,
+      `/api/fab-ops/release-gate?lot_id=${selectedLotId}`,
+      "/api/fab-ops/shift-handoff",
+      "/api/fab-ops/shift-handoff/signature",
     ];
     await copyTextValue(lines.join("\n"));
   });

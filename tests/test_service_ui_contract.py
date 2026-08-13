@@ -18,6 +18,13 @@ def test_service_ui_focus_route_contract() -> None:
         'id="continuity-guard"',
         'id="continuity-blockers"',
         'id="storyline-route"',
+        'id="synthetic-data-banner"',
+        'id="spc-evidence-panel"',
+        'id="spc-control-plan"',
+        'id="spc-disposition"',
+        'id="spc-flow-authority"',
+        "Synthetic fixture only:",
+        "HMAC Envelope (Not Approval)",
         "Start with the severe lot, then compare recovery and release posture before copying a handoff.",
         "Shift continuity stays blocked until owner, release gate, and signature line up.",
         "Gate blockers stay visible with the focused lot before any shift handoff is copied.",
@@ -40,8 +47,47 @@ def test_storyline_rich_text_does_not_reinterpret_dom_values_as_html() -> None:
 
     safe_dynamic_text = [
         '{ tag: "strong", text: storyLotId }',
-        'text: `/api/tool-ownership?tool_id=${selectedToolId || "pending-tool"}`',
-        'text: `/api/recovery-board?mode=${selectedRecoveryMode}`',
+        'text: `/api/fab-ops/tool-ownership?tool_id=${selectedToolId || "pending-tool"}`',
+        'text: `/api/fab-ops/recovery-board?mode=${selectedRecoveryMode}`',
     ]
     for text_assignment in safe_dynamic_text:
         assert text_assignment in javascript
+
+
+def test_ui_calls_mounted_versioned_spc_routes_and_labels_simulation() -> None:
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    javascript = APP_JS.read_text(encoding="utf-8")
+
+    for route in (
+        "/api/fab-ops/v1/control-plan",
+        '/api/fab-ops/v1/lots/${encodeURIComponent(selectedLotId || "lot-8812")}/disposition',
+        "/api/fab-ops/v1/evals/replays",
+    ):
+        assert route in javascript
+    assert "/api/runtime/brief" not in javascript
+    assert "/api/release-gate" not in javascript
+    assert "Simulated Workflow Risk" in html
+    assert "Human-Reviewed Recommendation" in html
+    assert "signed_by" not in javascript
+    assert "item.case_id || item.scenario" in javascript
+    assert "item.actual?.recommendation" in javascript
+    assert "assertions passed" in javascript
+
+
+def test_recorded_fallback_never_claims_executed_replay_passes() -> None:
+    javascript = APP_JS.read_text(encoding="utf-8")
+    recorded = javascript.split("const RECORDED_FAB =", maxsplit=1)[1].split(
+        "const REVIEW_LENSES", maxsplit=1
+    )[0]
+    all_failed = javascript.split("if (allFailed)", maxsplit=1)[1].split(
+        "const degradedPanels", maxsplit=1
+    )[0]
+
+    assert 'status: "unavailable"' in recorded
+    assert "score_pct" not in recorded
+    assert 'status: "pass"' not in recorded
+    assert "replay-passed" not in recorded
+    assert "replay stays green" not in recorded
+    assert 'replayScore.textContent = "--"' in all_failed
+    assert "Executed replay evidence unavailable" in all_failed
+    assert "no executed replay result is available as evidence" in recorded

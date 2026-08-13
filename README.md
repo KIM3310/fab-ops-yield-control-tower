@@ -1,179 +1,142 @@
-# Semiconductor Ops Platform
+# Fab Ops Yield Control Tower
 
 [![CI](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml/badge.svg)](https://github.com/KIM3310/fab-ops-yield-control-tower/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688.svg)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Unified manufacturing operations platform for semiconductor environments. Two operational domains in a single FastAPI application with shared infrastructure, SQLite persistence, Prometheus metrics, and multi-cloud deployment.
+A reviewable semiconductor-operations demo: deterministic Western Electric SPC, explainable lot-disposition gates, synthetic q-time/TAT/routing context, executed replay assertions, and tamper-evident shift artifacts in FastAPI.
 
-Technical review pack: [`docs/architecture-pack.md`](docs/architecture-pack.md)
+> **Evidence boundary:** every fab value is hand-authored synthetic fixture data. The service has no MES/FDC connection, reports no measured yield, makes no yield forecast, never moves material, and never replaces authorized process-engineer or release-supervisor judgment.
 
-## System Overview
+## 60-second technical review
 
-A semiconductor operations control tower that connects fab monitoring, qualification, and shift evidence into one reviewable system.
-
-| Area | Details |
+| Inspect | Concrete evidence |
 |---|---|
-| Users | Manufacturing IT teams, fab operations leaders, process engineers, and industrial analytics groups. |
-| System scope | Fab monitoring, scanner qualification, dual-domain analytics, release gating, and review material. |
-| Operating boundary | Uses staged data and operator workflows; production connection requires MES/SCADA access control and change governance. |
-| Evaluation path | Run the documented runtime commands and inspect review artifacts and staged process data. |
+| [`app/domains/fab_ops/spc.py`](app/domains/fab_ops/spc.py) | Four Western Electric rules, numerically robust inclusive zone boundaries (including decimal center/sigma references), strict same-side handling for centerline points, data-quality gates, and deterministic flow calculations. |
+| [`app/domains/fab_ops/fixtures/synthetic_shift.json`](app/domains/fab_ops/fixtures/synthetic_shift.json) | Packaged, hashed scenario with three lot dispositions plus six SPC boundary cases. |
+| `GET /api/fab-ops/v1/lots/lot-8812/disposition` | Actual `HOLD_FOR_CONTAINMENT`, WECO-1/2/3 evidence, breached synthetic q-time, route hold, and `material_state_changed: false`. |
+| `GET /api/fab-ops/v1/evals/replays` | Executes nine cases and 54 assertions; it does not return a prewritten pass list. |
+| [`tests/test_fab_ops_spc.py`](tests/test_fab_ops_spc.py) | Decimal-boundary and centerline regressions, malformed series, incomplete samples, coherent q-time boundaries, lineage tamper rejection, installed-wheel/static smoke, and authority assertions. |
 
-## Evaluation Path
+Start with the [reviewer evidence guide](docs/reviewer-evidence.md), then read the [SPC and disposition methodology](docs/fab-yield-methodology.md).
 
-- **Start here:** Open `/api/resource-pack`, then compare Fab Ops and Scanner Field routes.
-- **Local demo:** Run `make run`, then open `http://127.0.0.1:8000/docs`.
-- **Checks:** Run `make verify` for the standard gate or `make verify-strict` before presenting it as strict repository evidence.
+## Run locally
 
-## Service Launch Playbook
+```bash
+make run
+# UI       http://127.0.0.1:8000/
+# OpenAPI  http://127.0.0.1:8000/docs
+# Metrics  http://127.0.0.1:8000/metrics
+```
 
-- [Service launch playbook](docs/service-launch-playbook.md) maps the repository to its product scope, operating gates, operating boundaries, and risk controls.
+`make run` explicitly selects the `demo` profile, so the synthetic review needs no credential. An unset mode is locked, not implicitly demo. Python 3.11+ is required; if `python3` is older, use `make PYTHON_BIN=/path/to/python3.11 run`.
 
-## Architecture Notes
+Containerized demo: `make docker-build && make docker-run` (the built image itself defaults to locked mode; the Make target opts into demo).
 
-- [Review guide](docs/architecture-evidence-map.md) summarizes the system scope, first files to inspect, verification commands, and known boundaries.
-- [Quality notes](docs/quality-gate.md) lists the local checks, CI surface, and release expectations for this repository.
-- [Enterprise readiness notes](docs/enterprise-readiness.md) outlines security, data, operations, integration, and handoff expectations.
+Quick proof:
 
-## Domains
+```bash
+curl -fsS http://127.0.0.1:8000/api/fab-ops/v1/control-plan
+curl -fsS http://127.0.0.1:8000/api/fab-ops/v1/lots/lot-8812/disposition
+curl -fsS http://127.0.0.1:8000/api/fab-ops/v1/evals/replays
+```
 
-**Fab Ops Yield Control Tower** (`/api/fab-ops/`) — alarm triage, lot-at-risk prioritization, tool ownership tracking, release gate decisions, recovery board, and signed shift handoff.
+## What is implemented
 
-**Scanner Field Response** (`/api/scanner/`) — field incident workflow, subsystem escalation, qualification review, and signed handoff from local triage through customer milestone readiness.
+- **SPC:** WECO-1 through WECO-4 against configured reference centerline/sigma; overlapping windows remain visible.
+- **Fail-closed disposition:** incomplete evidence, special cause, out-of-spec values, critical equipment state, q-time breach, or route hold produces containment advice; missing flow context routes to human engineering review rather than release advice.
+- **Flow context:** deterministic q-time, TAT, current/next route step, and route state when the fixture supplies them. Displayed elapsed/remaining/overrun values use one calculation basis at boundaries.
+- **Executed evaluation:** expected and actual values are compared at request time, with assertion-level results and fixture SHA-256 lineage.
+- **Human authority:** API recommendations are advisory; approval is always `not_recorded` and material state is never changed.
+- **Security posture:** credential-free access and demo HMAC credentials exist only in exact `demo` mode. Other modes close sensitive and cloud-writing audit routes when credentials are absent; `/ready` reports critical configuration.
+- **Two domains:** the same application also retains the scanner field-response workflow under `/api/scanner/`.
 
-Both domains share operator access, HMAC signature logic, and runtime storage from `app/shared/` — zero duplication, per-domain environment variable isolation.
+## Fab Ops API
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/fab-ops/v1/control-plan` | Versioned rule, fixture, and authority contract |
+| `GET` | `/api/fab-ops/v1/lots/{lot_id}/disposition` | Execute packaged synthetic lot disposition |
+| `POST` | `/api/fab-ops/v1/disposition/evaluate` | Evaluate explicitly synthetic/non-production values |
+| `GET` | `/api/fab-ops/v1/evals/replays` | Execute fixture and SPC boundary assertions |
+| `GET` | `/api/fab-ops/recovery-board` | Legacy simulated-risk workflow board |
+| `GET` | `/api/fab-ops/shift-handoff/signature` | HMAC integrity envelope binding fixture/SPC/disposition/flow evidence; **not** human approval |
+| `POST` | `/api/fab-ops/shift-handoff/verify` | Verify the exact caller-presented manifest/envelope; missing or tampered proof fails |
+| `GET` | `/api/fab-ops/audit/feed` | Operator-guarded audit export (may write configured AWS targets) |
+| `GET` | `/api/fab-ops/meta` | Contracts, route discovery, auth/signing posture |
+| `GET` | `/ready` | Configuration-aware readiness; HTTP 503 when production auth/signing is incomplete |
+
+The POST contract forbids extra fields and production classifications, rejects NaN/infinity, validates engineering limits and sampling, and accepts at most 200 sequential values. See OpenAPI for the complete schema.
+
+## Runtime security modes
+
+```bash
+# Local packaged demo (selected explicitly by make run, make docker-run, or .env.example)
+SEMICONDUCTOR_OPS_MODE=demo
+
+# Non-demo example: sensitive routes fail closed unless these are configured
+SEMICONDUCTOR_OPS_MODE=production
+FAB_OPS_OPERATOR_TOKEN='replace-me'
+FAB_OPS_OPERATOR_ALLOWED_ROLES='shift-lead,release-supervisor'
+FAB_OPS_HANDOFF_SIGNING_KEY='replace-with-secret-manager-value'
+FAB_OPS_HANDOFF_SIGNING_KEY_ID='fab-ops-prod-v1'
+```
+
+`x-operator-token` or `Authorization: Bearer` carries the token; configured role headers are also enforced. HMAC proves payload integrity/authenticity under a shared key. The signed manifest binds the fixture SHA-256, control-plan/disposition contracts, recommendation, WECO result, and synthetic q-time/TAT/routing state. Verification hashes the caller-presented manifest rather than rebuilding a local trusted copy, rejects unknown outer fields, and validates every exported outer field (including digest preview, provenance/purpose, human-authority labels, route/method, and ordered verification steps) against deterministic values or the signed manifest. HMAC is not an electronic signature, identity attestation, or release authorization. Deployment secrets belong in a secret manager, never the ConfigMap or repository.
+
+For `PERSISTENCE_BACKEND=jsonl`, readiness opens both `FAB_OPS_RUNTIME_STORE_PATH` and `SCANNER_RUNTIME_STORE_PATH` for append; either unusable path makes `/ready` return 503 and closes authenticated non-demo sensitive routes. Unsupported backend names are rejected rather than treated as JSONL.
+
+**AWS** — set both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to activate optional exports. SQS additionally needs `AWS_SQS_QUEUE_URL`; DynamoDB additionally needs `AWS_DYNAMODB_TABLE`. These integrations are off in the credential-free demo. Fab and scanner audit feeds authenticate before invoking any S3, DynamoDB, or SQS writer outside demo mode.
+
+**Kubernetes** — [`infra/k8s/deployment.yaml`](infra/k8s/deployment.yaml) references the externally managed `semiconductor-ops-secrets` Secret for both domains' tokens and signing keys, while [`infra/k8s/configmap.yaml`](infra/k8s/configmap.yaml) contains only non-secret production policy. The readiness probe uses `/ready`; liveness remains `/health`. The SQLite topology is intentionally one replica with `Recreate` updates and a `ReadWriteOnce` PVC; no HPA is shipped or applied. Migrate to a reviewed shared database before horizontal scaling. Create/rotate the Secret and review durability limitations in [`infra/k8s/README.md`](infra/k8s/README.md). No Secret values are checked in.
 
 ## Architecture
 
-```
-Load Balancer / CDN
-     ↓
-FastAPI Application  (/docs  /health  /metrics)
-     ↓                        ↓
-Fab Ops Yield            Scanner Field
-Control Tower            Response
-/api/fab-ops/*           /api/scanner/*
-     ↓                        ↓
-Shared Infrastructure (auth, signatures, runtime_store, database)
-     ↓              ↓              ↓
-  SQLite          S3 (export)   SQS (events)
+```text
+Browser / API client
+        │
+FastAPI + request metrics
+        ├── /api/fab-ops/v1/*  → validated request → deterministic SPC
+        │                                      ├── fixture SHA lineage
+        │                                      ├── q-time/TAT/route indicators
+        │                                      └── advisory human gate
+        ├── /api/fab-ops/*     → legacy synthetic workflow boards
+        └── /api/scanner/*     → field-response domain
+                     │
+        shared auth · HMAC · SQLite/JSONL event evidence · optional AWS export
 ```
 
-## Quick Start
+The packaged fixture and `app/static` UI are declared in `pyproject.toml`. `make package-check` installs the built wheel into a clean target, proves `app.main` imports from that target, serves the packaged UI, and smokes health/control-plan APIs; no current working directory is assumed.
+
+## Validation
 
 ```bash
-git clone https://github.com/KIM3310/fab-ops-yield-control-tower.git && cd fab-ops-yield-control-tower
-make run
-# App:     http://127.0.0.1:8000
-# Docs:    http://127.0.0.1:8000/docs
-# Metrics: http://127.0.0.1:8000/metrics
+make verify-strict
+# or individually
+make lint
+make typecheck
+make coverage
+make package-check
+make smoke
+make validate
 ```
 
-Requires Python 3.11+. If your default `python3` is older, run `make PYTHON_BIN=/path/to/python3.11 verify`.
+CI performs bytecode compilation, Ruff, mypy, pytest with coverage, installed-wheel/static/API packaging smoke, runtime smoke, and repository/Kubernetes configuration validators. The deterministic runtime exerciser is available as:
 
-Docker:
 ```bash
-make docker-build && make docker-run
+SEMICONDUCTOR_OPS_MODE=demo PERSISTENCE_BACKEND=jsonl .venv/bin/python scripts/exercise_runtime.py
 ```
 
-Kubernetes:
-```bash
-make deploy  # applies infra/k8s/ manifests
-```
+## Evidence and design notes
 
-## Core API
-
-**Platform**
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Platform health and domain navigation |
-| `GET /metrics` | Prometheus metrics |
-| `GET /api/resource-pack` | Built-in manufacturing review cases |
-
-**Fab Ops** (`/api/fab-ops/`)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/fab-ops/alarms` | Active alarms |
-| `GET /api/fab-ops/lots/at-risk` | Lots at risk by yield score |
-| `GET /api/fab-ops/release-gate` | Release gate decision (auth) |
-| `GET /api/fab-ops/recovery-board` | Recovery board (hold/watch/ready) |
-| `GET /api/fab-ops/shift-handoff/signature` | Signed shift handoff envelope (auth) |
-| `GET /api/fab-ops/audit/feed` | Audit event feed |
-
-**Scanner** (`/api/scanner/`)
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/scanner/incidents` | Field incidents (filterable) |
-| `GET /api/scanner/field-response-board` | Field response board |
-| `GET /api/scanner/subsystem-escalation` | Subsystem escalation detail |
-| `GET /api/scanner/qualification-board` | Qualification review board |
-| `GET /api/scanner/customer-readiness` | Customer milestone readiness |
-| `GET /api/scanner/shift-handoff/signature` | Signed handoff envelope (auth) |
-
-## Deployment
-
-**AWS** — set both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to enable AWS exports. S3 uses `AWS_S3_BUCKET` when supplied and otherwise uses the documented default. SQS additionally requires `AWS_SQS_QUEUE_URL`; DynamoDB additionally requires `AWS_DYNAMODB_TABLE`. `AWS_DEFAULT_REGION` is optional and defaults to `us-west-2`.
-
-**GCP Cloud Run** — Terraform config in `infra/terraform/`:
-```bash
-cd infra/terraform
-terraform init && terraform plan -var="project_id=my-gcp-project" && terraform apply
-```
-
-**Kubernetes** — manifests in `infra/k8s/`: 2-replica deployment, HPA (2–8 pods), ClusterIP service.
-
-## Tech Stack
-
-Python · FastAPI · SQLAlchemy · SQLite · Prometheus · AWS (S3, DynamoDB, SQS) · GCP Cloud Run · Kubernetes · Terraform · Docker
+- [SPC and disposition methodology](docs/fab-yield-methodology.md)
+- [Reviewer evidence guide](docs/reviewer-evidence.md)
+- [Architecture evidence map](docs/architecture-evidence-map.md)
+- [Quality gate](docs/quality-gate.md)
+- [Cloud + AI architecture](docs/cloud-ai-architecture.md)
+- [Machine-readable architecture blueprint](docs/architecture/blueprint.json)
+- Blueprint validator: `scripts/validate_architecture_blueprint.py`
 
 ## License
 
 MIT
-
-## Cloud + AI Architecture
-
-- [Cloud + AI architecture blueprint](docs/cloud-ai-architecture.md)
-- [Machine-readable architecture manifest](docs/architecture/blueprint.json)
-- Validation command: `python3 scripts/validate_architecture_blueprint.py`
-
-## Enterprise Productization
-
-- [Product operating model](docs/product-operating-model.md) defines the product scope, trust boundary, operating checks, and service path for this repository.
-
-## System Architecture
-
-- [System architecture](docs/system-architecture.md) maps the runtime boundary, data/control flow, cloud or local deployment surface, and operating assumptions for this repository.
-
-## Service Architecture
-
-- [Service architecture](docs/service-architecture.md) defines the cloud resources, account information, cost controls, and production guardrails needed to turn this repo into a scoped service without publishing public financial assumptions.
-
-<!-- search-growth-readme:start -->
-
-## Search And Service Surface
-
-- Public entry: public synthetic fab demo and operating model
-- Paid boundary: paid factory pilot workspace with private connectors and shift report export
-- Canonical URL: https://fab-ops-yield-control-tower.pages.dev/
-- Lead capture: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower&inquiry=industrial-validation-discovery#private-inquiry
-- Resource route: https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/
-- Commercial route: https://kim3310-doeon-kim-portfolio.pages.dev/?offer=fab-ops-yield-control-tower#service-offers
-- Machine-readable offer: [docs/service-offer.json](docs/service-offer.json)
-- Search growth implementation: [docs/search-growth-implementation.md](docs/search-growth-implementation.md)
-- Revenue architecture: [docs/revenue-architecture.md](docs/revenue-architecture.md)
-
-<!-- search-growth-readme:end -->
-
-<!-- KIM3310:AD-DATA-PIVOT:START -->
-## Free Resource, Advertising, and Aggregate Data
-
-- [Public utility and architecture checklist](https://kim3310-doeon-kim-portfolio.pages.dev/resources/fab-ops-yield-control-tower/)
-- Revenue model: contextual advertising on the policy-eligible central resource page.
-- Aggregate value: anonymous aggregate manufacturing readiness topic interest and worksheet usage counts
-- Boundary: ads allowed only on public yield-readiness resources; control tower, defect queues, production data, and dashboards are ad-free
-- Consent defaults off, DNT/GPC fail closed, and personal or sensitive data is never sold.
-<!-- KIM3310:AD-DATA-PIVOT:END -->
