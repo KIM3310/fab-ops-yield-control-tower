@@ -281,7 +281,8 @@ def check_kubernetes_surface() -> None:
             fail(f"Kubernetes scaling boundary is not documented: {token}")
     for key in required_secret_keys:
         if deployment.count(f"key: {key}") != 1 or key not in guide:
-            fail(f"Kubernetes Secret key is not referenced/documented: {key}")
+            # Do not echo security-sensitive configuration key names to CI logs.
+            fail("a required Kubernetes Secret reference/documentation entry is missing")
     for path in (ROOT / "infra" / "k8s").glob("*.yaml"):
         if re.search(r"(?m)^kind:\s*Secret\s*$", read_text(path)):
             fail(f"deployable Secret manifest must not be checked in: {path.relative_to(ROOT)}")
