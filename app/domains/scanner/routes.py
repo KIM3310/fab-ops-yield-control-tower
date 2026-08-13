@@ -247,8 +247,9 @@ def lot_risk() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff")
-def shift_handoff() -> dict[str, Any]:
-    """Export the scanner shift handoff payload."""
+def shift_handoff(request: Request) -> dict[str, Any]:
+    """Export the scanner shift handoff payload (auth outside demo)."""
+    require_operator_token(request, DOMAIN)
     record_route_hit("/api/scanner/shift-handoff")
     payload = build_shift_handoff_payload()
     record_runtime_event("handoff_export", domain=DOMAIN, at=utc_now_iso(), handoff_id=payload["handoff_id"])
@@ -265,8 +266,9 @@ def shift_handoff() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff/signature")
-def shift_handoff_signature() -> dict[str, Any]:
-    """Export the signed scanner shift handoff envelope."""
+def shift_handoff_signature(request: Request) -> dict[str, Any]:
+    """Export the scanner HMAC integrity envelope (auth outside demo)."""
+    require_operator_token(request, DOMAIN)
     record_route_hit("/api/scanner/shift-handoff/signature")
     payload = build_shift_handoff_payload()
     signature = build_handoff_signature(payload)
@@ -284,8 +286,9 @@ def shift_handoff_signature() -> dict[str, Any]:
 
 
 @router.get("/shift-handoff/verify")
-def shift_handoff_verify() -> dict[str, Any]:
-    """Verify the scanner shift handoff signature."""
+def shift_handoff_verify(request: Request) -> dict[str, Any]:
+    """Run the labeled scanner demo signature self-check (auth outside demo)."""
+    require_operator_token(request, DOMAIN)
     record_route_hit("/api/scanner/shift-handoff/verify")
     payload = build_shift_handoff_payload()
     expected = build_handoff_signature(payload)
@@ -300,8 +303,9 @@ def replay_evals() -> dict[str, Any]:
 
 
 @router.get("/audit/feed")
-def audit_feed() -> dict[str, Any]:
-    """Return the audit event feed for the scanner domain."""
+def audit_feed(request: Request) -> dict[str, Any]:
+    """Export the audit event feed (auth required outside explicit demo mode)."""
+    require_operator_token(request, DOMAIN)
     record_route_hit("/api/scanner/audit/feed")
     payload = {"summary": {"events": len(AUDIT_EVENTS)}, "items": AUDIT_EVENTS}
     aws_s3 = export_audit_bundle_to_s3(DOMAIN, AUDIT_EVENTS)

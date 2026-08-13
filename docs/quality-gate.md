@@ -1,6 +1,6 @@
 # Quality Notes - Semiconductor Ops Platform
 
-Updated: 2026-05-30
+Updated: 2026-08-13
 
 These notes keep the repository easy to review without overstating what is production-ready.
 
@@ -16,8 +16,12 @@ These notes keep the repository easy to review without overstating what is produ
 
 | Purpose | Command |
 |---|---|
-| Full local gate | `make verify` |
+| Full local gate | `make verify-strict` |
 | Test suite | `make test` |
+| Branch coverage | `make coverage` (80% repository floor) |
+| Installed-wheel fixture/static/import/API smoke | `make package-check` |
+| Live canonical-route smoke | `make smoke` |
+| Architecture/repository validators | `make validate` |
 
 ## CI
 

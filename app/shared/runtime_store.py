@@ -81,11 +81,13 @@ def record_runtime_event(event_type: str, domain: str = "fab_ops", **payload: An
     Raises:
         OSError: If the JSONL store file cannot be opened for writing.
     """
-    from app.shared.database import is_sqlite_backend, record_event_sqlite
+    from app.shared.database import PERSISTENCE_BACKEND, is_sqlite_backend, record_event_sqlite
 
     if is_sqlite_backend():
         record_event_sqlite(event_type, domain, **payload)
         return
+    if PERSISTENCE_BACKEND != "jsonl":
+        raise RuntimeError(f"Unsupported persistence backend: {PERSISTENCE_BACKEND}")
 
     store_path = _ensure_store_file(domain)
     event: dict[str, Any] = {"event_type": event_type, **payload}
@@ -110,10 +112,12 @@ def summarize_runtime_events(domain: str = "fab_ops", limit: int = 4000) -> dict
     Returns:
         Dictionary containing counts, recent events, and last-event timestamp.
     """
-    from app.shared.database import is_sqlite_backend, summarize_events_sqlite
+    from app.shared.database import PERSISTENCE_BACKEND, is_sqlite_backend, summarize_events_sqlite
 
     if is_sqlite_backend():
         return summarize_events_sqlite(domain, limit)
+    if PERSISTENCE_BACKEND != "jsonl":
+        raise RuntimeError(f"Unsupported persistence backend: {PERSISTENCE_BACKEND}")
 
     store_path = runtime_store_path(domain)
     summary: dict[str, Any] = {

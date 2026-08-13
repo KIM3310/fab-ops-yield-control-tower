@@ -93,16 +93,34 @@ class TestSignManifest:
 class TestVerifySignature:
     """Tests for verify_signature()."""
 
-    def test_self_verify_passes(self) -> None:
+    def test_missing_proof_fails_closed(self) -> None:
+        result = verify_signature({"test": "data"}, domain="fab_ops")
+        assert result["overall_valid"] is False
+        assert result["checks"]["signature_present"] is False
+        assert result["checks"]["signature_match"] is False
+
+    def test_presented_proof_passes(self) -> None:
         manifest = {"test": "data"}
-        result = verify_signature(manifest, domain="fab_ops")
+        signed = sign_manifest(manifest, domain="fab_ops")
+        result = verify_signature(
+            manifest,
+            provided_algorithm="hmac-sha256",
+            provided_key_id=signing_key_id("fab_ops"),
+            provided_sha256=signed["sha256"],
+            provided_signature=signed["signature"],
+            domain="fab_ops",
+        )
         assert result["overall_valid"] is True
         assert all(result["checks"].values())
 
     def test_wrong_signature_fails(self) -> None:
         manifest = {"test": "data"}
+        signed = sign_manifest(manifest, domain="fab_ops")
         result = verify_signature(
             manifest,
+            provided_algorithm="hmac-sha256",
+            provided_key_id=signing_key_id("fab_ops"),
+            provided_sha256=signed["sha256"],
             provided_signature="0" * 64,
             domain="fab_ops",
         )
@@ -111,9 +129,13 @@ class TestVerifySignature:
 
     def test_wrong_algorithm_fails(self) -> None:
         manifest = {"test": "data"}
+        signed = sign_manifest(manifest, domain="fab_ops")
         result = verify_signature(
             manifest,
             provided_algorithm="rsa-256",
+            provided_key_id=signing_key_id("fab_ops"),
+            provided_sha256=signed["sha256"],
+            provided_signature=signed["signature"],
             domain="fab_ops",
         )
         assert result["overall_valid"] is False
@@ -186,7 +208,52 @@ class TestOperatorAccess:
         assert "enabled" in status
         assert "header" in status
         assert status["bearer_supported"] is True
+        assert status["runtime_mode"] == "demo"
+        assert status["enforcement"] == "credential_free_demo_bypass"
 
     def test_token_enabled_when_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FAB_OPS_OPERATOR_TOKEN", "secret")
         assert operator_token_enabled("fab_ops") is True
+
+
+class TestPersistenceReadiness:
+    """Readiness must exercise every selected runtime persistence target."""
+
+    @pytest.mark.parametrize(
+        ("broken_variable", "failed_domain"),
+        [
+            ("FAB_OPS_RUNTIME_STORE_PATH", "fab_ops"),
+            ("SCANNER_RUNTIME_STORE_PATH", "scanner"),
+        ],
+    )
+    def test_jsonl_requires_both_domain_paths_to_be_usable(
+        self,
+        broken_variable: str,
+        failed_domain: str,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.shared import database
+
+        monkeypatch.setattr(database, "PERSISTENCE_BACKEND", "jsonl")
+        monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", str(tmp_path / "fab.jsonl"))
+        monkeypatch.setenv("SCANNER_RUNTIME_STORE_PATH", str(tmp_path / "scanner.jsonl"))
+        monkeypatch.setenv(broken_variable, "/dev/null/runtime-events.jsonl")
+
+        readiness = database.persistence_readiness()
+        assert readiness["ready"] is False
+        assert readiness["error"] == "Persistence backend unavailable"
+        assert readiness["checks"][failed_domain] is False
+        other_domain = "scanner" if failed_domain == "fab_ops" else "fab_ops"
+        assert readiness["checks"][other_domain] is True
+
+    def test_unknown_backend_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.shared import database
+
+        monkeypatch.setattr(database, "PERSISTENCE_BACKEND", "typo-backend")
+        readiness = database.persistence_readiness()
+        assert readiness["ready"] is False
+        assert readiness["error"] == "Unsupported persistence backend"
+
+        with pytest.raises(RuntimeError, match="Unsupported persistence backend"):
+            record_runtime_event("must-not-fall-through", domain="fab_ops")

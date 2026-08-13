@@ -1,6 +1,6 @@
 """
 Hardcoded domain data for fab-ops-yield-control-tower.
-Contains all fabs, tools, alarms, lots, replay suites, tool ownership, audit events, and constants.
+Contains fixture-facing fabs, tools, alarms, lots, ownership, audit events, and constants.
 """
 
 from __future__ import annotations
@@ -11,6 +11,19 @@ SERVICE_NAME = "fab-ops-yield-control-tower"
 ALARM_REPORT_SCHEMA = "fab-ops-alarm-report-v1"
 SHIFT_HANDOFF_SCHEMA = "fab-ops-shift-handoff-v1"
 HANDOFF_SIGNATURE_CONTRACT = "fab-ops-handoff-signature-v1"
+HANDOFF_SIGNATURE_ALGORITHM = "hmac-sha256"
+HANDOFF_GENERATED_BY = "fab-ops-hmac-integrity-service"
+HANDOFF_ARTIFACT_CHANNEL = "morning-shift-review-pack"
+HANDOFF_SIGNATURE_PURPOSE = (
+    "HMAC payload integrity and shared-key authenticity; not a human approval or release signature."
+)
+HANDOFF_VERIFICATION_METHOD = "POST"
+HANDOFF_VERIFICATION_ROUTE = "/api/fab-ops/shift-handoff/verify"
+HANDOFF_VERIFICATION_STEPS = (
+    "POST this complete exported payload, including its manifest, to the verification route.",
+    "Confirm the signed SPC binding contains the packaged fixture hash, contracts, recommendation, and flow states.",
+    "Check must-acknowledge items and verify the digest/HMAC against the current key id.",
+)
 ALARM_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 ALLOWED_RECOVERY_MODES: set[str] = {"all", "hold", "watch", "ready"}
 
@@ -18,8 +31,8 @@ FABS = [
     {
         "fab_id": "fab-west-1",
         "name": "Fab West 1",
-        "site": "Hsinchu",
-        "focus": "logic-node pilot line",
+        "site": "SIM_SITE_WEST",
+        "focus": "fictional memory-process demonstration line",
         "shift": "night",
         "owner": "ops-west-night",
     }
@@ -99,37 +112,36 @@ LOTS_AT_RISK = [
     {
         "lot_id": "lot-8812",
         "tool_id": "etch-14",
-        "product_family": "N3 mobile logic",
+        "product_family": "FICTIONAL_DRAM_ALPHA",
         "wafer_count": 25,
-        "yield_risk_score": 0.94,
+        "simulated_yield_risk_score": 0.94,
+        "risk_basis": "hand-authored synthetic fixture; not measured yield",
+        "data_classification": "synthetic_fixture",
         "risk_bucket": "severe",
         "next_action": "maintenance approval + reroute review",
     },
     {
         "lot_id": "lot-8821",
         "tool_id": "depo-03",
-        "product_family": "automotive sensor",
+        "product_family": "FICTIONAL_NAND_BETA",
         "wafer_count": 18,
-        "yield_risk_score": 0.73,
+        "simulated_yield_risk_score": 0.73,
+        "risk_basis": "hand-authored synthetic fixture; not measured yield",
+        "data_classification": "synthetic_fixture",
         "risk_bucket": "elevated",
         "next_action": "tight monitoring and post-shift inspection",
     },
     {
         "lot_id": "lot-8836",
         "tool_id": "cmp-07",
-        "product_family": "edge compute package",
+        "product_family": "FICTIONAL_MEMORY_PACKAGE",
         "wafer_count": 20,
-        "yield_risk_score": 0.41,
+        "simulated_yield_risk_score": 0.41,
+        "risk_basis": "hand-authored synthetic fixture; not measured yield",
+        "data_classification": "synthetic_fixture",
         "risk_bucket": "watch",
         "next_action": "normal flow with sampling",
     },
-]
-
-REPLAY_SUITE = [
-    {"scenario": "plasma-instability", "status": "pass", "checks": 8},
-    {"scenario": "temperature-drift", "status": "pass", "checks": 8},
-    {"scenario": "vacuum-loss", "status": "pass", "checks": 8},
-    {"scenario": "shift-handoff-gap", "status": "pass", "checks": 8},
 ]
 
 TOOL_OWNERSHIP: dict[str, dict[str, Any]] = {

@@ -416,7 +416,9 @@ def build_handoff_signature(payload: dict[str, Any]) -> dict[str, Any]:
         "key_id": signing_key_id(DOMAIN),
         "sha256": sigs["sha256"],
         "signature": sigs["signature"],
-        "signed_by": "shift-lead-kim",
+        "generated_by": "scanner-hmac-integrity-service",
+        "signature_purpose": "HMAC payload integrity and shared-key authenticity; not human approval.",
+        "human_approval_status": "not_recorded",
     }
 
 
@@ -436,6 +438,9 @@ def build_handoff_verify(payload: dict[str, Any], expected: dict[str, Any]) -> d
         logger.warning("[scanner] handoff signature verification failed")
     return {
         "overall_valid": overall_valid,
+        "verification_mode": "locally_generated_demo_consistency_check",
+        "external_proof_verified": False,
+        "human_approval_verified": False,
         "checks": {
             "signature_match": _hmac.compare_digest(current_signature["signature"], expected["signature"]),
             "digest_match": current_signature["sha256"] == expected["sha256"],

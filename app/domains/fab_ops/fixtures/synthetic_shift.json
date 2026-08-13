@@ -1,0 +1,411 @@
+{
+  "schema_version": "synthetic-fab-shift-v1",
+  "dataset_id": "synthetic-memory-fab-shift-2026-03-08",
+  "as_of": "2026-03-08T08:15:00Z",
+  "synthetic": true,
+  "origin": "Hand-authored deterministic demonstration fixture; not sampled, transformed, or inferred from any company or production fab.",
+  "purpose": "Exercise SPC detection, evidence lineage, and human disposition gates for a memory-fab-style shift review.",
+  "limitations": [
+    "Eight sequential wafer-average measurements per lot are intentionally small and cannot establish production capability.",
+    "No wafer maps, final electrical test, defect pareto, chamber matching history, genealogy, or MES/FDC events are present.",
+    "Priority indexes and disposition recommendations are workflow aids, not yield forecasts or autonomous release authority."
+  ],
+  "control_plan": {
+    "policy_id": "CP-INLINE-SPC-001",
+    "revision": "1.0-demo",
+    "chart": "individuals-standardized-reference",
+    "reference_source": "Synthetic qualified-baseline constants embedded in this fixture.",
+    "rules": [
+      "WECO-1: one point at or beyond 3 sigma",
+      "WECO-2: two of three points at or beyond 2 sigma on the same side",
+      "WECO-3: four of five points at or beyond 1 sigma on the same side",
+      "WECO-4: eight consecutive points on one side of centerline"
+    ],
+    "release_authority": "Human process engineer plus shift release supervisor; API output is advisory only.",
+    "api_version": "v1",
+    "zone_boundary_policy": "WECO-1/2/3 include points exactly on the configured sigma boundary; WECO-4 requires strictly above or below centerline.",
+    "overlap_policy": "All qualifying rolling windows are emitted; unique_rule_ids is the deduplicated rule summary.",
+    "sampling_basis": "Each observation is a synthetic wafer average across the declared sites_per_wafer."
+  },
+  "lots": {
+    "lot-8812": {
+      "expected_recommendation": "HOLD_FOR_CONTAINMENT",
+      "tool_id": "etch-14",
+      "operation": "STI pattern etch (synthetic memory test vehicle)",
+      "measurement": {
+        "name": "post_etch_cd_bias",
+        "unit": "nm",
+        "centerline": 0.0,
+        "sigma": 0.4,
+        "lsl": -2.0,
+        "usl": 2.0,
+        "sampling_plan": {
+          "planned_wafer_averages": 8,
+          "observed_wafer_averages": 8,
+          "sites_per_wafer": 9
+        },
+        "observations": [
+          {
+            "sequence": 1,
+            "wafer_id": "W03",
+            "measured_at": "2026-03-08T07:21:00Z",
+            "value": -0.12
+          },
+          {
+            "sequence": 2,
+            "wafer_id": "W06",
+            "measured_at": "2026-03-08T07:26:00Z",
+            "value": 0.08
+          },
+          {
+            "sequence": 3,
+            "wafer_id": "W09",
+            "measured_at": "2026-03-08T07:31:00Z",
+            "value": 0.16
+          },
+          {
+            "sequence": 4,
+            "wafer_id": "W12",
+            "measured_at": "2026-03-08T07:36:00Z",
+            "value": 0.34
+          },
+          {
+            "sequence": 5,
+            "wafer_id": "W15",
+            "measured_at": "2026-03-08T07:41:00Z",
+            "value": 0.52
+          },
+          {
+            "sequence": 6,
+            "wafer_id": "W18",
+            "measured_at": "2026-03-08T07:46:00Z",
+            "value": 0.73
+          },
+          {
+            "sequence": 7,
+            "wafer_id": "W21",
+            "measured_at": "2026-03-08T07:51:00Z",
+            "value": 0.94
+          },
+          {
+            "sequence": 8,
+            "wafer_id": "W24",
+            "measured_at": "2026-03-08T07:56:00Z",
+            "value": 1.32
+          }
+        ]
+      },
+      "equipment_context": {
+        "tool_status": "alarm",
+        "active_alarm_severity": "critical",
+        "maintenance_ack_required": true
+      },
+      "flow_context": {
+        "route_id": "SYN-MEM-STI-ETCH-01",
+        "current_step": 120,
+        "current_operation": "STI pattern etch metrology review",
+        "next_step": 130,
+        "next_operation": "post-etch clean",
+        "route_state": "hold",
+        "queue_entered_at": "2026-03-08T05:55:00Z",
+        "q_time_limit_minutes": 120,
+        "lot_started_at": "2026-03-07T17:45:00Z",
+        "tat_target_minutes": 840
+      },
+      "expected_rule_ids": [
+        "WECO-1",
+        "WECO-2",
+        "WECO-3"
+      ],
+      "expected_flow": {
+        "q_time_status": "breached",
+        "tat_status": "over_target",
+        "route_state": "hold"
+      }
+    },
+    "lot-8821": {
+      "expected_recommendation": "ENGINEERING_REVIEW",
+      "tool_id": "depo-03",
+      "operation": "dielectric deposition thickness check (synthetic memory test vehicle)",
+      "measurement": {
+        "name": "film_thickness_deviation",
+        "unit": "nm",
+        "centerline": 0.0,
+        "sigma": 0.5,
+        "lsl": -2.5,
+        "usl": 2.5,
+        "sampling_plan": {
+          "planned_wafer_averages": 8,
+          "observed_wafer_averages": 8,
+          "sites_per_wafer": 9
+        },
+        "observations": [
+          {
+            "sequence": 1,
+            "wafer_id": "W02",
+            "measured_at": "2026-03-08T07:18:00Z",
+            "value": -0.1
+          },
+          {
+            "sequence": 2,
+            "wafer_id": "W05",
+            "measured_at": "2026-03-08T07:23:00Z",
+            "value": 0.15
+          },
+          {
+            "sequence": 3,
+            "wafer_id": "W08",
+            "measured_at": "2026-03-08T07:28:00Z",
+            "value": 0.25
+          },
+          {
+            "sequence": 4,
+            "wafer_id": "W11",
+            "measured_at": "2026-03-08T07:33:00Z",
+            "value": 0.35
+          },
+          {
+            "sequence": 5,
+            "wafer_id": "W14",
+            "measured_at": "2026-03-08T07:38:00Z",
+            "value": 0.45
+          },
+          {
+            "sequence": 6,
+            "wafer_id": "W17",
+            "measured_at": "2026-03-08T07:43:00Z",
+            "value": 0.55
+          },
+          {
+            "sequence": 7,
+            "wafer_id": "W20",
+            "measured_at": "2026-03-08T07:48:00Z",
+            "value": 0.72
+          },
+          {
+            "sequence": 8,
+            "wafer_id": "W23",
+            "measured_at": "2026-03-08T07:53:00Z",
+            "value": 0.84
+          }
+        ]
+      },
+      "equipment_context": {
+        "tool_status": "warning",
+        "active_alarm_severity": "high",
+        "maintenance_ack_required": true
+      },
+      "flow_context": {
+        "route_id": "SYN-MEM-DIEL-DEPO-01",
+        "current_step": 210,
+        "current_operation": "dielectric deposition metrology review",
+        "next_step": 220,
+        "next_operation": "film densification anneal",
+        "route_state": "awaiting_engineering_review",
+        "queue_entered_at": "2026-03-08T07:20:00Z",
+        "q_time_limit_minutes": 180,
+        "lot_started_at": "2026-03-07T22:15:00Z",
+        "tat_target_minutes": 720
+      },
+      "expected_rule_ids": [],
+      "expected_flow": {
+        "q_time_status": "within_window",
+        "tat_status": "within_target",
+        "route_state": "awaiting_engineering_review"
+      }
+    },
+    "lot-8836": {
+      "expected_recommendation": "RELEASE_WITH_SAMPLING",
+      "tool_id": "cmp-07",
+      "operation": "tungsten CMP removal-rate check (synthetic memory test vehicle)",
+      "measurement": {
+        "name": "removal_rate_deviation",
+        "unit": "nm_per_min",
+        "centerline": 0.0,
+        "sigma": 0.3,
+        "lsl": -1.5,
+        "usl": 1.5,
+        "sampling_plan": {
+          "planned_wafer_averages": 8,
+          "observed_wafer_averages": 8,
+          "sites_per_wafer": 9
+        },
+        "observations": [
+          {
+            "sequence": 1,
+            "wafer_id": "W01",
+            "measured_at": "2026-03-08T07:16:00Z",
+            "value": -0.12
+          },
+          {
+            "sequence": 2,
+            "wafer_id": "W04",
+            "measured_at": "2026-03-08T07:21:00Z",
+            "value": 0.06
+          },
+          {
+            "sequence": 3,
+            "wafer_id": "W07",
+            "measured_at": "2026-03-08T07:26:00Z",
+            "value": -0.03
+          },
+          {
+            "sequence": 4,
+            "wafer_id": "W10",
+            "measured_at": "2026-03-08T07:31:00Z",
+            "value": 0.09
+          },
+          {
+            "sequence": 5,
+            "wafer_id": "W13",
+            "measured_at": "2026-03-08T07:36:00Z",
+            "value": -0.08
+          },
+          {
+            "sequence": 6,
+            "wafer_id": "W16",
+            "measured_at": "2026-03-08T07:41:00Z",
+            "value": 0.12
+          },
+          {
+            "sequence": 7,
+            "wafer_id": "W19",
+            "measured_at": "2026-03-08T07:46:00Z",
+            "value": 0.03
+          },
+          {
+            "sequence": 8,
+            "wafer_id": "W22",
+            "measured_at": "2026-03-08T07:51:00Z",
+            "value": -0.06
+          }
+        ]
+      },
+      "equipment_context": {
+        "tool_status": "healthy",
+        "active_alarm_severity": "none",
+        "maintenance_ack_required": false
+      },
+      "flow_context": {
+        "route_id": "SYN-MEM-W-CMP-01",
+        "current_step": 310,
+        "current_operation": "tungsten CMP metrology review",
+        "next_step": 320,
+        "next_operation": "post-CMP clean",
+        "route_state": "ready_for_reviewed_dispatch",
+        "queue_entered_at": "2026-03-08T07:50:00Z",
+        "q_time_limit_minutes": 240,
+        "lot_started_at": "2026-03-08T01:45:00Z",
+        "tat_target_minutes": 600
+      },
+      "expected_rule_ids": [],
+      "expected_flow": {
+        "q_time_status": "within_window",
+        "tat_status": "within_target",
+        "route_state": "ready_for_reviewed_dispatch"
+      }
+    }
+  },
+  "spc_replay_cases": [
+    {
+      "case_id": "weco-1-upper-boundary",
+      "description": "A point exactly at +3 sigma fires WECO-1.",
+      "z_scores": [
+        -0.2,
+        0.2,
+        3.0
+      ],
+      "expected_rule_ids": [
+        "WECO-1"
+      ],
+      "expected_signal_sides": [
+        "WECO-1:upper"
+      ],
+      "expected_signal_count": 1
+    },
+    {
+      "case_id": "weco-2-lower-boundary",
+      "description": "Two of three points exactly at -2 sigma fire WECO-2 on the lower side.",
+      "z_scores": [
+        -2.0,
+        0.25,
+        -2.0
+      ],
+      "expected_rule_ids": [
+        "WECO-2"
+      ],
+      "expected_signal_sides": [
+        "WECO-2:lower"
+      ],
+      "expected_signal_count": 1
+    },
+    {
+      "case_id": "weco-3-upper-boundary",
+      "description": "Four of five points exactly at +1 sigma fire WECO-3.",
+      "z_scores": [
+        1.0,
+        1.0,
+        0.2,
+        1.0,
+        1.0
+      ],
+      "expected_rule_ids": [
+        "WECO-3"
+      ],
+      "expected_signal_sides": [
+        "WECO-3:upper"
+      ],
+      "expected_signal_count": 1
+    },
+    {
+      "case_id": "weco-4-strict-upper-side",
+      "description": "Eight strictly positive points fire WECO-4.",
+      "z_scores": [
+        0.1,
+        0.2,
+        0.1,
+        0.2,
+        0.1,
+        0.2,
+        0.1,
+        0.2
+      ],
+      "expected_rule_ids": [
+        "WECO-4"
+      ],
+      "expected_signal_sides": [
+        "WECO-4:upper"
+      ],
+      "expected_signal_count": 1
+    },
+    {
+      "case_id": "centerline-does-not-pick-a-side",
+      "description": "Points on the centerline do not satisfy either side of WECO-4.",
+      "z_scores": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "expected_rule_ids": [],
+      "expected_signal_sides": [],
+      "expected_signal_count": 0
+    },
+    {
+      "case_id": "opposite-zones-do-not-combine",
+      "description": "Opposite-side zone-A points are not combined into WECO-2 evidence.",
+      "z_scores": [
+        2.0,
+        -2.0,
+        0.0
+      ],
+      "expected_rule_ids": [],
+      "expected_signal_sides": [],
+      "expected_signal_count": 0
+    }
+  ]
+}

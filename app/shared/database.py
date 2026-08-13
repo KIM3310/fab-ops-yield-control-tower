@@ -198,24 +198,59 @@ def is_sqlite_backend() -> bool:
 
 
 def persistence_readiness() -> dict[str, Any]:
-    """Report whether the configured persistence backend is ready for runtime writes."""
+    """Report whether the selected backend is usable for all runtime writes.
+
+    SQLite is checked with ``SELECT 1``. JSONL readiness opens both domain
+    stores for append so a bad path cannot leave Kubernetes ready while the
+    first sensitive-route audit write will fail. Unknown backend names are
+    rejected rather than silently falling through to JSONL behavior.
+    """
     details: dict[str, Any] = {
         "backend": PERSISTENCE_BACKEND,
         "path": DATABASE_URL if is_sqlite_backend() else None,
         "ready": True,
         "error": None,
+        "checks": {},
     }
-    if not is_sqlite_backend():
+    if PERSISTENCE_BACKEND not in {"sqlite", "jsonl"}:
+        details["ready"] = False
+        details["error"] = "Unsupported persistence backend"
+        return details
+
+    if PERSISTENCE_BACKEND == "jsonl":
+        from app.shared.runtime_store import runtime_store_path
+
+        paths: dict[str, str] = {}
+        checks: dict[str, bool] = {}
+        for domain in ("fab_ops", "scanner"):
+            try:
+                store_path = runtime_store_path(domain)
+                paths[domain] = str(store_path)
+                store_path.parent.mkdir(parents=True, exist_ok=True)
+                store_path.touch(exist_ok=True)
+                with store_path.open("a+", encoding="utf-8") as handle:
+                    handle.flush()
+                checks[domain] = True
+            except (OSError, RuntimeError):
+                logger.exception("JSONL persistence readiness check failed for %s", domain)
+                checks[domain] = False
+        details["path"] = paths
+        details["checks"] = checks
+        if not all(checks.get(domain, False) for domain in ("fab_ops", "scanner")):
+            details["ready"] = False
+            details["error"] = "Persistence backend unavailable"
         return details
 
     session: Session | None = None
     try:
         session = get_session()
         session.execute(text("SELECT 1"))
+        details["checks"] = {"sqlite": True}
     except Exception:  # pragma: no cover - defensive readiness path
         logger.exception("SQLite persistence readiness check failed")
         details["ready"] = False
         details["error"] = "Persistence backend unavailable"
+        details["checks"] = {"sqlite": False}
     finally:
         if session is not None:
             session.close()

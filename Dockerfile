@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:90744cff8f32887f075c47d747a173ff333e9e98801667af93c357fa9f5e28ff
 
 WORKDIR /app
 
@@ -8,6 +8,7 @@ COPY app /app/app
 RUN pip install --no-cache-dir -r /app/requirements.txt && pip install --no-cache-dir -e /app
 
 ENV PYTHONPATH=/app
+ENV SEMICONDUCTOR_OPS_MODE=locked
 ENV FAB_OPS_RUNTIME_STORE_PATH=/app/.runtime/fab-ops-events.jsonl
 ENV SCANNER_RUNTIME_STORE_PATH=/app/.runtime/scanner-response-events.jsonl
 

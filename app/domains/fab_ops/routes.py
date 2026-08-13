@@ -6,10 +6,12 @@ handlers are intentionally thin -- business logic lives in
 :mod:`app.domains.fab_ops.helpers`.
 """
 
+import hashlib
+import json
 import logging
 from typing import Any, cast
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.domains.fab_ops.domain import ALARMS, LOTS_AT_RISK, SERVICE_NAME, TOOLS
 from app.domains.fab_ops.helpers import (
@@ -32,9 +34,20 @@ from app.domains.fab_ops.helpers import (
     build_runtime_scorecard,
     build_shift_handoff,
     build_shift_handoff_schema,
+    build_synthetic_evidence_boundary,
     build_tool_ownership,
     record_route_hit,
     utc_now_iso,
+)
+from app.domains.fab_ops.models import (
+    DispositionEvaluationRequest,
+    HandoffVerificationEnvelope,
+    HandoffVerificationRequest,
+)
+from app.domains.fab_ops.spc import (
+    build_control_plan,
+    build_disposition_evaluation,
+    build_fixture_excursion_review,
 )
 from app.shared.aws_adapter import (
     aws_status,
@@ -66,6 +79,7 @@ def _build_export_ledger(*, runtime_brief_path: str, architecture_pack_path: str
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "schema": "fab-ops-export-ledger-v1",
         "aws": aws_status(),
         "summary": {
@@ -108,12 +122,110 @@ async def runtime_export_ledger() -> dict[str, Any]:
     )
 
 
+@router.get("/v1/control-plan")
+async def synthetic_control_plan_v1() -> dict[str, Any]:
+    """Return the versioned synthetic SPC control plan and authority boundary."""
+    record_route_hit("/api/fab-ops/v1/control-plan")
+    return build_control_plan()
+
+
+@router.get("/v1/lots/{lot_id}/disposition")
+async def fixture_lot_disposition_v1(request: Request, lot_id: str) -> dict[str, Any]:
+    """Execute the advisory disposition gate for a packaged synthetic lot."""
+    require_operator_token(request, DOMAIN)
+    record_route_hit("/api/fab-ops/v1/lots/{lot_id}/disposition")
+    try:
+        payload = build_fixture_excursion_review(lot_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown synthetic fixture lot: {lot_id}") from exc
+    record_runtime_event(
+        "synthetic_disposition_evaluated",
+        domain=DOMAIN,
+        at=utc_now_iso(),
+        lot_id=lot_id,
+        recommendation=payload["gate"]["recommendation"],
+        material_state_changed=False,
+    )
+    return payload
+
+
+@router.post("/v1/disposition/evaluate")
+async def non_production_disposition_evaluation_v1(
+    request: Request,
+    evaluation: DispositionEvaluationRequest,
+) -> dict[str, Any]:
+    """Evaluate a caller-supplied synthetic/non-production sequence."""
+    require_operator_token(request, DOMAIN)
+    record_route_hit("/api/fab-ops/v1/disposition/evaluate")
+    evaluated_at = evaluation.evaluated_at.isoformat() if evaluation.evaluated_at else utc_now_iso()
+    request_payload = evaluation.model_dump(mode="json")
+    request_sha256 = hashlib.sha256(
+        json.dumps(request_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    measurement = {
+        "name": evaluation.measurement_name,
+        "unit": evaluation.unit,
+        "centerline": evaluation.centerline,
+        "sigma": evaluation.sigma,
+        "lsl": evaluation.lsl,
+        "usl": evaluation.usl,
+        "sampling_plan": {
+            "planned_wafer_averages": evaluation.planned_wafer_averages,
+            "observed_wafer_averages": len(evaluation.values),
+            "sites_per_wafer": evaluation.sites_per_wafer,
+        },
+        "observations": [
+            {"sequence": index, "wafer_id": f"CALLER-{index:03d}", "value": value}
+            for index, value in enumerate(evaluation.values, start=1)
+        ],
+    }
+    try:
+        payload = build_disposition_evaluation(
+            lot_id=evaluation.lot_id,
+            tool_id=evaluation.tool_id,
+            operation=evaluation.operation,
+            measurement=measurement,
+            tool_status=evaluation.tool_status,
+            active_alarm_severity=evaluation.active_alarm_severity,
+            maintenance_ack_required=evaluation.maintenance_ack_required,
+            evaluated_at=evaluated_at,
+            lineage={
+                "dataset_id": f"caller-supplied-{evaluation.lot_id}",
+                "schema_version": "fab-ops-non-production-evaluation-request-v1",
+                "request_sha256": request_sha256,
+                "data_classification": evaluation.data_classification,
+                "origin": "caller-supplied API payload; rejected unless explicitly non-production",
+                "as_of": evaluated_at,
+            },
+            flow_context=request_payload.get("flow_context"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_runtime_event(
+        "non_production_disposition_evaluated",
+        domain=DOMAIN,
+        at=utc_now_iso(),
+        lot_id=evaluation.lot_id,
+        recommendation=payload["gate"]["recommendation"],
+        data_classification=evaluation.data_classification,
+        material_state_changed=False,
+    )
+    return payload
+
+
+@router.get("/v1/evals/replays")
+async def executed_replays_v1() -> dict[str, Any]:
+    """Execute deterministic fixture and Western Electric boundary assertions."""
+    record_route_hit("/api/fab-ops/v1/evals/replays")
+    return build_replay_summary()
+
+
 @router.get("/architecture-summary")
 async def architecture_summary(
     severity: str | None = Query(default=None),
     risk_bucket: str | None = Query(default=None),
 ) -> dict[str, Any]:
-    """Return a filtered architecture summary of alarms and lots at risk."""
+    """Return a filtered synthetic-fixture architecture summary."""
     record_route_hit("/api/fab-ops/architecture-summary")
     return build_architecture_summary(severity=severity, risk_bucket=risk_bucket)
 
@@ -140,7 +252,7 @@ async def recovery_board(mode: str | None = Query(default=None)) -> dict[str, An
 
 @router.get("/release-board")
 async def release_board() -> dict[str, Any]:
-    """Return the release board with all lots sorted by yield risk."""
+    """Return the advisory board sorted by simulated fixture risk."""
     record_route_hit("/api/fab-ops/release-board")
     return build_release_board()
 
@@ -172,6 +284,7 @@ async def alarm_report_schema() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         **build_alarm_report_schema(),
     }
@@ -183,6 +296,7 @@ async def shift_handoff_schema() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
         **build_shift_handoff_schema(),
     }
@@ -195,6 +309,7 @@ async def fabs_summary() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "items": [build_fab_summary()],
     }
 
@@ -206,6 +321,7 @@ async def tools() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "items": TOOLS,
     }
 
@@ -217,6 +333,7 @@ async def tool_ownership(tool_id: str = Query(default="etch-14")) -> dict[str, A
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": build_tool_ownership(tool_id),
     }
 
@@ -228,31 +345,34 @@ async def alarms() -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "items": ALARMS,
     }
 
 
 @router.get("/lots/at-risk")
 async def lots_at_risk() -> dict[str, Any]:
-    """Return lots at risk sorted by yield risk score (descending)."""
+    """Return fixture lots sorted by simulated risk score (descending)."""
     record_route_hit("/api/fab-ops/lots/at-risk")
-    items = sorted(LOTS_AT_RISK, key=lambda item: float(cast(float | str, item["yield_risk_score"])), reverse=True)
+    items = sorted(LOTS_AT_RISK, key=lambda item: float(cast(float | str, item["simulated_yield_risk_score"])), reverse=True)
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "items": items,
     }
 
 
 @router.get("/release-gate")
 async def release_gate(request: Request, lot_id: str = Query(default="lot-8812")) -> dict[str, Any]:
-    """Evaluate and return the release gate decision for a lot (auth required)."""
+    """Return the legacy synthetic advisory gate recommendation (auth required)."""
     require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/release-gate")
     record_runtime_event("release_gate_check", domain=DOMAIN, at=utc_now_iso(), lot_id=lot_id)
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": build_release_gate(lot_id),
     }
 
@@ -277,6 +397,7 @@ async def shift_handoff(request: Request) -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": payload,
         "aws_exports": {"s3": aws_s3, "dynamodb": aws_ddb, "sqs": aws_sqs},
     }
@@ -308,27 +429,34 @@ async def shift_handoff_signature(request: Request) -> dict[str, Any]:
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": payload,
         "aws_exports": {"s3": aws_s3, "dynamodb": aws_ddb, "sqs": aws_sqs},
     }
 
 
-@router.get("/shift-handoff/verify")
-async def shift_handoff_verify(
-    request: Request,
-    algorithm: str | None = Query(default=None),
-    key_id: str | None = Query(default=None),
-    sha256: str | None = Query(default=None),
-    signature: str | None = Query(default=None),
-) -> dict[str, Any]:
-    """Verify the shift handoff signature (auth required)."""
-    require_operator_token(request, DOMAIN)
-    record_route_hit("/api/fab-ops/shift-handoff/verify")
+def _verify_presented_handoff(envelope: HandoffVerificationEnvelope) -> dict[str, Any]:
+    """Verify and audit one validated, caller-presented envelope."""
+    presented = envelope.model_dump(mode="json")
     payload = build_handoff_signature_verification(
-        algorithm=algorithm,
-        key_id=key_id,
-        sha256=sha256,
-        signature=signature,
+        manifest=cast(dict[str, Any], presented["manifest"]),
+        fab_id=str(presented["fab_id"]),
+        signature_contract=str(presented["signature_contract"]),
+        signature_id=str(presented["signature_id"]),
+        signed_at=str(presented["signed_at"]),
+        algorithm=str(presented["algorithm"]),
+        key_id=str(presented["key_id"]),
+        sha256=str(presented["sha256"]),
+        signature=str(presented["signature"]),
+        digest_preview=str(presented["digest_preview"]),
+        generated_by=str(presented["generated_by"]),
+        artifact_channel=str(presented["artifact_channel"]),
+        signature_purpose=str(presented["signature_purpose"]),
+        human_approval_status=str(presented["human_approval_status"]),
+        human_release_authority_required=bool(presented["human_release_authority_required"]),
+        verification_method=str(presented["verification_method"]),
+        verification_route=str(presented["verification_route"]),
+        verification_steps=[str(item) for item in presented["verification_steps"]],
     )
     record_runtime_event(
         "handoff_signature_verify",
@@ -341,13 +469,39 @@ async def shift_handoff_verify(
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": payload,
     }
 
 
+@router.post("/shift-handoff/verify")
+async def shift_handoff_verify(
+    request: Request,
+    presented: HandoffVerificationEnvelope | HandoffVerificationRequest,
+) -> dict[str, Any]:
+    """Verify an exported caller-presented manifest/envelope (auth required)."""
+    require_operator_token(request, DOMAIN)
+    record_route_hit("/api/fab-ops/shift-handoff/verify")
+    envelope = presented.payload if isinstance(presented, HandoffVerificationRequest) else presented
+    return _verify_presented_handoff(envelope)
+
+
+@router.get("/shift-handoff/verify", deprecated=True)
+async def shift_handoff_verify_query(request: Request) -> dict[str, Any]:
+    """Reject legacy query verification; exact envelopes require a POST body."""
+    require_operator_token(request, DOMAIN)
+    raise HTTPException(
+        status_code=405,
+        detail=(
+            "POST the complete exported handoff payload as JSON; query verification cannot present the exact envelope"
+        ),
+    )
+
+
 @router.get("/audit/feed")
-async def audit_feed() -> dict[str, Any]:
-    """Return the audit event feed for the fab-ops domain."""
+async def audit_feed(request: Request) -> dict[str, Any]:
+    """Export the audit event feed (auth required outside explicit demo mode)."""
+    require_operator_token(request, DOMAIN)
     record_route_hit("/api/fab-ops/audit/feed")
     payload = build_audit_feed()
     aws_s3 = export_audit_bundle_to_s3(DOMAIN, payload["items"])
@@ -363,27 +517,34 @@ async def audit_feed() -> dict[str, Any]:
     return payload
 
 
-@router.get("/yield-trend")
+@router.get("/yield-trend", deprecated=True)
 async def yield_trend() -> dict[str, Any]:
-    """Return yield trend data by tool over recent shifts."""
+    """Return a clearly labeled synthetic UI trend; no yield is measured."""
     record_route_hit("/api/fab-ops/yield-trend")
-    shifts = ["shift-1 (06:00)", "shift-2 (14:00)", "shift-3 (22:00)"]
-    trend_data = []
+    shifts = ["fixture-shift-1", "fixture-shift-2", "fixture-shift-3"]
+    trend_data: list[dict[str, Any]] = []
     for tool in TOOLS:
         base = 0.92 if tool["status"] == "healthy" else 0.78 if tool["status"] == "warning" else 0.64
-        trend_data.append({
-            "tool_id": tool["tool_id"],
-            "fab_id": tool["fab_id"],
-            "status": tool["status"],
-            "shifts": [
-                {"shift": s, "yield_pct": round(base + (i * 0.02) - 0.01, 4)}
-                for i, s in enumerate(shifts)
-            ],
-        })
+        trend_data.append(
+            {
+                "tool_id": tool["tool_id"],
+                "fab_id": tool["fab_id"],
+                "fixture_tool_status": tool["status"],
+                "shifts": [
+                    {"shift": shift, "simulated_yield_fraction": round(base + (index * 0.02) - 0.01, 4)}
+                    for index, shift in enumerate(shifts)
+                ],
+            }
+        )
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "generated_at": utc_now_iso(),
+        "data_classification": "synthetic_fixture",
+        "measured_yield": False,
+        "method": "deterministic display heuristic; not process capability or a yield forecast",
+        "deprecated_reason": "Use the SPC disposition evidence endpoints; this compatibility trend is illustrative only.",
         "items": trend_data,
     }
 
@@ -399,7 +560,7 @@ async def alarm_acknowledge(
     record_route_hit("/api/fab-ops/alarms/acknowledge")
     alarm = next((a for a in ALARMS if a["alarm_id"] == alarm_id), None)
     if alarm is None:
-        return {"status": "error", "message": f"Alarm {alarm_id} not found"}
+        raise HTTPException(status_code=404, detail=f"Unknown synthetic fixture alarm: {alarm_id}")
     ack_at = utc_now_iso()
     record_runtime_event(
         "alarm_acknowledged",
@@ -412,6 +573,7 @@ async def alarm_acknowledge(
     return {
         "status": "ok",
         "service": SERVICE_NAME,
+        "evidence_boundary": build_synthetic_evidence_boundary(),
         "payload": {
             "alarm_id": alarm_id,
             "acknowledged_by": operator_id,

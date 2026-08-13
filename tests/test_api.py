@@ -20,11 +20,15 @@ def test_platform_health() -> None:
     assert "fab_ops" in payload["domains"]
     assert "scanner" in payload["domains"]
     assert payload["architecture_fast_path"][0] == "/health"
-    assert payload["architecture_fast_path"][1] == "/api/resource-pack"
-    assert payload["architecture_fast_path"][2] == "/api/export-proof-board"
+    assert payload["architecture_fast_path"][1] == "/ready"
+    assert payload["architecture_fast_path"][2] == "/api/resource-pack"
+    assert payload["architecture_fast_path"][3] == "/api/export-proof-board"
+    assert payload["readiness"]["ready"] is True
     assert payload["proof_routes"]["resource_pack"] == "/api/resource-pack"
     assert payload["proof_routes"]["export_proof_board"] == "/api/export-proof-board"
     assert payload["proof_routes"]["fab_ops_architecture_pack"] == "/api/fab-ops/architecture-pack"
+    assert payload["proof_routes"]["fab_ops_spc_control_plan"] == "/api/fab-ops/v1/control-plan"
+    assert payload["proof_routes"]["fab_ops_executed_replays"] == "/api/fab-ops/v1/evals/replays"
     assert payload["proof_routes"]["scanner_architecture_pack"] == "/api/scanner/architecture-pack"
     assert payload["links"]["resource_pack"] == "/api/resource-pack"
     assert payload["links"]["export_proof_board"] == "/api/export-proof-board"
@@ -32,10 +36,18 @@ def test_platform_health() -> None:
     resource_payload = resource_pack.json()
     assert resource_payload["contract_version"] == "semiconductor-ops-resource-pack-v1"
     assert resource_payload["summary"]["fab_alarm_count"] >= 2
+    assert resource_payload["summary"]["operator_check_count"] == len(resource_payload["operator_checks"])
+    assert resource_payload["summary"]["validation_case_count"] == len(resource_payload["validation_cases"])
     assert "external_data" in resource_payload
     assert "preview_rows" in resource_payload["external_data"]
     assert resource_payload["architecture_fast_path"][1] == "/api/resource-pack"
     assert resource_payload["architecture_fast_path"][2] == "/api/export-proof-board"
+    assert resource_payload["evidence_boundary"]["measured_yield"] is False
+    assert "/api/fab-ops/v1/control-plan" in resource_payload["architecture_fast_path"]
+    assert any(
+        case["proof_surface"] == "/api/fab-ops/v1/evals/replays"
+        for case in resource_payload["validation_cases"]
+    )
     assert export_proof_board.status_code == 200
     export_payload = export_proof_board.json()
     assert export_payload["contract_version"] == "semiconductor-ops-export-proof-board-v1"
@@ -46,6 +58,75 @@ def test_platform_health() -> None:
 # ---------------------------------------------------------------------------
 # Fab Ops domain
 # ---------------------------------------------------------------------------
+
+
+def test_readiness_fails_closed_for_missing_production_credentials(monkeypatch) -> None:
+    monkeypatch.setenv("SEMICONDUCTOR_OPS_MODE", "production")
+    for name in (
+        "FAB_OPS_OPERATOR_TOKEN",
+        "SCANNER_OPERATOR_TOKEN",
+        "FAB_OPS_HANDOFF_SIGNING_KEY",
+        "SCANNER_RESPONSE_SIGNING_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    client = TestClient(app)
+    readiness = client.get("/ready")
+    health = client.get("/health")
+    assert readiness.status_code == 503
+    assert readiness.json()["status"] == "not_ready"
+    assert readiness.json()["checks"]["fab_ops_operator_auth"] is False
+    assert readiness.json()["checks"]["scanner_handoff_signing"] is False
+    assert health.status_code == 200
+    assert health.json()["status"] == "degraded"
+
+    monkeypatch.setenv("FAB_OPS_OPERATOR_TOKEN", "fab-token")
+    monkeypatch.setenv("SCANNER_OPERATOR_TOKEN", "scanner-token")
+    monkeypatch.setenv("FAB_OPS_HANDOFF_SIGNING_KEY", "fab-signing-key")
+    monkeypatch.setenv("SCANNER_RESPONSE_SIGNING_KEY", "scanner-signing-key")
+    monkeypatch.setenv("FAB_OPS_HANDOFF_SIGNING_KEY_ID", "fab-prod-v1")
+    monkeypatch.setenv("SCANNER_RESPONSE_SIGNING_KEY_ID", "scanner-prod-v1")
+    configured = client.get("/ready")
+    assert configured.status_code == 200
+    assert configured.json()["ready"] is True
+    assert configured.json()["credential_values_exposed"] is False
+
+
+def test_production_readiness_and_sensitive_routes_fail_on_unusable_jsonl(
+    monkeypatch,
+) -> None:
+    from app.shared import database
+
+    monkeypatch.setattr(database, "PERSISTENCE_BACKEND", "jsonl")
+    monkeypatch.setenv("SEMICONDUCTOR_OPS_MODE", "production")
+    monkeypatch.setenv("FAB_OPS_RUNTIME_STORE_PATH", "/dev/null/fab-events.jsonl")
+    monkeypatch.setenv("SCANNER_RUNTIME_STORE_PATH", "/dev/null/scanner-events.jsonl")
+    monkeypatch.setenv("FAB_OPS_OPERATOR_TOKEN", "fab-token")
+    monkeypatch.setenv("SCANNER_OPERATOR_TOKEN", "scanner-token")
+    monkeypatch.delenv("FAB_OPS_OPERATOR_ALLOWED_ROLES", raising=False)
+    monkeypatch.delenv("SCANNER_OPERATOR_ALLOWED_ROLES", raising=False)
+    monkeypatch.setenv("FAB_OPS_HANDOFF_SIGNING_KEY", "fab-signing-key")
+    monkeypatch.setenv("SCANNER_RESPONSE_SIGNING_KEY", "scanner-signing-key")
+    monkeypatch.setenv("FAB_OPS_HANDOFF_SIGNING_KEY_ID", "fab-prod-v1")
+    monkeypatch.setenv("SCANNER_RESPONSE_SIGNING_KEY_ID", "scanner-prod-v1")
+
+    client = TestClient(app)
+    readiness = client.get("/ready")
+    assert readiness.status_code == 503
+    assert readiness.json()["checks"]["persistence"] is False
+    assert readiness.json()["persistence"]["checks"] == {
+        "fab_ops": False,
+        "scanner": False,
+    }
+
+    sensitive = client.get(
+        "/api/fab-ops/v1/lots/lot-8812/disposition",
+        headers={"x-operator-token": "fab-token"},
+    )
+    assert sensitive.status_code == 503
+    assert sensitive.json()["detail"]["message"] == (
+        "runtime persistence is unavailable; sensitive route is closed"
+    )
 
 
 def test_fab_ops_health_and_service_grade_surfaces() -> None:
@@ -88,7 +169,7 @@ def test_fab_ops_health_and_service_grade_surfaces() -> None:
     assert runtime_brief.status_code == 200
     brief_payload = runtime_brief.json()
     assert brief_payload["readiness_contract"] == "fab-ops-runtime-brief-v1"
-    assert brief_payload["evidence_counts"]["replay_scenarios"] == 4
+    assert brief_payload["evidence_counts"]["replay_scenarios"] == 9
     assert brief_payload["evidence_counts"]["recovery_routes"] == 3
     assert brief_payload["ops_snapshot"]["critical_alarm_count"] == 1
     assert brief_payload["assignment_count"] == 3
@@ -201,7 +282,11 @@ def test_fab_ops_core_domain_endpoints() -> None:
     release_gate = client.get("/api/fab-ops/release-gate?lot_id=lot-8812")
     handoff = client.get("/api/fab-ops/shift-handoff")
     handoff_signature = client.get("/api/fab-ops/shift-handoff/signature")
-    handoff_verify = client.get("/api/fab-ops/shift-handoff/verify")
+    signature_proof = handoff_signature.json()["payload"]
+    handoff_verify = client.post(
+        "/api/fab-ops/shift-handoff/verify",
+        json=signature_proof,
+    )
     replay = client.get("/api/fab-ops/evals/replays")
 
     assert fabs.status_code == 200
@@ -222,7 +307,7 @@ def test_fab_ops_core_domain_endpoints() -> None:
     assert lots.status_code == 200
     lots_payload = lots.json()["items"]
     assert lots_payload[0]["lot_id"] == "lot-8812"
-    assert lots_payload[0]["yield_risk_score"] > lots_payload[-1]["yield_risk_score"]
+    assert lots_payload[0]["simulated_yield_risk_score"] > lots_payload[-1]["simulated_yield_risk_score"]
 
     assert release_gate.status_code == 200
     gate_payload = release_gate.json()["payload"]
@@ -241,6 +326,13 @@ def test_fab_ops_core_domain_endpoints() -> None:
     assert signature_payload["algorithm"] == "hmac-sha256"
     assert len(signature_payload["sha256"]) == 64
     assert len(signature_payload["signature"]) == 64
+    assert signature_payload["human_approval_status"] == "not_recorded"
+    assert "not a human approval" in signature_payload["signature_purpose"]
+    assert "signed_by" not in signature_payload
+    binding = signature_payload["manifest"]["spc_evidence_binding"]
+    assert binding["recommendation"] == "HOLD_FOR_CONTAINMENT"
+    assert binding["fixture_sha256"]
+    assert binding["human_approval_status"] == "not_recorded"
 
     assert handoff_verify.status_code == 200
     verify_payload = handoff_verify.json()["payload"]
@@ -249,8 +341,10 @@ def test_fab_ops_core_domain_endpoints() -> None:
 
     assert replay.status_code == 200
     replay_payload = replay.json()
-    assert replay_payload["summary"]["scenarios"] == 4
+    assert replay_payload["summary"]["scenarios"] == 9
     assert replay_payload["summary"]["score_pct"] == 100.0
+    assert replay_payload["summary"]["failed_assertions"] == 0
+    assert replay_payload["runs"][0]["assertions"][0]["actual"] == "HOLD_FOR_CONTAINMENT"
 
 
 def test_fab_ops_release_gate_relaxation_and_audit_feed() -> None:

@@ -127,8 +127,8 @@
         <span class="chip">manufacturing ops</span>
         <span class="chip">control tower</span>
       </div>
-      <h1>Alarm triage, lot risk, release gates, and shift handoff for fab operations.</h1>
-      <p class="lede">This public Pages site is a quick overview of the control tower workflow: grounded alarms, lot-at-risk prioritization, tool ownership, and a signed next-shift handoff that still reads clearly under pressure.</p>
+      <h1>Synthetic SPC, advisory lot disposition, flow evidence, and shift integrity for fab operations.</h1>
+      <p class="lede">This public Pages surface describes a hand-authored synthetic fixture: no measured yield, MES/FDC connection, autonomous material movement, or recorded human release approval.</p>
       <div class="hero-actions">
         <a class="button primary" href="#focus-lot-panel">Open lot proof</a>
         <a class="button" href="https://github.com/KIM3310/fab-ops-yield-control-tower/blob/main/app/main.py">Inspect API routes</a>
@@ -145,14 +145,14 @@
         </article>
         <article class="quick-card">
           <strong>03 · Shift handoff</strong>
-          <p>End with the signed handoff to prove continuity, not just dashboard cosmetics.</p>
+          <p>End with the HMAC envelope as payload-integrity evidence—not human release approval.</p>
         </article>
       </div>
       <section class="focus-strip" id="focus-lot-panel">
         <div>
           <span class="chip">one-lot continuity</span>
-          <h2>Lot-8812 stays visible from hold decision to signed handoff.</h2>
-          <p class="focus-note">Top-fold spotlight keeps the severe lot, owning tool, release decision, and next operator move on one line of review instead of scattering them across the walkthrough.</p>
+          <h2>Lot-8812 stays visible from synthetic SPC containment to HMAC integrity evidence.</h2>
+          <p class="focus-note">Top-fold spotlight keeps the synthetic lot, owning tool, advisory recommendation, and next human review step together without claiming measured fab performance.</p>
         </div>
         <div class="focus-grid">
           <article class="focus-card"><span class="chip">Alarm</span><strong>alm-2041 · critical</strong></article>
@@ -164,7 +164,7 @@
           <button id="copyLotPathBtn" class="primary" type="button">Copy Lot Path</button>
           <button id="copyHandoffPathBtn" type="button">Copy Shift Handoff</button>
         </div>
-        <p class="focus-note" id="focusLotStatus">Fast path: runtime brief → recovery board → release gate → shift handoff signature.</p>
+        <p class="focus-note" id="focusLotStatus">Fast path: control plan → executed disposition → replay assertions → HMAC integrity envelope.</p>
       </section>
     </section>
 
@@ -256,6 +256,7 @@
         '- /api/fab-ops/runtime/brief',
         '- /api/fab-ops/recovery-board?mode=hold',
         '- /api/fab-ops/release-gate?lot_id=lot-8812',
+        '- /api/fab-ops/v1/lots/lot-8812/disposition',
         '- /api/fab-ops/shift-handoff/signature',
       ].join('\n'));
       if (focusLotStatus) focusLotStatus.textContent = ok ? 'Lot path copied.' : 'Failed to copy lot path.';

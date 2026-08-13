@@ -20,15 +20,26 @@ ARCH_DOC = ROOT / "docs" / "cloud-ai-architecture.md"
 ARCH_MANIFEST = ROOT / "docs" / "architecture" / "blueprint.json"
 ARCH_VALIDATOR = ROOT / "scripts" / "validate_architecture_blueprint.py"
 ARCH_WORKFLOW = ROOT / ".github" / "workflows" / "architecture-blueprint.yml"
+K8S_DEPLOYMENT = ROOT / "infra" / "k8s" / "deployment.yaml"
+K8S_CONFIGMAP = ROOT / "infra" / "k8s" / "configmap.yaml"
+K8S_PVC = ROOT / "infra" / "k8s" / "pvc.yaml"
+K8S_HPA = ROOT / "infra" / "k8s" / "hpa.yaml"
+K8S_GUIDE = ROOT / "infra" / "k8s" / "README.md"
+DOCKERFILE = ROOT / "Dockerfile"
 
 REQUIRED_FILES = (
     README,
+    DOCKERFILE,
     ROOT / ".editorconfig",
     ROOT / "CONTRIBUTING.md",
     ARCH_DOC,
     ARCH_MANIFEST,
     ARCH_VALIDATOR,
     ARCH_WORKFLOW,
+    K8S_DEPLOYMENT,
+    K8S_CONFIGMAP,
+    K8S_PVC,
+    K8S_GUIDE,
 )
 
 BANNED_TERMS = {
@@ -234,12 +245,69 @@ def check_architecture_surface() -> None:
             fail(f"README missing architecture reference: {expected}")
 
 
+def check_kubernetes_surface() -> None:
+    """Require production Secret references and configuration-aware readiness."""
+    deployment = read_text(K8S_DEPLOYMENT)
+    configmap = read_text(K8S_CONFIGMAP)
+    pvc = read_text(K8S_PVC)
+    guide = read_text(K8S_GUIDE)
+    makefile = read_text(ROOT / "Makefile")
+    required_secret_keys = (
+        "FAB_OPS_OPERATOR_TOKEN",
+        "FAB_OPS_HANDOFF_SIGNING_KEY",
+        "SCANNER_OPERATOR_TOKEN",
+        "SCANNER_RESPONSE_SIGNING_KEY",
+    )
+    if 'SEMICONDUCTOR_OPS_MODE: "production"' not in configmap:
+        fail("Kubernetes ConfigMap must select the production runtime profile")
+    if "path: /ready" not in deployment:
+        fail("Kubernetes readiness probe must use /ready")
+    if "name: semiconductor-ops-secrets" not in deployment:
+        fail("Kubernetes Deployment is missing the external Secret reference")
+    if deployment.count("replicas: 1") != 1 or "type: Recreate" not in deployment:
+        fail("file-backed SQLite deployment must enforce one replica with Recreate updates")
+    if "emptyDir" in deployment or "persistentVolumeClaim:" not in deployment:
+        fail("file-backed SQLite deployment must use durable PVC storage, not emptyDir")
+    if "claimName: semiconductor-ops-data" not in deployment:
+        fail("SQLite deployment does not reference semiconductor-ops-data")
+    if "kind: PersistentVolumeClaim" not in pvc or "ReadWriteOnce" not in pvc:
+        fail("SQLite PVC must be a ReadWriteOnce PersistentVolumeClaim")
+    if K8S_HPA.exists() or "infra/k8s/hpa.yaml" in makefile:
+        fail("HPA must remain absent for the single-writer SQLite deployment")
+    if "kubectl apply -f infra/k8s/pvc.yaml" not in makefile:
+        fail("make deploy must apply the durable SQLite PVC")
+    for token in ("single replica", "single writer", "no HPA", "shared database"):
+        if token not in guide:
+            fail(f"Kubernetes scaling boundary is not documented: {token}")
+    for key in required_secret_keys:
+        if deployment.count(f"key: {key}") != 1 or key not in guide:
+            fail(f"Kubernetes Secret key is not referenced/documented: {key}")
+    for path in (ROOT / "infra" / "k8s").glob("*.yaml"):
+        if re.search(r"(?m)^kind:\s*Secret\s*$", read_text(path)):
+            fail(f"deployable Secret manifest must not be checked in: {path.relative_to(ROOT)}")
+
+
+def check_container_contract() -> None:
+    dockerfile = read_text(DOCKERFILE)
+    first_line = dockerfile.splitlines()[0] if dockerfile.splitlines() else ""
+    if not re.fullmatch(r"FROM python:3\.11-slim@sha256:[0-9a-f]{64}", first_line):
+        fail("Docker base image must retain an immutable Python 3.11 slim digest")
+    copy_index = dockerfile.find("COPY app /app/app")
+    install_index = dockerfile.find("pip install --no-cache-dir -e /app")
+    if copy_index < 0 or install_index < 0 or copy_index > install_index:
+        fail("Docker editable install must run after application source is copied")
+    if "HEALTHCHECK" not in dockerfile or "/health" not in dockerfile:
+        fail("Dockerfile must retain the runtime health check")
+
+
 def main() -> None:
     for path in REQUIRED_FILES:
         require_file(path)
     if not read_text(README).strip():
         fail("README.md is empty")
     check_architecture_surface()
+    check_container_contract()
+    check_kubernetes_surface()
     check_markdown_links()
     scan_positioning_terms()
     print("repository surface validation ok")

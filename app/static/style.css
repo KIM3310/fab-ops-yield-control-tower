@@ -426,3 +426,14 @@ body {
     font-size: 22px;
   }
 }
+
+.evidence-banner {
+  max-width: 72rem;
+  margin: 0.9rem 0 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(245, 190, 74, 0.45);
+  border-radius: 0.75rem;
+  background: rgba(245, 190, 74, 0.1);
+  color: var(--text, #eef3f8);
+  line-height: 1.55;
+}

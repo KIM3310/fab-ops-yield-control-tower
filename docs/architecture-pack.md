@@ -13,7 +13,7 @@ flowchart LR
     FastAPI --> DomainB["Field response domain"]
     DomainA --> Shared["Shared auth, signatures, storage"]
     DomainB --> Shared
-    Shared --> Evidence["Signed handoff and audit evidence"]
+    Shared --> Evidence["HMAC integrity envelopes and audit evidence"]
 ```
 
 The two domains share infrastructure while keeping domain-specific rules isolated. This prevents duplicate security and signature logic.
