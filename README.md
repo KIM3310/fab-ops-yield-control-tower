@@ -4,6 +4,11 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688.svg)](https://fastapi.tiangolo.com)
 
+## Live Demo
+
+- [Open the public Cloudflare Pages demo](https://fab-ops-yield-control-tower.pages.dev/)
+- Scope: credential-free, synthetic semiconductor-operations review surface; not connected to live fab systems.
+
 A reviewable semiconductor-operations demo: deterministic Western Electric SPC, explainable lot-disposition gates, synthetic q-time/TAT/routing context, executed replay assertions, and tamper-evident shift artifacts in FastAPI.
 
 > **Evidence boundary:** every fab value is hand-authored synthetic fixture data. The service has no MES/FDC connection, reports no measured yield, makes no yield forecast, never moves material, and never replaces authorized process-engineer or release-supervisor judgment.
