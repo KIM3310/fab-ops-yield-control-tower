@@ -5,7 +5,10 @@ WORKDIR /app
 COPY pyproject.toml README.md requirements.txt requirements-dev.txt /app/
 COPY app /app/app
 
-RUN pip install --no-cache-dir -r /app/requirements.txt && pip install --no-cache-dir -e /app
+RUN python -m pip install --no-cache-dir --upgrade "pip>=26.1.2" "setuptools>=83.0.0" && \
+    python -m pip install --no-cache-dir -r /app/requirements.txt && \
+    python -m pip install --no-cache-dir -e /app && \
+    python -m pip check
 
 ENV PYTHONPATH=/app
 ENV SEMICONDUCTOR_OPS_MODE=locked
